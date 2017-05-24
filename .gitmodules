@@ -6,10 +6,10 @@
 	url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
 [submodule "ros_nodes/camera_base"]
 	path = pes/ros_nodes/camera_base
-	url = git@github.com:KumarRobotics/camera_base.git
+	url = https://github.com/KumarRobotics/camera_base
 [submodule "ros_nodes/usb_cam"]
 	path = pes/ros_nodes/usb_cam
-	url = git@github.com:bosch-ros-pkg/usb_cam.git
+	url = https://github.com:bosch-ros-pkg/usb_cam
 [submodule "ros_nodes/terarangerone-ros"]
 	path = pes/ros_nodes/terarangerone-ros
 	url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
