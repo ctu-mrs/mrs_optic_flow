@@ -1,0 +1,3 @@
+[submodule "ros_nodes/bluefox2"]
+	path = pes/ros_nodes/bluefox2
+	url = git@mrs.felk.cvut.cz:uav/bluefox2.git
