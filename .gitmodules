@@ -1,3 +1,6 @@
 [submodule "ros_nodes/bluefox2"]
 	path = pes/ros_nodes/bluefox2
 	url = git@mrs.felk.cvut.cz:uav/bluefox2.git
+[submodule "ros_nodes/nmea_navsat_driver"]
+	path = pes/ros_nodes/nmea_navsat_driver
+	url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
