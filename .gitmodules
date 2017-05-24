@@ -9,7 +9,7 @@
 	url = https://github.com/KumarRobotics/camera_base
 [submodule "ros_nodes/usb_cam"]
 	path = pes/ros_nodes/usb_cam
-	url = https://github.com:bosch-ros-pkg/usb_cam
+	url = https://github.com/bosch-ros-pkg/usb_cam.git
 [submodule "ros_nodes/terarangerone-ros"]
 	path = pes/ros_nodes/terarangerone-ros
 	url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
