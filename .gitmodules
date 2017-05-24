@@ -13,3 +13,6 @@
 [submodule "ros_nodes/terarangerone-ros"]
 	path = pes/ros_nodes/terarangerone-ros
 	url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
+[submodule "ros_nodes/gazebo_ros_link_attacher"]
+	path = pes/ros_nodes/gazebo_ros_link_attacher
+	url = git@mrs.felk.cvut.cz:uav/gazebo_ros_link_attacher.git
