@@ -4,3 +4,9 @@
 [submodule "ros_nodes/nmea_navsat_driver"]
 	path = pes/ros_nodes/nmea_navsat_driver
 	url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
+[submodule "ros_nodes/camera_base"]
+	path = pes/ros_nodes/camera_base
+	url = git@github.com:KumarRobotics/camera_base.git
+[submodule "ros_nodes/usb_cam"]
+	path = pes/ros_nodes/usb_cam
+	url = git@github.com:bosch-ros-pkg/usb_cam.git
