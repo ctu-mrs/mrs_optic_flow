@@ -1,18 +1,24 @@
 [submodule "ros_nodes/bluefox2"]
 	path = pes/ros_nodes/bluefox2
 	url = git@mrs.felk.cvut.cz:uav/bluefox2.git
+  branch = master
 [submodule "ros_nodes/nmea_navsat_driver"]
 	path = pes/ros_nodes/nmea_navsat_driver
 	url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
+  branch = indigo-branch
 [submodule "ros_nodes/camera_base"]
 	path = pes/ros_nodes/camera_base
 	url = https://github.com/KumarRobotics/camera_base
+  branch = master
 [submodule "ros_nodes/usb_cam"]
 	path = pes/ros_nodes/usb_cam
 	url = https://github.com/bosch-ros-pkg/usb_cam
+  branch = master
 [submodule "ros_nodes/terarangerone-ros"]
 	path = pes/ros_nodes/terarangerone-ros
 	url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
+  branch = master
 [submodule "ros_nodes/gazebo_ros_link_attacher"]
 	path = pes/ros_nodes/gazebo_ros_link_attacher
 	url = git@mrs.felk.cvut.cz:uav/gazebo_ros_link_attacher.git
+  branch = master
