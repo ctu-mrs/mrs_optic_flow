@@ -22,3 +22,6 @@
 	path = pes/ros_nodes/gazebo_ros_link_attacher
   url = git@mrs.felk.cvut.cz:uav/gazebo_ros_link_attacher.git
   branch = master
+[submodule "ros_nodes/garmin_rangefinder"]
+	path = pes/ros_nodes/garmin_rangefinder
+	url = git@mrs.felk.cvut.cz:uav/garmin_rangefinder
