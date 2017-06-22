@@ -1,0 +1,6 @@
+camera_rotation_matrix:
+  rows: 2
+  cols: 2
+  data: [0.9788, 0.2049, -0.2049, 0.9788]
+alpha: -0.2064
+alpha_deg: -11.8255

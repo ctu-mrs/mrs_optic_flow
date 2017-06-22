@@ -1,0 +1,120 @@
+<launch>
+	<arg name="uav_name" default="$(optenv UAV_NAME uav5)"/>
+	<group ns="$(arg uav_name)">
+
+	<arg name="gui" default="false"/>
+	<arg name="DEBUG" default="false"/>
+	<arg name="method" default="4"/>
+	<arg name="info" default="imu_source"/>
+
+	<arg name="FrameSize" default="240"/>
+	<arg name="SamplePointSize" default="80"/>
+	<arg name="ScanRadius" default="15"/>
+	<arg name="StepSize" default="12"/>
+	
+	<arg name="NumberOfBins" default="3"/>
+
+	<arg name="RansacNumOfChosen" default="2"/>
+	<arg name="RansacNumOfIter" default="50"/>
+	<arg name="RansacThresholdRad" default="1"/>
+	<arg name="filterMethod" default="allsac"/>
+
+	<arg name="lastSpeedsSize" default="60"/>
+	<arg name="analyseDuration" default="1"/>
+
+	<arg name="publish" default="true"/>
+	<arg name="cameraRotated" default="false"/>
+	<arg name="useOdom" default="true"/>
+	<arg name="applyAbsBounding" default="true"/>
+	<arg name="applyRelBounding" default="false"/>
+
+	<arg name="rotation_correction_enable" default="true"/>
+	<arg name="tilt_correction_enable" default="true"/>
+	<arg name="ang_rate_source" default="imu"/>
+	<arg name="raw_enable" default="true"/>
+
+	<arg name="scale_rot_enable" default="false"/>
+	<arg name="scale_rot_mag" default="49.9"/>
+	<arg name="scale_rot_output" default="velocity"/>
+
+	<arg name="ScaleFactor" default="1"/>
+	<arg name="storeVideo" default="true"/>
+	<arg name="videoFPS" default="110"/>
+	
+	<arg name="maxFPS" default="500"/>
+	
+	<arg name="videoPath" default="$(env HOME)/Desktop/bags/tilt_correction_testing/results/Eval_Meth$(arg method)_SPsize$(arg SamplePointSize)_Filtering-$(arg filterMethod)_tiltCorr-$(arg tilt_correction_enable)_rotCorr-$(arg rotation_correction_enable)_$(arg info).avi"/>
+	
+	<node pkg="rosbag" type="play" name="player"  args="--clock $(env HOME)/Desktop/bags/_2017-02-17-14-29-12.bag -s 64 -u 10" />
+
+	<node name="optic_flow" pkg="optic_flow" type="optic_flow_node" output="screen" >
+
+		<param name="DEBUG" type="bool" value="$(arg DEBUG)"/>
+		<param name="gui" type="bool" value="$(arg gui)"/>
+	 	<param name="publish" type="bool" value="$(arg publish)"/>
+
+		<param name="FrameSize" type="int" value="$(arg FrameSize)"/>
+		<param name="SamplePointSize" type="int" value="$(arg SamplePointSize)"/>
+		<param name="ScanRadius" type="int" value="$(arg ScanRadius)"/>
+		<param name="StepSize" type="int" value="$(arg StepSize)"/>
+
+		<rosparam file="$(find optic_flow)/yaml/cam_uav5.yaml"/>
+		<rosparam file="$(find optic_flow)/yaml/cam_rot.yaml"/>
+
+		<param name="ScaleFactor" type="int" value="1"/>
+		<param name="CameraImageCompressed" type="bool" value="true"/>
+
+		<param name="method" type="int" value="$(arg method)"/>
+
+		<param name="useOdom" type="bool" value="$(arg useOdom)"/>
+		<param name="applyAbsBounding" type="bool" value="$(arg applyAbsBounding)"/>
+		<param name="applyRelBounding" type="bool" value="$(arg applyRelBounding)"/>
+		
+		<param name="rotation_correction_enable" type="bool" value="$(arg rotation_correction_enable)"/>
+		<param name="tilt_correction_enable" type="bool" value="$(arg tilt_correction_enable)"/>
+		<param name="ang_rate_source" type="string" value="$(arg ang_rate_source)"/>
+		<param name="raw_enable" type="bool" value="$(arg raw_enable)"/>
+		
+		<param name="scale_rot_enable" type="bool" value="$(arg scale_rot_enable)"/>
+		<param name="scale_rot_mag" type="double" value="$(arg scale_rot_mag)"/>
+		<param name="scale_rot_output type="string" value="$(arg scale_rot_output)"/>
+
+		<param name="NumberOfBins" type="int" value="$(arg NumberOfBins)"/>
+		<param name="cameraRotated" type="bool" value="$(arg cameraRotated)"/>
+
+		<param name="RansacNumOfChosen" type="int" value="$(arg RansacNumOfChosen)"/>
+		<param name="RansacNumOfIter" type="int" value="$(arg RansacNumOfIter)"/>
+		<param name="RansacThresholdRad" type="double" value="$(arg RansacThresholdRad)"/>
+		<param name="filterMethod" type="string" value="$(arg filterMethod)"/>
+
+		<param name="lastSpeedsSize" type="int" value="$(arg lastSpeedsSize)"/>
+		<param name="analyseDuration" type="double" value="$(arg analyseDuration)"/>
+
+		<param name="cameraRotated" type="bool" value="$(arg cameraRotated)"/>
+
+		<param name="storeVideo" type="bool" value="$(arg storeVideo)"/>
+		<param name="videoFPS" type="int" value="$(arg videoFPS)"/>
+		<param name="videoPath" type="string" value="$(arg videoPath)"/>
+		
+		<param name="maxFPS" type="double" value="$(arg maxFPS)"/>
+
+		<remap from="odometry" to="mbzirc_odom/new_odom"/>
+		<remap from="camera" to="bluefox/image_raw/compressed"/>
+		<remap from="camera_info" to="bluefox/camera_info"/>
+		<remap from="ranger" to="teraranger/range"/>
+		<remap from="imu" to="mavros/imu/data_raw"/>
+
+		<remap from="velocity" to="~velocity"/>
+		<remap from="velocity_raw" to="~velocity_raw"/>
+		<remap from="velocity_stddev" to="~velocity_stddev"/>
+		<remap from="max_velocity" to="~max_velocity"/>
+		<remap from="tilt_correction" to="~tilt_correction"/>
+		<remap from="allsac_chosen" to="~allsac_chosen"/>
+	</node>
+
+	<node pkg="rosbag" type="record" name="recorder"  args="/$(arg uav_name)/mbzirc_odom/new_odom /$(arg uav_name)/optic_flow/velocity /$(arg uav_name)/optic_flow/velocity_raw /$(arg uav_name)/optic_flow/velocity_stddev /$(arg uav_name)/optic_flow/tilt_correction -O $(env HOME)/Desktop/bags/tilt_correction_testing/results/Eval_Meth$(arg method)_SPsize$(arg SamplePointSize)_Filtering-$(arg filterMethod)_tiltCorr-$(arg tilt_correction_enable)_rotCorr-$(arg rotation_correction_enable)_$(arg info).bag" />
+
+	</group>
+</launch>
+
+
