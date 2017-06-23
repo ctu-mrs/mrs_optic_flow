@@ -177,12 +177,17 @@ public:
 
         if(!gotCamInfo || negativeCamInfo){
             ROS_WARN("Optic Flow missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loaded default parameters");
+            ROS_INFO("1");
             std::vector<double> camMat;
+            ROS_INFO("2");
             private_node_handle.getParam("camera_matrix/data", camMat);
+            ROS_INFO("3");
             fx = camMat[0];
+            ROS_INFO("slon");
             cx = camMat[2];
             fy = camMat[4];
             cy = camMat[5];
+            ROS_INFO("kocka");
             std::vector<double> distCoeffs;
             private_node_handle.getParam("distortion_coefficients/data",distCoeffs);
             k1 = distCoeffs[0];
@@ -194,6 +199,8 @@ public:
         }else{
             ROS_INFO("Loaded camera parameters!");
         }
+
+        ROS_INFO("PES");
 
 
         switch(method){
