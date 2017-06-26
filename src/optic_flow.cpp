@@ -610,6 +610,11 @@ class OpticFlow
         return;
       }
 
+      /* for (int i=0;i<speeds.size();i++) */
+      /*   ROS_INFO("x:%f, y:%f",speeds[i].x,speeds[i].y); */
+
+      /* ROS_INFO("%2.2f %2.2f", -trueRange/(fx*dur.toSec()), trueRange/(fy*dur.toSec())); */
+
       // Calculate real velocity
       multiplyAllPts(speeds,
           -trueRange/(fx*dur.toSec()),
@@ -621,11 +626,17 @@ class OpticFlow
       // camera rotation (within the construction) correction
       double phi = -1.570796326794897;
 
+      /* for (int i=0;i<speeds.size();i++) */
+      /*   ROS_INFO("BBBx:%f, y:%f",speeds[i].x,speeds[i].y); */
+
       //rotate2d(vxm,vym,phi);
       rotateAllPts(speeds,phi);
 
       // transform to global system
       rotateAllPts(speeds,yaw);
+
+      /* for (int i=0;i<speeds.size();i++) */
+      /*   ROS_INFO("x:%f, y:%f",speeds[i].x,speeds[i].y); */
 
       // Print output
       if(DEBUG){
@@ -645,7 +656,6 @@ class OpticFlow
       if(silent_debug){
         bck_speeds = speeds;
       }
-
 
       int af_abs = 0;
       int af_acc = 0;
@@ -687,7 +697,6 @@ class OpticFlow
       }else if(DEBUG){
         ROS_INFO_THROTTLE(0.1,"Bounding of speeds not enabled.");
       }
-
 
       // Do the Allsac/Ransac/Averaging
       cv::Point2f out;

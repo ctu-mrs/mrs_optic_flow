@@ -143,8 +143,10 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     imPrev = imCurr.clone();
 
     if (gui){
+        ROS_INFO("KOCKAAAAAAAAAAAAAAAAAAA");
         cv::imshow("main",imView);
         cv::waitKey(1);
+        ROS_INFO("PEEEEEEEEEEEEEEEEEEEEEEEES");
     }
 
     if (storeVideo){

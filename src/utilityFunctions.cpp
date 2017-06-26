@@ -30,7 +30,7 @@ cv::Point2f pointMean(std::vector<cv::Point2f> pts){
     float my = 0;
     int numPts = 0;
     for(uint i = 0;i < pts.size();i++){
-        if(!std::isfinite(pts[i].x) && !std::isfinite(pts[i].y)){
+        if(!std::isnan(pts[i].x) && !std::isnan(pts[i].y)){
             mx += pts[i].x;
             my += pts[i].y;
             numPts++;
@@ -245,7 +245,7 @@ std::vector<cv::Point2f> removeNanPoints(std::vector<cv::Point2f> v){
 std::vector<double> removeNanPoints(std::vector<double> v){
     std::vector<double> ret;
     for(int i=0;i<v.size();i++){
-        if(!std::isfinite(v[i])){
+        if(!std::isnan(v[i])){
             ret.push_back(v[i]);
         }
     }
