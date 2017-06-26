@@ -5,7 +5,7 @@
   <group ns="$(arg uav_name)">
 
     <arg name="gui" default="false"/>
-    <arg name="DEBUG" default="true"/>
+    <arg name="DEBUG" default="false"/>
     <arg name="method" default="4"/>
 
     <!-- Don't forget to change the camera parameters yaml file -->
