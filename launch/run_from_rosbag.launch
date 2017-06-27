@@ -1,120 +1,121 @@
 <launch>
 
-  <arg name="uav_name" default="uav4"/>
+  <arg name="uav_name" default="uav4" />
 
   <group ns="$(arg uav_name)">
 
-    <node pkg="image_transport" type="republish" name="republish_bluefox" output="screen" args="compressed in:=bluefox/image_raw raw out:=bluefox2/image_raw" />
+    <node pkg="image_transport" type="republish" name="republish_bluefox" output="screen" args="compressed in:=bluefox/image_raw raw out:=bluefox2/image_raw"  />
 
-    <arg name="gui" default="true"/>
-    <arg name="DEBUG" default="true"/>
-    <arg name="method" default="4"/>
+    <arg name="gui" default="true" />
+    <arg name="DEBUG" default="true" />
+    <arg name="method" default="4" />
 
     <!-- Don't forget to change the camera parameters yaml file -->
-    <arg name="FrameSize" default="480"/>
-    <arg name="SamplePointSize" default="120"/>
-    <arg name="filterMethod" default="allsac"/>
-    <arg name="applyAbsBounding" default="true"/>
-    <arg name="applyRelBounding" default="false"/>
+    <arg name="FrameSize" default="480" />
+    <arg name="SamplePointSize" default="120" />
+    <arg name="filterMethod" default="allsac" />
+    <arg name="applyAbsBounding" default="true" />
+    <arg name="applyRelBounding" default="false" />
 
-    <arg name="rotation_correction_enable" default="true"/>
-    <arg name="tilt_correction_enable" default="true"/>
-    <arg name="ang_rate_source" default="imu"/>
-    <arg name="raw_enable" default="false"/>
+    <arg name="rotation_correction_enable" default="true" />
+    <arg name="tilt_correction_enable" default="true" />
+    <arg name="ang_rate_source" default="imu" />
+    <arg name="raw_enable" default="false" />
 
-    <arg name="ScanRadius" default="21"/>
-    <arg name="StepSize" default="24"/>
-    <arg name="NumberOfBins" default="3"/>
+    <arg name="ScanRadius" default="21" />
+    <arg name="StepSize" default="24" />
+    <arg name="NumberOfBins" default="3" />
 
-    <arg name="RansacNumOfChosen" default="2"/>
-    <arg name="RansacNumOfIter" default="50"/>
-    <arg name="RansacThresholdRad" default="1"/>
+    <arg name="RansacNumOfChosen" default="2" />
+    <arg name="RansacNumOfIter" default="50" />
+    <arg name="RansacThresholdRad" default="1" />
 
-    <arg name="lastSpeedsSize" default="60"/>
-    <arg name="analyseDuration" default="1"/>
+    <arg name="lastSpeedsSize" default="60" />
+    <arg name="analyseDuration" default="1" />
 
-    <arg name="scale_rot_enable" default="false"/>
-    <arg name="scale_rot_mag" default="49.9"/>
-    <arg name="scale_rot_output" default="velocity"/>
-    <arg name="d3d_method" default=""/>
+    <arg name="scale_rot_enable" default="false" />
+    <arg name="scale_rot_mag" default="49.9" />
+    <arg name="scale_rot_output" default="velocity" />
+    <arg name="d3d_method" default="" />
 
-    <arg name="ScaleFactor" default="1"/>
+    <arg name="ScaleFactor" default="1" />
 
-    <arg name="storeVideo" default="false"/>
-    <arg name="videoFPS" default="35"/>
+    <arg name="storeVideo" default="false" />
+    <arg name="videoFPS" default="35" />
 
-    <arg name="maxFPS" default="500"/>
-    <arg name="videoPath" default="/dev/null"/>
+    <arg name="maxFPS" default="500" />
+    <arg name="videoPath" default="/dev/null" />
 
     <!-- Node Settings -->
-    <arg name="output" default="screen"/>
-    <arg name="proc" default="false"/>
-    <arg name="view" default="false"/>
-    <arg name="calib" default="false"/>
+    <arg name="output" default="screen" />
+    <arg name="proc" default="false" />
+    <arg name="view" default="false" />
+    <arg name="calib" default="false" />
 
     <node name="optic_flow2" pkg="optic_flow" type="optic_flow_node" output="screen" >
 
-      <rosparam file="$(find optic_flow)/yaml/physical_constraints.yaml"/>
+      <rosparam file="$(find optic_flow)/yaml/physical_constraints.yaml" />
 
       <!-- File with camera parameters - loaded when nothing found on Camera info --> 
-      <rosparam file="$(find optic_flow)/yaml/bluefox_uav5_as_of_26-4.yaml"/>
+      <rosparam file="$(find optic_flow)/yaml/bluefox_uav5_as_of_26-4.yaml" />
 
-      <param name="DEBUG" type="bool" value="$(arg DEBUG)"/>
-      <param name="gui" type="bool" value="$(arg gui)"/>
+      <param name="DEBUG" type="bool" value="$(arg DEBUG)" />
+      <param name="gui" type="bool" value="$(arg gui)" />
 
-      <param name="FrameSize" type="int" value="$(arg FrameSize)"/>
-      <param name="SamplePointSize" type="int" value="$(arg SamplePointSize)"/>
-      <param name="ScanRadius" type="int" value="$(arg ScanRadius)"/>
-      <param name="StepSize" type="int" value="$(arg StepSize)"/>
+      <param name="FrameSize" type="int" value="$(arg FrameSize)" />
+      <param name="SamplePointSize" type="int" value="$(arg SamplePointSize)" />
+      <param name="ScanRadius" type="int" value="$(arg ScanRadius)" />
+      <param name="StepSize" type="int" value="$(arg StepSize)" />
 
-      <param name="ScaleFactor" type="int" value="1"/>
-      <param name="CameraImageCompressed" type="bool" value="false"/>
+      <param name="ScaleFactor" type="int" value="1" />
+      <param name="CameraImageCompressed" type="bool" value="false" />
 
-      <param name="method" type="int" value="$(arg method)"/>
+      <param name="method" type="int" value="$(arg method)" />
 
-      <param name="applyAbsBounding" type="bool" value="$(arg applyAbsBounding)"/>
-      <param name="applyRelBounding" type="bool" value="$(arg applyRelBounding)"/>
+      <param name="applyAbsBounding" type="bool" value="$(arg applyAbsBounding)" />
+      <param name="applyRelBounding" type="bool" value="$(arg applyRelBounding)" />
 
-      <param name="rotation_correction_enable" type="bool" value="$(arg rotation_correction_enable)"/>
-      <param name="tilt_correction_enable" type="bool" value="$(arg tilt_correction_enable)"/>
-      <param name="ang_rate_source" type="string" value="$(arg ang_rate_source)"/>
-      <param name="raw_enable" type="bool" value="$(arg raw_enable)"/>
+      <param name="rotation_correction_enable" type="bool" value="$(arg rotation_correction_enable)" />
+      <param name="tilt_correction_enable" type="bool" value="$(arg tilt_correction_enable)" />
+      <param name="ang_rate_source" type="string" value="$(arg ang_rate_source)" />
+      <param name="raw_enable" type="bool" value="$(arg raw_enable)" />
 
-      <param name="scale_rot_enable" type="bool" value="$(arg scale_rot_enable)"/>
-      <param name="scale_rot_mag" type="double" value="$(arg scale_rot_mag)"/>
-      <param name="scale_rot_output" type="string" value="$(arg scale_rot_output)"/>
-      <param name="d3d_method" type="string" value="$(arg d3d_method)"/>
+      <param name="scale_rot_enable" type="bool" value="$(arg scale_rot_enable)" />
+      <param name="scale_rot_mag" type="double" value="$(arg scale_rot_mag)" />
+      <param name="scale_rot_output" type="string" value="$(arg scale_rot_output)" />
+      <param name="d3d_method" type="string" value="$(arg d3d_method)" />
 
-      <param name="NumberOfBins" type="int" value="$(arg NumberOfBins)"/>
+      <param name="NumberOfBins" type="int" value="$(arg NumberOfBins)" />
 
-      <param name="RansacNumOfChosen" type="int" value="$(arg RansacNumOfChosen)"/>
-      <param name="RansacNumOfIter" type="int" value="$(arg RansacNumOfIter)"/>
-      <param name="RansacThresholdRad" type="double" value="$(arg RansacThresholdRad)"/>
-      <param name="filterMethod" type="string" value="$(arg filterMethod)"/>
+      <param name="RansacNumOfChosen" type="int" value="$(arg RansacNumOfChosen)" />
+      <param name="RansacNumOfIter" type="int" value="$(arg RansacNumOfIter)" />
+      <param name="RansacThresholdRad" type="double" value="$(arg RansacThresholdRad)" />
+      <param name="filterMethod" type="string" value="$(arg filterMethod)" />
 
-      <param name="lastSpeedsSize" type="int" value="$(arg lastSpeedsSize)"/>
-      <param name="analyseDuration" type="double" value="$(arg analyseDuration)"/>
+      <param name="lastSpeedsSize" type="int" value="$(arg lastSpeedsSize)" />
+      <param name="analyseDuration" type="double" value="$(arg analyseDuration)" />
 
-      <param name="storeVideo" type="bool" value="$(arg storeVideo)"/>
-      <param name="videoFPS" type="int" value="$(arg videoFPS)"/>
-      <param name="videoPath" type="string" value="$(arg videoPath)"/>
+      <param name="storeVideo" type="bool" value="$(arg storeVideo)" />
+      <param name="videoFPS" type="int" value="$(arg videoFPS)" />
+      <param name="videoPath" type="string" value="$(arg videoPath)" />
 
-      <param name="maxFPS" type="double" value="$(arg maxFPS)"/>
+      <param name="maxFPS" type="double" value="$(arg maxFPS)" />
 
-      <remap from="odometry" to="mbzirc_odom/new_odom"/>
-      <remap from="camera" to="bluefox2/image_raw"/>
-      <remap from="camera_info" to="bluefox/camera_info"/>
-      <remap from="ranger" to="teraranger/range"/>
-      <remap from="imu" to="mavros/imu/data_raw"/>
+      <remap from="~odometry" to="mrs_odometry_flow/new_odom" />
+      <remap from="~camera" to="bluefox2/image_raw" />
+      <remap from="~camera_info" to="bluefox/camera_info" />
+      <remap from="~ranger" to="teraranger/range" />
+      <remap from="~imu" to="mavros/imu/data_raw" />
 
-      <remap from="velocity" to="~velocity"/>
-      <remap from="velocity_raw" to="~velocity_raw"/>
-      <remap from="velocity_stddev" to="~velocity_stddev"/>
-      <remap from="max_velocity" to="~max_velocity"/>
-      <remap from="tilt_correction" to="~tilt_correction"/>
-      <remap from="allsac_chosen" to="~allsac_chosen"/>
+      <remap from="~velocity" to="~velocity" />
+      <remap from="~velocity_raw" to="~velocity_raw" />
+      <remap from="~velocity_stddev" to="~velocity_stddev" />
+      <remap from="~max_velocity" to="~max_velocity" />
+      <remap from="~tilt_correction" to="~tilt_correction" />
+      <remap from="~allsac_chosen" to="~allsac_chosen" />
 
     </node>
 
   </group>
+
 </launch>

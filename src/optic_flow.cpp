@@ -65,7 +65,6 @@ class OpticFlow
       private_node_handle.param("SamplePointSize", samplePointSize, int(8));
       private_node_handle.param("NumberOfBins", numberOfBins, int(20));
 
-
       private_node_handle.param("StepSize", stepSize, int(0));
 
       private_node_handle.param("gui", gui, bool(false));
@@ -153,7 +152,7 @@ class OpticFlow
         ROS_INFO("Waiting for camera parameters..");
       }
 
-      CamInfoSubscriber = node.subscribe("camera_info",1,&OpticFlow::CameraInfoCallback,this);
+      CamInfoSubscriber = private_node_handle.subscribe("camera_info",1,&OpticFlow::CameraInfoCallback,this);
       gotCamInfo = false;
       negativeCamInfo = false;
       ros::spinOnce();
@@ -232,30 +231,29 @@ class OpticFlow
 
       //image_transport::ImageTransport iTran(node);
 
-      VelocityPublisher = node.advertise<geometry_msgs::Twist>("velocity", 1);
-      VelocitySDPublisher = node.advertise<geometry_msgs::Vector3>("velocity_stddev", 1);
+      VelocityPublisher = private_node_handle.advertise<geometry_msgs::Twist>("velocity", 1);
+      VelocitySDPublisher = private_node_handle.advertise<geometry_msgs::Vector3>("velocity_stddev", 1);
       if(raw_enable){
-        VelocityRawPublisher = node.advertise<geometry_msgs::Twist>("velocity_raw", 1);
+        VelocityRawPublisher = private_node_handle.advertise<geometry_msgs::Twist>("velocity_raw", 1);
       }
-      MaxAllowedVelocityPublisher = node.advertise<std_msgs::Float32>("max_velocity", 1);
+      MaxAllowedVelocityPublisher = private_node_handle.advertise<std_msgs::Float32>("max_velocity", 1);
 
-      TiltCorrectionPublisher = node.advertise<geometry_msgs::Vector3>("tilt_correction", 1); // just for testing
-      AllsacChosenPublisher = node.advertise<geometry_msgs::Vector3>("allsac_chosen", 1); // just for testing
+      TiltCorrectionPublisher = private_node_handle.advertise<geometry_msgs::Vector3>("tilt_correction", 1); // just for testing
+      AllsacChosenPublisher = private_node_handle.advertise<geometry_msgs::Vector3>("allsac_chosen", 1); // just for testing
 
       // Camera info subscriber
 
-      RangeSubscriber = node.subscribe("ranger",1,&OpticFlow::RangeCallback, this);
-      TiltSubscriber = node.subscribe("odometry",1,&OpticFlow::CorrectTilt, this);
-
+      RangeSubscriber = private_node_handle.subscribe("ranger",1,&OpticFlow::RangeCallback, this);
+      TiltSubscriber = private_node_handle.subscribe("odometry", 1, &OpticFlow::CorrectTilt, this);
 
       if (ImgCompressed){
-        ImageSubscriber = node.subscribe("camera", 1, &OpticFlow::ProcessCompressed, this);
+        ImageSubscriber = private_node_handle.subscribe("camera", 1, &OpticFlow::ProcessCompressed, this);
       }else{
-        ImageSubscriber = node.subscribe("camera", 1, &OpticFlow::ProcessRaw, this);
+        ImageSubscriber = private_node_handle.subscribe("camera", 1, &OpticFlow::ProcessRaw, this);
       }
 
       if(ang_rate_source.compare("imu") == 0){
-        ImuSubscriber = node.subscribe("imu",1,&OpticFlow::ImuCallback,this);
+        ImuSubscriber = private_node_handle.subscribe("imu",1,&OpticFlow::ImuCallback,this);
       }else{
         if(ang_rate_source.compare("odometry") != 0){
           ROS_ERROR("Wrong parameter ang_rate_source - possible choices: imu, odometry. Entered: %s",ang_rate_source.c_str());
@@ -291,6 +289,9 @@ class OpticFlow
     }
 
     void CorrectTilt(const nav_msgs::Odometry odom_msg){
+
+      ROS_INFO_THROTTLE(1.0, "Dostaveme odometrii");
+
       //roll_old = roll; pitch_old = pitch; yaw_old = yaw;
       //ypr_old_time = ypr_time;
 
