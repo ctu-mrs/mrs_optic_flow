@@ -4,8 +4,8 @@
   branch = master
 [submodule "ros_nodes/nmea_navsat_driver"]
 	path = pes/ros_nodes/nmea_navsat_driver
-  url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
-  branch = indigo-branch
+  url = git@192.168.0.107:uav/nmea_navsat_driver.git
+  branch = master
 [submodule "ros_nodes/camera_base"]
 	path = pes/ros_nodes/camera_base
   url = https://github.com/KumarRobotics/camera_base
