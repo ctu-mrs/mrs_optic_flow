@@ -22,3 +22,9 @@
 	path = pes/ros_nodes/gazebo_ros_link_attacher
   url = git@mrs.felk.cvut.cz:uav/gazebo_ros_link_attacher.git
   branch = master
+[submodule "ros_nodes/mrs_multimaster"]
+	path = pes/ros_nodes/mrs_multimaster
+	url = git@mrs.felk.cvut.cz:uav/mrs_multimaster.git
+[submodule "ros_nodes/nimbro_network"]
+	path = pes/ros_nodes/nimbro_network
+	url = git@mrs.felk.cvut.cz:uav/nimbro_network.git
