@@ -1,30 +1,30 @@
-[submodule "ros_nodes/bluefox2"]
-	path = pes/ros_nodes/bluefox2
+[submodule "ros_packages/bluefox2"]
+	path = pes/ros_packages/bluefox2
   url = git@mrs.felk.cvut.cz:uav/bluefox2.git
   branch = master
-[submodule "ros_nodes/nmea_navsat_driver"]
-	path = pes/ros_nodes/nmea_navsat_driver
+[submodule "ros_packages/nmea_navsat_driver"]
+	path = pes/ros_packages/nmea_navsat_driver
   url = git@mrs.felk.cvut.cz:uav/nmea_navsat_driver.git
   branch = master
-[submodule "ros_nodes/camera_base"]
-	path = pes/ros_nodes/camera_base
+[submodule "ros_packages/camera_base"]
+	path = pes/ros_packages/camera_base
   url = https://github.com/KumarRobotics/camera_base
   branch = master
-[submodule "ros_nodes/usb_cam"]
-	path = pes/ros_nodes/usb_cam
+[submodule "ros_packages/usb_cam"]
+	path = pes/ros_packages/usb_cam
   url = https://github.com/bosch-ros-pkg/usb_cam
   branch = master
-[submodule "ros_nodes/terarangerone-ros"]
-	path = pes/ros_nodes/terarangerone-ros
+[submodule "ros_packages/terarangerone-ros"]
+	path = pes/ros_packages/terarangerone-ros
   url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
   branch = master
-[submodule "ros_nodes/gazebo_ros_link_attacher"]
-	path = pes/ros_nodes/gazebo_ros_link_attacher
+[submodule "ros_packages/gazebo_ros_link_attacher"]
+	path = pes/ros_packages/gazebo_ros_link_attacher
   url = git@mrs.felk.cvut.cz:uav/gazebo_ros_link_attacher.git
   branch = master
-[submodule "ros_nodes/mrs_multimaster"]
-	path = pes/ros_nodes/mrs_multimaster
+[submodule "ros_packages/mrs_multimaster"]
+	path = pes/ros_packages/mrs_multimaster
 	url = git@mrs.felk.cvut.cz:uav/mrs_multimaster.git
-[submodule "ros_nodes/nimbro_network"]
-	path = pes/ros_nodes/nimbro_network
+[submodule "ros_packages/nimbro_network"]
+	path = pes/ros_packages/nimbro_network
 	url = git@mrs.felk.cvut.cz:uav/nimbro_network.git
