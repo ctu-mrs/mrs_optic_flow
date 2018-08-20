@@ -50,11 +50,11 @@
     <arg name="view" default="false" />
     <arg name="calib" default="false" />
 
-    <node name="optic_flow" pkg="optic_flow" type="optic_flow_node" output="screen" >
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone optic_flow/OpticFlow" output="screen" >
 
       <rosparam file="$(find optic_flow)/yaml/physical_constraints.yaml" />
 
-      <!-- File with camera parameters - loaded when nothing found on Camera info --> 
+      <!-- File with camera parameters - loaded when nothing found on Camera info -->
       <rosparam file="$(find optic_flow)/yaml/bluefox_uav5_as_of_26-4.yaml" />
 
       <param name="DEBUG" type="bool" value="$(arg DEBUG)" />

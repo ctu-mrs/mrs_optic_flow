@@ -10,9 +10,10 @@ FILE(GLOB_RECURSE YAML_FILES include *.yaml)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  nodelet
   cv_bridge
   image_transport
-  roscpp
   sensor_msgs
   std_msgs
   tf
@@ -35,10 +36,11 @@ find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME} block_method fft_method # fastSpaced_method
+  LIBRARIES block_method fft_method # fastSpaced_method
   CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
   #  DEPENDS system_lib
   DEPENDS Eigen
+  LIBRARIES OpticFlow
   )
 
 ###########
@@ -52,8 +54,8 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
-  #  ${OpenCL_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  #  ${OpenCL_INCLUDE_DIRS}
   )
 
 ## Declare a C++ library
@@ -69,11 +71,14 @@ target_link_libraries(scaleRotationEstimator ${OpenCV_LIBRARIES})
 #target_link_libraries(fastSpacedOCL_method ${OpenCV_LIBRARIES} ${OpenCL_LIBRARIES} ${catkin_LIBRARIES})
 
 ## Declare a C++ executable
-add_executable(optic_flow_node src/optic_flow.cpp)
+add_library(OpticFlow src/optic_flow.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(optic_flow_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(OpticFlow
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+  ${catkin_EXPORTED_TARGETS}
+  )
 
 add_custom_target(headers SOURCES ${HEADER_FILES} ${OPENCL_FILES} ${LAUNCHER_FILES} ${YAML_FILES})
 #configure_file(src/FastSpacedBMMethod.cl ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/FastSpacedBMMethod.cl COPYONLY)
@@ -81,11 +86,10 @@ add_custom_target(headers SOURCES ${HEADER_FILES} ${OPENCL_FILES} ${LAUNCHER_FIL
 #target_link_libraries(fastSpaced_method fsbmof)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(optic_flow_node
+target_link_libraries(OpticFlow
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${Eigen_LIBRARIES}
-
   block_method
   fft_method
   # fastSpacedOCL_method
