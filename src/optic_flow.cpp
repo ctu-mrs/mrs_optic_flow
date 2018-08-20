@@ -29,6 +29,7 @@ using namespace std;
 #include "optic_flow/scaleRotationEstimator.h"
 
 #ifdef OPENCL_ENABLE
+
 #include "optic_flow/FastSpacedBMMethod_OCL.h"
 #include "optic_flow/FastSpacedBMOptFlow.h"
 #include <opencv2/gpu/gpu.hpp>
@@ -44,11 +45,12 @@ struct PointValue
 
 class OpticFlow {
 public:
+
   OpticFlow(ros::NodeHandle& node) {
+
     first = true;
 
     // LOAD PARAMETERS
-
     ros::NodeHandle private_node_handle("~");
     private_node_handle.param("DEBUG", DEBUG, bool(false));
 
@@ -301,7 +303,6 @@ private:
     odomSpeedTime = ros::Time::now();
   }
 
-
   void ProcessCompressed(const sensor_msgs::CompressedImageConstPtr& image_msg) {
     ros::Time nowTime = image_msg->header.stamp;
 
@@ -311,7 +312,6 @@ private:
       }
       return;
     }
-
 
     dur   = nowTime - begin;
     begin = nowTime;
@@ -360,7 +360,6 @@ private:
     image = cv_bridge::toCvCopy(image_msg, enc::BGR8);
     Process(image);
   }
-
 
   void CameraInfoCallback(const sensor_msgs::CameraInfo cam_info) {
     // TODO: deal with binning
@@ -422,7 +421,6 @@ private:
     }
 
     // Frequency control
-
     // Scaling
     if (ScaleFactor != 1) {
       cv::resize(image->image, imOrigScaled, cv::Size(image->image.size().width / ScaleFactor, image->image.size().height / ScaleFactor));
@@ -755,6 +753,7 @@ private:
   }
 
 private:
+
   bool first;
 
   ros::Time RangeRecTime;
@@ -836,7 +835,6 @@ private:
   std::string             d3d_method;
 
   // Ranger & odom vars
-
   double trueRange;
 
   double max_freq;
@@ -861,10 +859,12 @@ private:
 };
 
 int main(int argc, char** argv) {
+
   ros::init(argc, argv, "optic_flow");
   ros::NodeHandle nodeA;
 
   OpticFlow of(nodeA);
   ros::spin();
+
   return 0;
 }

@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
-)
+  )
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -fno-diagnostics-color")
 
@@ -26,46 +26,20 @@ set(Eigen_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS})
 set(Eigen_LIBRARIES ${Eigen_LIBRARIES})
 
 find_package(OpenCV REQUIRED)
-#find_package(OpenCL REQUIRED)
-#message("${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   cross_pos.msg
-# )
-
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
-
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+# find_package(OpenCL REQUIRED)
+# message("${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
 
 ###################################
 ## catkin specific configuration ##
 ###################################
 
 catkin_package(
-   INCLUDE_DIRS include
-   LIBRARIES ${PROJECT_NAME} block_method fft_method # fastSpaced_method
-   CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
-#  DEPENDS system_lib
-   DEPENDS Eigen
-)
-
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME} block_method fft_method # fastSpaced_method
+  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
+  #  DEPENDS system_lib
+  DEPENDS Eigen
+  )
 
 ###########
 ## Build ##
@@ -78,29 +52,24 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
-#  ${OpenCL_INCLUDE_DIRS}
+  #  ${OpenCL_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
-)
+  )
 
 ## Declare a C++ library
-
-
-
 add_library(util_functions src/utilityFunctions.cpp)
-
 add_library(block_method src/BlockMethod.cpp)
 add_library(fft_method src/FftMethod.cpp)
-#add_library(fastSpacedOCL_method src/FastSpacedBMMethod_OCL.cpp)
 add_library(scaleRotationEstimator src/scaleRotationEstimator.cpp)
+#add_library(fastSpacedOCL_method src/FastSpacedBMMethod_OCL.cpp)
 
 target_link_libraries(fft_method ${OpenCV_LIBRARIES})
 target_link_libraries(block_method ${OpenCV_LIBRARIES})
-#target_link_libraries(fastSpacedOCL_method ${OpenCV_LIBRARIES} ${OpenCL_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries(scaleRotationEstimator ${OpenCV_LIBRARIES})
+#target_link_libraries(fastSpacedOCL_method ${OpenCV_LIBRARIES} ${OpenCL_LIBRARIES} ${catkin_LIBRARIES})
 
 ## Declare a C++ executable
 add_executable(optic_flow_node src/optic_flow.cpp)
-
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -113,14 +82,13 @@ add_custom_target(headers SOURCES ${HEADER_FILES} ${OPENCL_FILES} ${LAUNCHER_FIL
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(optic_flow_node
-   ${catkin_LIBRARIES}
-   ${OpenCV_LIBRARIES}
-   ${Eigen_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${Eigen_LIBRARIES}
 
-    block_method
-    fft_method
-#    fastSpacedOCL_method
-    util_functions
-    scaleRotationEstimator
-)
-
+  block_method
+  fft_method
+  # fastSpacedOCL_method
+  util_functions
+  scaleRotationEstimator
+  )
