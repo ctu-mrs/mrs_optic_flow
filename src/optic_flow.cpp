@@ -162,7 +162,7 @@ private:
   bool applyAbsBounding;
   bool applyRelBounding;
 
-  cv::Point3d angVel;
+  cv::Point3d angular_velocity;
 
   cv::Point2f odomSpeed;
   ros::Time   odomSpeedTime;
@@ -307,7 +307,8 @@ void OpticFlow::onInit() {
   }
 
   if (!gotCamInfo || negativeCamInfo) {
-    ROS_WARN("[OpticFlow]: Optic Flow missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loaded default parameters");
+    ROS_WARN(
+        "[OpticFlow]: Optic Flow missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loaded default parameters");
     std::vector<double> camMat;
     nh_.getParam("camera_matrix/data", camMat);
     fx = camMat[0];
@@ -344,7 +345,6 @@ void OpticFlow::onInit() {
       break;
     }
 #endif
-
   }
 
   imPrev = cv::Mat(frameSize, frameSize, CV_8UC1);
@@ -429,7 +429,7 @@ void OpticFlow::callbackImu(const sensor_msgs::Imu imu_msg) {
 
   // angular rate source is imu aka gyro
   if (ang_rate_source.compare("imu") == 0) {
-    angVel = cv::Point3d(imu_msg.angular_velocity.x, imu_msg.angular_velocity.y, imu_msg.angular_velocity.z);
+    angular_velocity = cv::Point3d(imu_msg.angular_velocity.x, imu_msg.angular_velocity.y, imu_msg.angular_velocity.z);
   }
 }
 
@@ -454,7 +454,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::Odometry odom_msg) {
 
   // angular rate source is odometry
   if (ang_rate_source.compare("odometry") == 0) {
-    angVel = cv::Point3d(odom_msg.twist.twist.angular.x, odom_msg.twist.twist.angular.y, odom_msg.twist.twist.angular.z);
+    angular_velocity = cv::Point3d(odom_msg.twist.twist.angular.x, odom_msg.twist.twist.angular.y, odom_msg.twist.twist.angular.z);
   }
 
   odomSpeed     = cv::Point2f(odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y);
@@ -473,33 +473,37 @@ void OpticFlow::callbackImageCompressed(const sensor_msgs::CompressedImageConstP
   ros::Time nowTime = image_msg->header.stamp;
 
   if (!first && (nowTime - begin).toSec() < 1 / max_freq) {
+
     if (DEBUG) {
       ROS_INFO("[OpticFlow]: MAX frequency overrun (%f). Skipping...", (nowTime - begin).toSec());
     }
+
     return;
   }
 
   dur   = nowTime - begin;
   begin = nowTime;
+
   if (DEBUG) {
     ROS_INFO("[OpticFlow]: freq = %fHz", 1.0 / dur.toSec());
   }
 
-  /*        double odom_time_diff = image_msg->header.stamp.toSec() - ypr_time;
-            double odom_period = ypr_time - ypr_old_time;
+  /* double odom_time_diff = image_msg->header.stamp.toSec() - ypr_time; */
+  /* double odom_period    = ypr_time - ypr_old_time; */
 
-            double yaw_curr = odom_time_diff*((yaw - yaw_old)/(odom_period)) + yaw;
-            yaw_dif = yaw_curr - yaw_im_old;
-            yaw_im_old = yaw_curr;
+  /* double yaw_curr = odom_time_diff * ((yaw - yaw_old) / (odom_period)) + yaw; */
+  /* yaw_dif         = yaw_curr - yaw_im_old; */
+  /* yaw_im_old      = yaw_curr; */
 
-            double pitch_curr = odom_time_diff*((pitch - pitch_old)/(odom_period)) + pitch;
-            pitch_dif = pitch_curr - pitch_im_old;
-            ROS_INFO("[OpticFlow]: Pitch odom: %f pitch extra: %f pitch diff %f time diff: %f odom extra time: %f",yaw,yaw_curr,pitch_dif,odom_time_diff, odom_period);
-            pitch_im_old = pitch_curr;
+  /* double pitch_curr = odom_time_diff * ((pitch - pitch_old) / (odom_period)) + pitch; */
+  /* pitch_dif         = pitch_curr - pitch_im_old; */
+  /* ROS_INFO("[OpticFlow]: Pitch odom: %f pitch extra: %f pitch diff %f time diff: %f odom extra time: %f", yaw, yaw_curr, pitch_dif, odom_time_diff, */
+  /*          odom_period); */
+  /* pitch_im_old = pitch_curr; */
 
-            double roll_curr = odom_time_diff*((roll - roll_old)/(odom_period)) + roll;
-            roll_dif = roll_curr - roll_im_old;
-            roll_im_old = roll_curr;*/
+  /* double roll_curr = odom_time_diff * ((roll - roll_old) / (odom_period)) + roll; */
+  /* roll_dif         = roll_curr - roll_im_old; */
+  /* roll_im_old      = roll_curr; */
 
   cv_bridge::CvImagePtr image;
   image = cv_bridge::toCvCopy(image_msg, enc::BGR8);
@@ -546,14 +550,19 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfo cam_info) {
 
   // TODO: deal with binning
   gotCamInfo = true;
+
   if (cam_info.binning_x != 0) {
     ROS_WARN("[OpticFlow]: TODO : deal with binning when loading camera parameters.");
   }
+
   // check if the matricies have any data
   if (cam_info.K.size() < 6 || cam_info.D.size() < 5) {
+
     ROS_WARN("[OpticFlow]: Camera info has wrong calibration matricies.");
     negativeCamInfo = true;
+
   } else {
+
     fx = cam_info.K.at(0);
     fy = cam_info.K.at(4);
     cx = cam_info.K.at(2);
@@ -583,21 +592,20 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // First things first
   if (first) {
-    /* not needed, because we are subscribed to camera_info topic
-       if (ScaleFactor == 1)
-       {
-       int parameScale = image->image.cols/expectedWidth;
-       fx = fx*parameScale;
-       cx = cx*parameScale;
-       fy = fy*parameScale;
-       cy = cy*parameScale;
-       k1 = k1*parameScale;
-       k2 = k2*parameScale;
-       k3 = k3*parameScale;
-       p1 = p1*parameScale;
-       p2 = p2*parameScale;
 
-       }*/
+    // not needed, because we are subscribed to camera_info topic
+    /* if (ScaleFactor == 1) { */
+    /*   int parameScale = image->image.cols / expectedWidth; */
+    /*   fx              = fx * parameScale; */
+    /*   cx              = cx * parameScale; */
+    /*   fy              = fy * parameScale; */
+    /*   cy              = cy * parameScale; */
+    /*   k1              = k1 * parameScale; */
+    /*   k2              = k2 * parameScale; */
+    /*   k3              = k3 * parameScale; */
+    /*   p1              = p1 * parameScale; */
+    /*   p2              = p2 * parameScale; */
+    /* } */
 
     ROS_INFO("[OpticFlow]: Source img: %dx%d", image->image.cols, image->image.rows);
     ROS_INFO("[OpticFlow]: Camera params: fx: %f, fy: %f \t cx: %f, cy: %f \t k1: %f, k2: %f \t p1: %f, p2: %f, p3: %f", fx, fy, cx, cy, k1, k2, p1, p2, k3);
@@ -631,24 +639,28 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // Calculate angular rate correction
   cv::Point2d tiltCorr = cv::Point2d(0, 0);
-  if (tilt_correction_enable) {
-    // do tilt correction (in pixels)
-    tiltCorr.x = -angVel.x * fx * dur.toSec();  // version 4
-    tiltCorr.y = angVel.y * fy * dur.toSec();
 
-    // double xTiltCorr =  - fx * sqrt(2 - 2*cos(angVel.x * dur.toSec())) * angVel.x/abs(angVel.x); // version 5
-    // double yTiltCorr =  fy * sqrt(2 - 2*cos(angVel.y * dur.toSec())) * angVel.y/abs(angVel.y);
+  if (tilt_correction_enable) {
+
+    // do tilt correction (in pixels)
+    tiltCorr.x = -angular_velocity.x * fx * dur.toSec();  // version 4
+    tiltCorr.y = angular_velocity.y * fy * dur.toSec();
+
+    // double xTiltCorr =  - fx * sqrt(2 - 2*cos(angular_velocity.x * dur.toSec())) * angular_velocity.x/abs(angular_velocity.x); // version 5
+    // double yTiltCorr =  fy * sqrt(2 - 2*cos(angular_velocity.y * dur.toSec())) * angular_velocity.y/abs(angular_velocity.y);
 
     geometry_msgs::Vector3 tiltCorrOut;
-    tiltCorrOut.x = tiltCorr.x;  //(tan(angVel.y*dur.toSec())*trueRange)/dur.toSec();
-    tiltCorrOut.y = tiltCorr.y;  //(tan(angVel.x*dur.toSec())*trueRange)/dur.toSec();
+    tiltCorrOut.x = tiltCorr.x;  // (tan(angular_velocity.y*dur.toSec())*trueRange)/dur.toSec();
+    tiltCorrOut.y = tiltCorr.y;  // (tan(angular_velocity.x*dur.toSec())*trueRange)/dur.toSec();
     tiltCorrOut.z = 0;
     TiltCorrectionPublisher.publish(tiltCorrOut);
   }
 
   // Estimate scale and rotation (if enabled)
   cv::Point2d scaleRot = cv::Point2d(0, 0);
+
   if (scaleRot_enable && d3d_method.compare("logpol") == 0) {
+
     scaleRot = srEstimator->processImage(imCurr, gui, DEBUG);
     scaleRot.y /= dur.toSec();
 
@@ -668,13 +680,16 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     t12 = t23;*/
 
     if (scale_rot_output.compare("altitude") == 0) {
+
       // Altitude from velocity
+
       if (abs(scaleRot.x - 1) > 0.01) {
         scaleRot.x = 0;  //(Zvelocity*dur.toSec())/(scaleRot.x - 1);
       } else {
         // ROS_INFO("[OpticFlow]: Scale too small: %f",scaleRot.x);
         scaleRot.x = 0;
       }
+
     } else {
       // Velocity from altitude
       scaleRot.x = ((scaleRot.x - 1) / trueRange) / dur.toSec();
@@ -682,7 +697,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   }
 
   // Call the method function
-  std::vector<cv::Point2f> speeds = processClass->processImage(imCurr, gui, DEBUG, midPoint, angVel.z * dur.toSec(), tiltCorr);
+  std::vector<cv::Point2f> speeds = processClass->processImage(imCurr, gui, DEBUG, midPoint, angular_velocity.z * dur.toSec(), tiltCorr);
 
   // Check for wrong values
   /*speeds = removeNanPoints(speeds);
@@ -693,6 +708,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // RAW velocity without tilt corrections
   if (raw_enable) {
+
     if (method == 4 && (speeds.size() % 2 != 0)) {
       ROS_WARN("[OpticFlow]: Raw enabled and the processing function returned odd number of points. If this is not normal, disable raw veolcity.");
       return;
@@ -745,8 +761,6 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
     VelocityRawPublisher.publish(velocity);
   }
-
-  // Continuing after a brief intermission...
 
   // tilt correction! (FFT has it inside the processing function...)
   if (tilt_correction_enable && method != 4) {
@@ -861,8 +875,8 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
       if (silent_debug) {
         for (uint i = 0; i < bck_speeds.size(); i++) {
-          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: %d -> vx = %f; vy=%f; v=%f; dist from odom=%f", i, bck_speeds[i].x, bck_speeds[i].y, sqrt(getNormSq(bck_speeds[i])),
-                            sqrt(getDistSq(bck_speeds[i], odomSpeed)));
+          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: %d -> vx = %f; vy=%f; v=%f; dist from odom=%f", i, bck_speeds[i].x, bck_speeds[i].y,
+                            sqrt(getNormSq(bck_speeds[i])), sqrt(getDistSq(bck_speeds[i], odomSpeed)));
         }
         ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Absolute max: %f, Odometry: vx = %f, vy = %f, v = %f, Max odom distance: %f", maxSpeed, odomSpeed.x, odomSpeed.y,
                           sqrt(getNormSq(odomSpeed)), max_sp_dif_from_accel);
