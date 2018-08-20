@@ -54,7 +54,7 @@ struct PointValue
 class OpticFlow : public nodelet::Nodelet {
 
 public:
-  virtual void onInit();
+  virtual void    onInit();
   ros::NodeHandle nh_;
 
 private:
@@ -66,7 +66,6 @@ private:
   void callbackCameraInfo(const sensor_msgs::CameraInfo cam_info);
 
 private:
-
   void processImage(const cv_bridge::CvImagePtr image);
 
 private:
@@ -212,13 +211,16 @@ void OpticFlow::onInit() {
   nh_.param("applyRelBounding", applyRelBounding, bool(false));
 
   bool ImgCompressed;
+
   nh_.param("CameraImageCompressed", ImgCompressed, bool(false));
 
   nh_.param("ScaleFactor", ScaleFactor, int(1));
 
   nh_.param("RansacNumOfChosen", RansacNumOfChosen, int(2));
   nh_.param("RansacNumOfIter", RansacNumOfIter, int(5));
+
   float RansacThresholdRad;
+
   nh_.param("RansacThresholdRad", RansacThresholdRad, float(4));
   RansacThresholdRadSq = pow(RansacThresholdRad, 2);
 
@@ -254,7 +256,6 @@ void OpticFlow::onInit() {
 
   int videoFPS;
   nh_.param("videoFPS", videoFPS, int(30));
-
 
   if (filterMethod.compare("ransac") && RansacNumOfChosen != 2) {
     ROS_WARN("When Allsac is enabled, the RansacNumOfChosen can be only 2.");
@@ -335,6 +336,7 @@ void OpticFlow::onInit() {
                                    &videoPath, videoFPS);
       break;
     }
+
 #ifdef OPENCL_ENABLE
     case 5: {
 
@@ -342,6 +344,7 @@ void OpticFlow::onInit() {
       break;
     }
 #endif
+
   }
 
   imPrev = cv::Mat(frameSize, frameSize, CV_8UC1);
@@ -362,9 +365,8 @@ void OpticFlow::onInit() {
     srEstimator         = new scaleRotationEstimator(frameSize, scaleRot_mag, storeVideo, &sr_name, videoFPS);
   }
 
-
   // image_transport::ImageTransport iTran(node);
-
+  //
   VelocityPublisher   = nh_.advertise<geometry_msgs::TwistStamped>("velocity", 1);
   VelocitySDPublisher = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev", 1);
   if (raw_enable) {
@@ -843,10 +845,13 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     }
   }
   if (applyRelBounding) {
+
     speeds = getOnlyInRadiusFromTruth(odomSpeed, speeds, max_sp_dif_from_accel);
+
     if (silent_debug) {
       af_acc = speeds.size();
     }
+
     if (DEBUG) {
       ROS_INFO_THROTTLE(0.1, "Speeds after acceleration bound #%lu, max speed from acc: %f", speeds.size(), max_sp_dif_from_accel);
     }
@@ -863,8 +868,10 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
                           sqrt(getNormSq(odomSpeed)), max_sp_dif_from_accel);
         ROS_INFO_THROTTLE(0.1, "After absoulute bound: #%d, after accel: #%d", af_abs, af_acc);
       }
+
       return;
     }
+
   } else if (DEBUG) {
     ROS_INFO_THROTTLE(0.1, "Bounding of speeds not enabled.");
   }
@@ -891,7 +898,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   vxm = out.x;
   vym = out.y;
 
-  // Publish it mrkev
+  // | -------------------- publish velocity -------------------- |
   geometry_msgs::TwistStamped velocity;
 
   velocity.header.frame_id = "local_origin";
@@ -902,7 +909,6 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   velocity.twist.linear.z  = scaleRot.x;
   velocity.twist.angular.z = -scaleRot.y;
 
-  // Print out info
   if (DEBUG) {
     ROS_INFO_THROTTLE(0.1, "vxm = %f; vym=%f; vam=%f; range=%f; yaw=%f", vxm, vym, vam, trueRange, yaw);
   }

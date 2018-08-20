@@ -9,26 +9,27 @@
 #include <cmath>
 #include <image_transport/image_transport.h>
 
-class scaleRotationEstimator
-{
+class scaleRotationEstimator {
+
 public:
-    scaleRotationEstimator(int resolution, double m,bool i_storeVideo,std::string *videoPath,int videoFPS); // accepts only rectangular images
-    cv::Point2d processImage(cv::Mat imCurr,bool gui,bool debug);
+  scaleRotationEstimator(int resolution, double m, bool i_storeVideo, std::string *videoPath, int videoFPS);  // accepts only rectangular images
+  cv::Point2d processImage(cv::Mat imCurr, bool gui, bool debug);
+
 private:
-    cv::Mat prevIm_F32;
-    cv::Mat tempIm;
-    cv::Mat tempIm_F32;
-    cv::Point2f center;
-    double optimM, Ky;
-    bool first;
-    IplImage ipl_ta,ipl_tb;
-    bool storeVideo;
+  cv::Mat     prevIm_F32;
+  cv::Mat     tempIm;
+  cv::Mat     tempIm_F32;
+  cv::Point2f center;
+  double      optimM, Ky;
+  bool        first;
+  IplImage    ipl_ta, ipl_tb;
+  bool        storeVideo;
 
-    cv::VideoWriter outputVideo;
+  cv::VideoWriter outputVideo;
 
-    cv::Mat magLL_prev;
-    cv::Mat magLL;
-    int resolution;
+  cv::Mat magLL_prev;
+  cv::Mat magLL;
+  int     resolution;
 };
 
-#endif // SCALEROTATIONESTIMATOR_H
+#endif  // SCALEROTATIONESTIMATOR_H
