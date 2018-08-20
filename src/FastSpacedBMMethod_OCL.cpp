@@ -1,7 +1,6 @@
 #include "../include/optic_flow/FastSpacedBMMethod_OCL.h"
 #include <ostream>
 #include <dirent.h>
-#include "ros/package.h"
 
 FastSpacedBMMethod::FastSpacedBMMethod(int i_samplePointSize, int i_scanRadius, int i_stepSize, int i_cx, int i_cy, int i_fx, int i_fy, int i_k1, int i_k2,
                                        int i_k3, int i_p1, int i_p2, bool i_storeVideo, std::string *videoPath) {
@@ -19,12 +18,11 @@ FastSpacedBMMethod::FastSpacedBMMethod(int i_samplePointSize, int i_scanRadius, 
   p1              = i_p1;
   p2              = i_p2;
 
-
   storeVideo = i_storeVideo;
   if (storeVideo) {
     outputVideo.open(*videoPath, CV_FOURCC('M', 'P', 'E', 'G'), 30, cv::Size(240, 240), false);
     if (!outputVideo.isOpened())
-      ROS_ERROR("Could not open output video file: %s", videoPath->c_str());
+      ROS_ERROR("[OpticFlow]: Could not open output video file: %s", videoPath->c_str());
   }
 
   cv::ocl::DevicesInfo devsInfo;
@@ -38,19 +36,19 @@ FastSpacedBMMethod::FastSpacedBMMethod(int i_samplePointSize, int i_scanRadius, 
   }
   cv::ocl::setDevice(devsInfo[0]);
   int max_wg_size = (cv::ocl::Context::getContext()->getDeviceInfo().maxWorkGroupSize);
-  ROS_INFO("Max wg size: %d", max_wg_size);
+  ROS_INFO("[OpticFlow]: Max wg size: %d", max_wg_size);
 
   int viableSD = floor(sqrt(max_wg_size));
   int viableSR = ((viableSD % 2) == 1) ? ((viableSD - 1) / 2) : ((viableSD - 2) / 2);
 
   scanBlock = (scanRadius <= viableSR ? (2 * scanRadius + 1) : viableSD);
-  ROS_INFO("Using scaning block of %d.", scanBlock);
+  ROS_INFO("[OpticFlow]: Using scaning block of %d.", scanBlock);
   if (scanRadius > viableSR)
-    ROS_INFO("This will require repetitions within threads.");
+    ROS_INFO("[OpticFlow]: This will require repetitions within threads.");
 
   FILE * program_handle;
   size_t program_size;
-  // ROS_INFO((ros::package::getPath("optic_flow")+"/src/FastSpacedBMMethod.cl").c_str());
+  // ROS_INFO((ros::package::getPath("[OpticFlow]: optic_flow")+"/src/FastSpacedBMMethod.cl").c_str());
   program_handle = fopen((ros::package::getPath("optic_flow") + "/src/FastSpacedBMMethod.cl").c_str(), "r");
   if (program_handle == NULL) {
     std::cout << "Couldn't find the program file" << std::endl;
@@ -66,7 +64,7 @@ FastSpacedBMMethod::FastSpacedBMMethod(int i_samplePointSize, int i_scanRadius, 
 
   program     = new cv::ocl::ProgramSource("OptFlow", kernelSource);
   initialized = true;
-  ROS_INFO("OCL context initialized.");
+  ROS_INFO("[OpticFlow]: OCL context initialized.");
   return;
 }
 
@@ -207,7 +205,7 @@ void FastSpacedBMMethod::drawOpticalFlow(const cv::Mat_<signed char> &flowx, con
   for (int y = 0; y < flowx.rows; y++) {
     for (int x = 0; x < flowx.cols; x++) {
       if ((abs(flowx(y, x)) > scanRadius) || (abs(flowy(y, x)) > scanRadius)) {
-        // ROS_WARN("Flow out of bounds: X:%d, Y:%d",flowx(y, x),flowy(y, x));
+        // ROS_WARN("[OpticFlow]: Flow out of bounds: X:%d, Y:%d",flowx(y, x),flowy(y, x));
         // continue;
       }
       cv::Point2i startPos(x * (step + samplePointSize) + samplePointSize / 2 + scanRadius * 2,

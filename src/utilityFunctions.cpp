@@ -356,14 +356,14 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
   t_est.push_back(r5);
 
 
-  /*ROS_INFO("Translation estimates");
+  /*ROS_INFO("[OpticFlow]: Translation estimates");
   for(int i = 0;i < t_est.size();i++){
-      ROS_INFO("%f %f",t_est[i].x,t_est[i].y);
+      ROS_INFO("[OpticFlow]: %f %f",t_est[i].x,t_est[i].y);
   }*/
 
   // allsac_radius /=  range/(fx*duration); // recalc allsac radius to pixels
 
-  // ROS_INFO_THROTTLE(0.5,"Allsac radius: %f px.",allsac_radius);
+  // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Allsac radius: %f px.",allsac_radius);
   t_est = removeNanPoints(t_est);
 
   multiplyAllPts(t_est, range / (fx * duration), range / (fy * duration));
@@ -372,12 +372,12 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
 
   cv::Point2f tr = allsacMean(t_est, allsac_radiusSQ, &ch);
 
-  // ROS_INFO_THROTTLE(0.5,"Translation est %f,%f m/s - chosen: %d",tr.x,tr.y,ch);
+  // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Translation est %f,%f m/s - chosen: %d",tr.x,tr.y,ch);
 
   tr.x *= (fx * duration) / range;
   tr.y *= -(fy * duration) / range;
 
-  // ROS_INFO_THROTTLE(0.5,"Translation est %f,%f px - chosen: %d",tr.x,tr.y,ch);
+  // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Translation est %f,%f px - chosen: %d",tr.x,tr.y,ch);
 
   ret.push_back(tr);
 
@@ -395,7 +395,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
   r8 -= tr;
   r9 -= tr;
 
-  // ROS_INFO("Vectors: \n(%f,%f) , (%f,%f) , (%f,%f)\n(%f,%f) , (%f,%f) , (%f,%f)\n(%f,%f) , (%f,%f) , (%f,%f)\n",
+  // ROS_INFO("[OpticFlow]: Vectors: \n(%f,%f) , (%f,%f) , (%f,%f)\n(%f,%f) , (%f,%f) , (%f,%f)\n(%f,%f) , (%f,%f) , (%f,%f)\n",
   // r1.x,r1.y,r2.x,r2.y,r3.x,r3.y,r4.x,r4.y,r5.x,r5.y,r6.x,r6.y,r7.x,r7.y,r8.x,r8.y,r9.x,r9.y);
 
   r_est.push_back((r1.y + r1.x) / 2);  // diagonal vectors
@@ -422,9 +422,9 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
   r_est.push_back(-r8.x);
   s_est.push_back(-r8.y);
 
-  /*ROS_INFO("Rotation and scale estimates");
+  /*ROS_INFO("[OpticFlow]: Rotation and scale estimates");
   for(int i = 0;i < r_est.size();i++){
-      ROS_INFO("%f %f",r_est[i],s_est[i]);
+      ROS_INFO("[OpticFlow]: %f %f",r_est[i],s_est[i]);
   }*/
 
   r_est = removeNanPoints(r_est);
@@ -441,7 +441,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
   }
   rot /= ((double)r_est.size());
 
-  // ROS_INFO_THROTTLE(0.5,"Rotation est %f px - chosen: %d",rot,ch);
+  // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Rotation est %f px - chosen: %d",rot,ch);
 
   // Vertical speed
   multiplyAllPts(s_est, range / (duration * a));  // recalc to m/s
@@ -454,9 +454,9 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
   }
   vert /= ((double)s_est.size());
 
-  /*ROS_INFO("Rotation and scale estimates after");
+  /*ROS_INFO("[OpticFlow]: Rotation and scale estimates after");
   for(int i = 0;i < r_est.size();i++){
-      ROS_INFO("%f %f",r_est[i],s_est[i]);
+      ROS_INFO("[OpticFlow]: %f %f",r_est[i],s_est[i]);
   }*/
 
 
@@ -468,7 +468,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
     vert = nan("");
   }
 
-  // ROS_INFO_THROTTLE(0.5,"Rot est %f rad/s, VVel est %f m/s",rot,vert);
+  // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Rot est %f rad/s, VVel est %f m/s",rot,vert);
 
   ret.push_back(cv::Point2f(rot, vert));
   return ret;

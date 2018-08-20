@@ -9,14 +9,13 @@ scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVi
   if (storeVideo) {
     outputVideo.open(*videoPath, CV_FOURCC('M', 'P', 'E', 'G'), videoFPS, cv::Size(resolution, resolution), false);
     if (!outputVideo.isOpened())
-      ROS_ERROR("Could not open output video file: %s", videoPath->c_str());
+      ROS_ERROR("[OpticFlow]: Could not open output video file: %s", videoPath->c_str());
   }
-
 
   // assuming image resoultion is square
   // optimM = ((double)resolution) / (log((double)resolution)/log(M_E));
   optimM = m;
-  ROS_INFO("ScaleRotation estimator -> Optimal LogPol scale: %f\n", optimM);
+  ROS_INFO("[OpticFlow]: ScaleRotation estimator -> Optimal LogPol scale: %f\n", optimM);
 
   center = cv::Point2f(resolution / 2, resolution / 2);
   Ky     = ((double)resolution) / 360.0;
@@ -27,7 +26,6 @@ scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVi
   first = true;
 }
 
-
 cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool debug) {
   if (first) {
     // old code
@@ -36,27 +34,29 @@ cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool 
     cvLogPolar(&ipl_ta, &ipl_tb, center, optimM, CV_INTER_CUBIC);
 
     tempIm.convertTo(prevIm_F32, CV_32FC1);
+
     /*
-            imCurr.convertTo(tempIm,CV_32FC1);
+    imCurr.convertTo(tempIm,CV_32FC1);
 
-            cv::Mat planes[] = {cv::Mat_<float>(tempIm), cv::Mat::zeros(tempIm.size(), CV_32F)};
-            cv::Mat complexI;
-            cv::merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
-            cv::dft(complexI, complexI);            // this way the result may fit in the source matrix
+    cv::Mat planes[] = {cv::Mat_<float>(tempIm), cv::Mat::zeros(tempIm.size(), CV_32F)};
+    cv::Mat complexI;
+    cv::merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
+    cv::dft(complexI, complexI);            // this way the result may fit in the source matrix
 
-            cv::split(complexI, planes);                   // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
-            cv::magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
-            cv::Mat mag = planes[0];
+    cv::split(complexI, planes);                   // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
+    cv::magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
+    cv::Mat mag = planes[0];
 
-            cv::Laplacian(mag,mag,CV_32FC1);
+    cv::Laplacian(mag,mag,CV_32FC1);
 
-            ipl_ta = mag;
-            ipl_tb = magLL;
+    ipl_ta = mag;
+    ipl_tb = magLL;
 
-            cvLogPolar(&ipl_ta,&ipl_tb,center,optimM);
+    cvLogPolar(&ipl_ta,&ipl_tb,center,optimM);
 
-            magLL_prev = magLL.clone();
+    magLL_prev = magLL.clone();
     */
+
     first = false;
     return cv::Point2d(1, 0);
   }
@@ -85,7 +85,7 @@ cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool 
 
       cv::Point2d out = cv::Point2d(scale,rotat);
 
-      //ROS_INFO("sc: %f, rot: %f",scale,rotat);
+      //ROS_INFO("[OpticFlow]: sc: %f, rot: %f",scale,rotat);
 
       magLL_prev = magLL.clone();*/
 
@@ -110,7 +110,6 @@ cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool 
   cv::Point2d out = cv::Point2d(scale, rotat);
 
   prevIm_F32 = tempIm_F32.clone();
-
 
   if (gui) {
     cv::line(tempIm, cv::Point2i(resolution / 2, resolution / 2),

@@ -18,13 +18,13 @@ BlockMethod::BlockMethod(int i_frameSize, int i_samplePointSize, int i_scanRadiu
   imPrev = cv::Mat(frameSize, frameSize, CV_8UC1);
   imPrev = cv::Scalar(0);
 
-  // ROS_WARN("Block Matching wasn't rewritten for Allsac yet!!! Please don't use it...");
+  // ROS_WARN("[OpticFlow]: Block Matching wasn't rewritten for Allsac yet!!! Please don't use it...");
 }
 
 
 std::vector<cv::Point2f> BlockMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr) {
 
-  // ROS_WARN("Really, you are using BM while it's not rewritten yet? C'mon...rewrite it for ALLsac");
+  // ROS_WARN("[OpticFlow]: Really, you are using BM while it's not rewritten yet? C'mon...rewrite it for ALLsac");
 
   // save image for gui
   if (gui)
@@ -74,7 +74,7 @@ std::vector<cv::Point2f> BlockMethod::processImage(cv::Mat imCurr, bool gui, boo
 
   int outputX = std::distance(xHist, std::max_element(xHist, xHist + scanDiameter)) - scanRadius;
   int outputY = std::distance(yHist, std::max_element(yHist, yHist + scanDiameter)) - scanRadius;
-  // ROS_INFO("x = %d; y = %d\n",outputX,outputY);
+  // ROS_INFO("[OpticFlow]: x = %d; y = %d\n",outputX,outputY);
 
   cv::Point2f refined = Refine(imCurr, imPrev, cv::Point2i(outputX, outputY), 2);
 
@@ -126,8 +126,8 @@ cv::Point2f BlockMethod::Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i full
     absDiffsMatSubpix = cv::Mat(3, 3, CV_32S);
     for (int m = -1; m <= 1; m++) {
       for (int n = -1; n <= 1; n++) {
-        // ROS_INFO("m=%d, n=%d, scale=%d, tx=%d, ty=%d",m,n,pixScale,totalOffset.x,totalOffset.y);
-        // ROS_INFO("spx=%d, spy=%d, szx=%d, szy=%d",startpoint.x,startpoint.y,cutoutSize.width,cutoutSize.height);
+        // ROS_INFO("[OpticFlow]: m=%d, n=%d, scale=%d, tx=%d, ty=%d",m,n,pixScale,totalOffset.x,totalOffset.y);
+        // ROS_INFO("[OpticFlow]: spx=%d, spy=%d, szx=%d, szy=%d",startpoint.x,startpoint.y,cutoutSize.width,cutoutSize.height);
 
         cv::absdiff(imCurr2x(cv::Rect(cv::Point2i(1, 1), cutoutSize)), imPrev2x(cv::Rect(startpoint + cv::Point2i(n, m), cutoutSize)), imDiff2x);
 

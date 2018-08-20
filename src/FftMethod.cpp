@@ -13,7 +13,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   if (storeVideo) {
     outputVideo.open(*videoPath, CV_FOURCC('M', 'P', 'E', 'G'), videoFPS, cv::Size(frameSize, frameSize), false);
     if (!outputVideo.isOpened())
-      ROS_ERROR("Could not open output video file: %s", videoPath->c_str());
+      ROS_ERROR("[OpticFlow]: Could not open output video file: %s", videoPath->c_str());
   }
 
   if ((frameSize % 2) == 1) {
@@ -32,10 +32,10 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   rot_corr_enable  = i_rot_corr_enable;
   tilt_corr_enable = i_tilt_corr_enable;
   if (rot_corr_enable) {
-    ROS_INFO("FFT method - rotation correction enabled");
+    ROS_INFO("[OpticFlow]: FFT method - rotation correction enabled");
   }
   if (tilt_corr_enable) {
-    ROS_INFO("FFT method - tilt correction enabled");
+    ROS_INFO("[OpticFlow]: FFT method - tilt correction enabled");
   }
   first = true;
 }
@@ -54,7 +54,7 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   }
 
   if (debug) {
-    ROS_INFO("Curr type: %d prev type: %d", imCurr.type(), imPrev.type());
+    ROS_INFO("[OpticFlow]: Curr type: %d prev type: %d", imCurr.type(), imPrev.type());
   }
 
   // convert images to float images
@@ -82,10 +82,10 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
         // push without correction first
         if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
             absd(shift.y) > ((double)samplePointSize / 2)) {
-          ROS_WARN("FFT - invalid correlation in window x %d y %d", i, j);
+          ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
           speeds.push_back(cv::Point2f(nan(""), nan("")));
         } else {
-          // ROS_WARN("Hacks going on in raw...");  // hack for Gazebo Mobius
+          // ROS_WARN("[OpticFlow]: Hacks going on in raw...");  // hack for Gazebo Mobius
           // speeds.push_back(cv::Point2f(-shift.x,-shift.y));
           speeds.push_back(cv::Point2f(shift.x, shift.y));  // normal operation
         }
@@ -108,15 +108,15 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
         shift = shift + tiltCorr;  // should be + for bluefox, - for Gazebo Mobius
       }
 
-      // ROS_INFO("i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
+      // ROS_INFO("[OpticFlow]: i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
 
-      // ROS_WARN("Hacks going on..."); // hack for Gazebo Mobius
+      // ROS_WARN("[OpticFlow]: Hacks going on..."); // hack for Gazebo Mobius
       // shift.x = - shift.x;
       // shift.y = - shift.y;
 
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
-        ROS_WARN("FFT - invalid correlation in window x %d y %d", i, j);
+        ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
         speeds.push_back(cv::Point2f(nan(""), nan("")));
       } else {
         speeds.push_back(cv::Point2f(shift.x, shift.y));
