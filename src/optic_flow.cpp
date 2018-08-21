@@ -69,6 +69,10 @@ private:
   void processImage(const cv_bridge::CvImagePtr image);
 
 private:
+  ros::Timer cam_init_timer;
+  void       camInitTimer(const ros::TimerEvent& event);
+
+private:
   bool first;
 
   ros::Time RangeRecTime;
@@ -85,6 +89,10 @@ private:
   ros::Subscriber CamInfoSubscriber;
   ros::Subscriber TiltSubscriber;
   ros::Subscriber ImuSubscriber;
+
+  bool got_camera_info      = false;
+  bool got_raw_image        = false;
+  bool got_compressed_image = false;
 
   cv::Mat imOrigScaled;
   cv::Mat imCurr;
@@ -128,7 +136,6 @@ private:
 
   double cx, cy, fx, fy, s;
   double k1, k2, p1, p2, k3;
-  bool   gotCamInfo;
   bool   negativeCamInfo;
 
   bool gui;
@@ -288,44 +295,9 @@ void OpticFlow::onInit() {
       "%f\n - speed noise: %f\n - max yaw velocity: %f\n",
       max_px_speed_t, maxSpeed, maxVertSpeed, maxAccel, speed_noise, maxYawSpeed);
 
-  if (DEBUG) {
-    ROS_INFO("[OpticFlow]: Waiting for camera parameters..");
-  }
-
   CamInfoSubscriber = nh_.subscribe("camera_info", 1, &OpticFlow::callbackCameraInfo, this);
-  gotCamInfo        = false;
+  got_camera_info   = false;
   negativeCamInfo   = false;
-  ros::spinOnce();
-
-  int i = 0;
-  while (i < 10 && !gotCamInfo) {
-    usleep(100 * 1000);  // wait 100ms
-    ros::spinOnce();
-    if (DEBUG)
-      ROS_INFO("[OpticFlow]: Still waiting for camera parameters.. (%d)", i);
-    i++;
-  }
-
-  if (!gotCamInfo || negativeCamInfo) {
-    ROS_WARN(
-        "[OpticFlow]: Optic Flow missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loaded default parameters");
-    std::vector<double> camMat;
-    nh_.getParam("camera_matrix/data", camMat);
-    fx = camMat[0];
-    cx = camMat[2];
-    fy = camMat[4];
-    cy = camMat[5];
-    std::vector<double> distCoeffs;
-    nh_.getParam("distortion_coefficients/data", distCoeffs);
-    k1         = distCoeffs[0];
-    k2         = distCoeffs[1];
-    k3         = distCoeffs[4];
-    p1         = distCoeffs[2];
-    p2         = distCoeffs[3];
-    gotCamInfo = true;
-  } else {
-    ROS_INFO("[OpticFlow]: Loaded camera parameters!");
-  }
 
   switch (method) {
     case 3: {
@@ -340,7 +312,6 @@ void OpticFlow::onInit() {
 
 #ifdef OPENCL_ENABLE
     case 5: {
-
       processClass = new FastSpacedBMMethod(samplePointSize, scanRadius, stepSize, cx, cy, fx, fy, k1, k2, k3, p1, p2, storeVideo, &videoPath);
       break;
     }
@@ -378,7 +349,6 @@ void OpticFlow::onInit() {
   AllsacChosenPublisher   = nh_.advertise<geometry_msgs::Vector3>("allsac_chosen", 1);    // just for testing
 
   // Camera info subscriber
-
   RangeSubscriber = nh_.subscribe("ranger", 1, &OpticFlow::callbackRangefinder, this);
   TiltSubscriber  = nh_.subscribe("odometry", 1, &OpticFlow::callbackOdometry, this);
 
@@ -396,6 +366,65 @@ void OpticFlow::onInit() {
       exit(2);
     }
   }
+
+  // --------------------------------------------------------------
+  // |                           timers                           |
+  // --------------------------------------------------------------
+
+  cam_init_timer = nh_.createTimer(ros::Rate(10), &OpticFlow::camInitTimer, this);
+
+  is_initialized = true;
+}
+
+//}
+
+// --------------------------------------------------------------
+// |                           timers                           |
+// --------------------------------------------------------------
+
+//{ camInitTimer()
+
+void OpticFlow::camInitTimer(const ros::TimerEvent& event) {
+
+  ros::Time camera_info_timeout;
+
+  if (!got_raw_image && !got_compressed_image) {
+
+    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for camera");
+    camera_info_timeout = ros::Time::now();
+    return;
+  }
+
+  if (!got_camera_info && (ros::Time::now() - camera_info_timeout).toSec() < 5.0) {
+
+    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for camera info");
+    return;
+  }
+
+  if (!got_camera_info || negativeCamInfo) {
+
+    ROS_WARN(
+        "[OpticFlow]: missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loading default parameters");
+    std::vector<double> camMat;
+    nh_.getParam("camera_matrix/data", camMat);
+    fx = camMat[0];
+    cx = camMat[2];
+    fy = camMat[4];
+    cy = camMat[5];
+    std::vector<double> distCoeffs;
+    nh_.getParam("distortion_coefficients/data", distCoeffs);
+    k1              = distCoeffs[0];
+    k2              = distCoeffs[1];
+    k3              = distCoeffs[4];
+    p1              = distCoeffs[2];
+    p2              = distCoeffs[3];
+    got_camera_info = true;
+
+  } else {
+    ROS_INFO("[OpticFlow]: camera parameters loaded");
+  }
+
+  cam_init_timer.stop();
 }
 
 //}
@@ -470,6 +499,8 @@ void OpticFlow::callbackImageCompressed(const sensor_msgs::CompressedImageConstP
   if (!is_initialized)
     return;
 
+  got_compressed_image = true;
+
   ros::Time nowTime = image_msg->header.stamp;
 
   if (!first && (nowTime - begin).toSec() < 1 / max_freq) {
@@ -519,6 +550,8 @@ void OpticFlow::callbackImageRaw(const sensor_msgs::ImageConstPtr& image_msg) {
   if (!is_initialized)
     return;
 
+  got_raw_image = true;
+
   ros::Time nowTime = image_msg->header.stamp;
 
   if (!first && (nowTime - begin).toSec() < 1 / max_freq) {
@@ -549,7 +582,7 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfo cam_info) {
     return;
 
   // TODO: deal with binning
-  gotCamInfo = true;
+  got_camera_info = true;
 
   if (cam_info.binning_x != 0) {
     ROS_WARN("[OpticFlow]: TODO : deal with binning when loading camera parameters.");
@@ -613,7 +646,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     first = false;
   }
 
-  if (!gotCamInfo) {
+  if (!got_camera_info) {
     ROS_WARN("[OpticFlow]: Camera info didn't arrive yet! We don't have focus lenght coefficients. Can't publish optic flow.");
     return;
   }
@@ -765,6 +798,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   // tilt correction! (FFT has it inside the processing function...)
   if (tilt_correction_enable && method != 4) {
     addToAll(speeds, tiltCorr.x, tiltCorr.y);
+    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: using angular velocity tilt correction");
   }
 
   // Advanced 3D positioning
@@ -933,7 +967,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   sb.speed     = out;
   sb.odomSpeed = odomSpeed;
 
-  if (lastSpeeds.size() >= lastSpeedsSize) {
+  if (int(lastSpeeds.size()) >= lastSpeedsSize) {
     lastSpeeds.erase(lastSpeeds.begin());
   }
 

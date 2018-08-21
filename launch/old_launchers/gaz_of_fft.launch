@@ -55,8 +55,8 @@
 		<param name="ScanRadius" type="int" value="$(arg ScanRadius)"/>
 		<param name="StepSize" type="int" value="$(arg StepSize)"/>
 
-		<rosparam file="$(find optic_flow)/yaml/ost.yaml"/>
-		<rosparam file="$(find optic_flow)/yaml/cam_rot.yaml"/>
+		<rosparam file="$(find optic_flow)/config/ost.yaml"/>
+		<rosparam file="$(find optic_flow)/config/cam_rot.yaml"/>
 
 		<param name="ScaleFactor" type="int" value="1"/>
 		<param name="CameraImageCompressed" type="bool" value="true"/>
