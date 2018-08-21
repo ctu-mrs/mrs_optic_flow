@@ -6,7 +6,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-
 #include <image_transport/image_transport.h>
 #include "optic_flow/OpticFlowCalc.h"
 #include <iostream>
@@ -42,6 +41,5 @@ public:
 
   std::vector<cv::Point2f> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr);
 };
-
 
 #endif  // FFTMETHOD_H

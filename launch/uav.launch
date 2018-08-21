@@ -106,7 +106,7 @@
 
     <node name="optic_flow" pkg="optic_flow" type="optic_flow_node" output="screen" >
 
-      <rosparam file="$(find optic_flow)/config/physical_constraints.yaml" />
+      <!-- <rosparam file="$(find optic_flow)/config/physical_constraints.yaml" /> -->
 
       <!-- File with camera parameters - loaded when nothing found on Camera info --> 
       <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
@@ -153,18 +153,18 @@
 
       <param name="maxFPS" type="double" value="$(arg maxFPS)" />
 
-      <remap from="~odometry" to="mrs_odometry/new_odom" />
-      <remap from="~camera" to="bluefox/image_raw" />
-      <remap from="~camera_info" to="bluefox/camera_info" />
-      <remap from="~ranger" to="teraranger/range" />
-      <remap from="~imu" to="mavros/imu/data_raw" />
+      <remap from="~odometry_in" to="mrs_odometry/new_odom" />
+      <remap from="~camera_in" to="bluefox/image_raw" />
+      <remap from="~camera_info_in" to="bluefox/camera_info" />
+      <remap from="~ranger_in" to="teraranger/range" />
+      <remap from="~imu_in" to="mavros/imu/data_raw" />
 
-      <remap from="~velocity" to="~velocity" />
-      <remap from="~velocity_raw" to="~velocity_raw" />
-      <remap from="~velocity_stddev" to="~velocity_stddev" />
-      <remap from="~max_velocity" to="~max_velocity" />
-      <remap from="~tilt_correction" to="~tilt_correction" />
-      <remap from="~allsac_chosen" to="~allsac_chosen" />
+      <remap from="~velocity_out" to="~velocity" />
+      <remap from="~velocity_raw_out" to="~velocity_raw" />
+      <remap from="~velocity_stddev_out" to="~velocity_stddev" />
+      <!-- <remap from="~max_velocity" to="~max_velocity" /> -->
+      <remap from="~tilt_correction_out" to="~tilt_correction" />
+      <remap from="~allsac_chosen_out" to="~allsac_chosen" />
 
     </node>
 

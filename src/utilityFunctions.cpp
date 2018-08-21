@@ -80,11 +80,11 @@ cv::Point2f allsacMean(std::vector<cv::Point2f> pts, float thresholdRadius_sq, i
         }
       }
 
-      if (currIter.size() > bestIter_num) {
+      if (int(currIter.size()) > bestIter_num) {
         bestIter_num = currIter.size();
         bestIter     = pointMean(currIter);
         *chosen      = bestIter_num;
-        if (bestIter_num >= pts.size()) {
+        if (bestIter_num >= int(pts.size())) {
           return bestIter;
         }
       }
@@ -96,7 +96,7 @@ cv::Point2f allsacMean(std::vector<cv::Point2f> pts, float thresholdRadius_sq, i
 
 double calcMean(std::vector<double> pts) {
   double sum = 0;
-  for (int i = 0; i < pts.size(); i++) {
+  for (int i = 0; i < int(pts.size()); i++) {
     sum += pts[i];
   }
   return sum / pts.size();
@@ -127,11 +127,11 @@ double allsacMean(std::vector<double> pts, float thresholdRadius, int *chosen) {
         }
       }
 
-      if (currIter.size() > bestIter_num) {
+      if (int(currIter.size()) > bestIter_num) {
         bestIter_num = currIter.size();
         bestIter     = calcMean(currIter);
         *chosen      = bestIter_num;
-        if (bestIter_num >= pts.size()) {
+        if (bestIter_num >= int(pts.size())) {
           return bestIter;
         }
       }
@@ -168,7 +168,7 @@ void addToAll(std::vector<cv::Point2f> &v, float adx, float ady) {
 }
 
 cv::Point2f ransacMean(std::vector<cv::Point2f> pts, int numOfChosen, float thresholdRadius_sq, int numOfIterations) {
-  if (pts.size() <= numOfChosen) {  // weve got less or same number (or zero?) of points as number to choose
+  if (int(pts.size()) <= numOfChosen) {  // weve got less or same number (or zero?) of points as number to choose
     return pointMean(pts);
   }
 
@@ -177,10 +177,10 @@ cv::Point2f ransacMean(std::vector<cv::Point2f> pts, int numOfChosen, float thre
   std::vector<cv::Point2f> currIter;          // here goes current iteration
   cv::Point2f              currMean;
 
-  for (uint i = 0; i < numOfIterations; i++) {  // ITERATE!!!
+  for (uint i = 0; i < uint(numOfIterations); i++) {  // ITERATE!!!
     currIter.clear();
 
-    for (uint j = 0; j < numOfChosen; j++) {  // choose some points (one point can be chosen more times...)
+    for (uint j = 0; j < uint(numOfChosen); j++) {  // choose some points (one point can be chosen more times...)
       currIter.push_back(pts[rand() % pts.size()]);
     }
 
@@ -204,10 +204,13 @@ cv::Point2f ransacMean(std::vector<cv::Point2f> pts, int numOfChosen, float thre
 }
 
 std::vector<cv::Point2f> getOnlyInAbsBound(std::vector<cv::Point2f> v, float up) {
+
   std::vector<cv::Point2f> ret;
+
   float                    upSq = up * up;
   float                    n;
-  for (int i = 0; i < v.size(); i++) {
+
+  for (int i = 0; i < int(v.size()); i++) {
     n = getNormSq(v[i]);
     if (n < upSq) {
       ret.push_back(v[i]);
@@ -219,7 +222,7 @@ std::vector<cv::Point2f> getOnlyInAbsBound(std::vector<cv::Point2f> v, float up)
 
 std::vector<double> getOnlyInAbsBound(std::vector<double> v, double up) {
   std::vector<double> ret;
-  for (int i = 0; i < v.size(); i++) {
+  for (int i = 0; i < int(v.size()); i++) {
     if (absd(v[i]) < up) {
       ret.push_back(v[i]);
     }
@@ -229,7 +232,7 @@ std::vector<double> getOnlyInAbsBound(std::vector<double> v, double up) {
 
 std::vector<cv::Point2f> removeNanPoints(std::vector<cv::Point2f> v) {
   std::vector<cv::Point2f> ret;
-  for (int i = 0; i < v.size(); i++) {
+  for (int i = 0; i < int(v.size()); i++) {
     if (!isnanf(v[i].x) && !isnanf(v[i].y)) {
       ret.push_back(v[i]);
     }
@@ -239,7 +242,7 @@ std::vector<cv::Point2f> removeNanPoints(std::vector<cv::Point2f> v) {
 
 std::vector<double> removeNanPoints(std::vector<double> v) {
   std::vector<double> ret;
-  for (int i = 0; i < v.size(); i++) {
+  for (int i = 0; i < int(v.size()); i++) {
     if (!std::isnan(v[i])) {
       ret.push_back(v[i]);
     }
@@ -248,15 +251,20 @@ std::vector<double> removeNanPoints(std::vector<double> v) {
 }
 
 std::vector<cv::Point2f> getOnlyInRadiusFromTruth(cv::Point2f truth, std::vector<cv::Point2f> v, float rad) {
+
   std::vector<cv::Point2f> ret;
   float                    radSq = rad * rad;
   float                    n;
-  for (int i = 0; i < v.size(); i++) {
+
+  for (int i = 0; i < int(v.size()); i++) {
+
     n = getDistSq(truth, v[i]);
+
     if (n < radSq) {
       ret.push_back(v[i]);
     }
   }
+
   return ret;
 }
 
@@ -436,7 +444,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
 
   // r_est = getOnlyInAbsBound(r_est,max_yaw_speed); // abs. bounding
   double rot = 0;
-  for (int i = 0; i < r_est.size(); i++) {
+  for (int i = 0; i < int(r_est.size()); i++) {
     rot += r_est[i];
   }
   rot /= ((double)r_est.size());
@@ -449,7 +457,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
 
   // average
   double vert = 0;
-  for (int i = 0; i < s_est.size(); i++) {
+  for (int i = 0; i < int(s_est.size()); i++) {
     vert += s_est[i];
   }
   vert /= ((double)s_est.size());

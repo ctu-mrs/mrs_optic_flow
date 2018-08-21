@@ -9,7 +9,6 @@
 #include <CL/cl.hpp>
 #include <opencv2/ocl/ocl.hpp>
 
-
 class FastSpacedBMMethod : public OpticFlowCalc {
 private:
   bool                    initialized;
@@ -46,6 +45,5 @@ private:
   void showFlow(const cv::Mat flowx, const cv::Mat flowy, cl_char vXin, cl_char vYin, bool gui);
   void drawOpticalFlow(const cv::Mat_<signed char>& flowx, const cv::Mat_<signed char>& flowy, cv::Mat& dst, float maxmotion, int step);
 };
-
 
 #endif  // FASTSPACEDBMMETHOD_OCL_H

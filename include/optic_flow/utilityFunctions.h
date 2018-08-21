@@ -1,5 +1,6 @@
 #ifndef UTILITYFUNCTIONS_H
 #define UTILITYFUNCTIONS_H
+
 #include <math.h>
 #include <opencv2/core/core.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -23,7 +24,6 @@ struct SpeedBox
   cv::Point2f speed;
   cv::Point2f odomSpeed;
 };
-
 
 void                     rotate2d(double &x, double &y, double alpha);
 void                     rotate2d(cv::Point2f &pt, double alpha);
@@ -49,6 +49,5 @@ double                   absd(double x);
 StatData                 analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds);
 std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, double a, double fx, double fy, double range, double allsac_radius,
                                              double duration, double max_vert_speed, double max_yaw_speed);
-
 
 #endif  // UTILITYFUNCTIONS_H
