@@ -6,6 +6,7 @@
 
     <arg name="gui" default="true" />
     <arg name="DEBUG" default="false" />
+    <arg name="silentDebug" default="false" />
     <arg name="method" default="4" />
 
     <!-- Don't forget to change the camera parameters yaml file -->
@@ -19,6 +20,8 @@
     <arg name="tilt_correction_enable" default="true" />
     <arg name="ang_rate_source" default="imu" />
     <arg name="raw_enable" default="true" />
+
+    <arg name="alpha" default="0" />
 
     <arg name="ScanRadius" default="21" />
     <arg name="StepSize" default="24" />
@@ -67,6 +70,9 @@
 
       <param name="ScaleFactor" type="int" value="1" />
       <param name="CameraImageCompressed" type="bool" value="false" />
+
+      <param name="silentDebug" type="bool" value="$(arg silentDebug)" />
+      <param name="alpha" type="double" value="$(arg alpha)" />
 
       <param name="method" type="int" value="$(arg method)" />
 

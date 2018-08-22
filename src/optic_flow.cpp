@@ -38,6 +38,8 @@ using namespace std;
 
 #endif
 
+#include <mrs_lib/ParamLoader.h>
+
 namespace enc = sensor_msgs::image_encodings;
 
 namespace optic_flow
@@ -193,76 +195,78 @@ void OpticFlow::onInit() {
 
   ros::Time::waitForValid();
 
+  mrs_lib::ParamLoader param_loader(nh_, "OpticFlow");
+
   first = true;
 
   // LOAD PARAMETERS
-  nh_.param("DEBUG", DEBUG, bool(false));
+  param_loader.load_param("DEBUG", DEBUG);
 
-  nh_.param("method", method, int(0));
+  param_loader.load_param("method", method);
 
   if (method < 3 || method > 5) {
     ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
   }
 
   // optic flow parameters
-  nh_.param("ScanRadius", scanRadius, int(8));
-  nh_.param("FrameSize", frameSize, int(64));
-  nh_.param("SamplePointSize", samplePointSize, int(8));
-  nh_.param("NumberOfBins", numberOfBins, int(20));
+  param_loader.load_param("ScanRadius", scanRadius);
+  param_loader.load_param("FrameSize", frameSize);
+  param_loader.load_param("SamplePointSize", samplePointSize);
+  param_loader.load_param("NumberOfBins", numberOfBins);
 
-  nh_.param("StepSize", stepSize, int(0));
+  param_loader.load_param("StepSize", stepSize);
 
-  nh_.param("gui", gui, bool(false));
+  param_loader.load_param("gui", gui);
 
-  nh_.param("applyAbsBounding", applyAbsBounding, bool(true));
-  nh_.param("applyRelBounding", applyRelBounding, bool(false));
+  param_loader.load_param("applyAbsBounding", applyAbsBounding);
+  param_loader.load_param("applyRelBounding", applyRelBounding);
 
   bool ImgCompressed;
 
-  nh_.param("CameraImageCompressed", ImgCompressed, bool(false));
+  param_loader.load_param("CameraImageCompressed", ImgCompressed);
 
-  nh_.param("ScaleFactor", ScaleFactor, int(1));
+  param_loader.load_param("ScaleFactor", ScaleFactor);
 
-  nh_.param("RansacNumOfChosen", RansacNumOfChosen, int(2));
-  nh_.param("RansacNumOfIter", RansacNumOfIter, int(5));
+  param_loader.load_param("RansacNumOfChosen", RansacNumOfChosen);
+  param_loader.load_param("RansacNumOfIter", RansacNumOfIter);
 
   float RansacThresholdRad;
 
-  nh_.param("RansacThresholdRad", RansacThresholdRad, float(4));
+  param_loader.load_param("RansacThresholdRad", RansacThresholdRad);
   RansacThresholdRadSq = pow(RansacThresholdRad, 2);
 
-  nh_.param("filterMethod", filterMethod, std::string("no parameter"));
+  param_loader.load_param("filterMethod", filterMethod);
 
-  nh_.param("lastSpeedsSize", lastSpeedsSize, int(60));
-  nh_.param("analyseDuration", analyseDuration, double(1));
-  nh_.param("silentDebug", silent_debug, bool(false));
+  param_loader.load_param("lastSpeedsSize", lastSpeedsSize);
+  param_loader.load_param("analyseDuration", analyseDuration);
+  param_loader.load_param("silentDebug", silent_debug);
 
-  nh_.param("rotation_correction_enable", rotation_correction_enable, bool(true));
-  nh_.param("tilt_correction_enable", tilt_correction_enable, bool(true));
-  nh_.param("ang_rate_source", ang_rate_source, std::string("no parameter"));
-  nh_.param("raw_enable", raw_enable, bool(false));
+  param_loader.load_param("rotation_correction_enable", rotation_correction_enable);
+  param_loader.load_param("tilt_correction_enable", tilt_correction_enable);
+  param_loader.load_param("ang_rate_source", ang_rate_source);
+  param_loader.load_param("raw_enable", raw_enable);
 
-  nh_.param("scale_rot_enable", scaleRot_enable, bool(false));
-  nh_.param("scale_rot_mag", scaleRot_mag, double(40));
-  nh_.param("scale_rot_output", scale_rot_output, std::string("no parameter"));
-  nh_.param("d3d_method", d3d_method, std::string("no parameter"));
+  param_loader.load_param("scale_rot_enable", scaleRot_enable);
+  param_loader.load_param("scale_rot_mag", scaleRot_mag);
+  param_loader.load_param("scale_rot_output", scale_rot_output);
+  param_loader.load_param("d3d_method", d3d_method);
 
   if (scaleRot_enable && d3d_method.compare("advanced") != 0 && d3d_method.compare("logpol") != 0) {
     ROS_ERROR("[OpticFlow]: Wrong parameter 3d_method. Possible values: logpol, advanced. Entered: %s", d3d_method.c_str());
     exit(2);
   }
 
-  nh_.param("maxFPS", max_freq, double(500));
+  param_loader.load_param("maxFPS", max_freq);
 
-  nh_.param("storeVideo", storeVideo, bool(false));
+  param_loader.load_param("storeVideo", storeVideo);
   std::string videoPath;
-  nh_.param("videoPath", videoPath, std::string("no parameter"));
+  param_loader.load_param("videoPath", videoPath);
   if (storeVideo) {
     ROS_INFO("[OpticFlow]: Video path: %s", videoPath.c_str());
   }
 
   int videoFPS;
-  nh_.param("videoFPS", videoFPS, int(30));
+  param_loader.load_param("videoFPS", videoFPS);
 
   if (filterMethod.compare("ransac") && RansacNumOfChosen != 2) {
     ROS_WARN("[OpticFlow]: When Allsac is enabled, the RansacNumOfChosen can be only 2.");
@@ -272,7 +276,7 @@ void OpticFlow::onInit() {
     ROS_WARN("[OpticFlow]: Why is RAND_MAX set to only %d? Ransac in OpticFlow won't work properly!", RAND_MAX);
   }
 
-  nh_.getParam("image_width", expectedWidth);
+  param_loader.load_param("image_width", expectedWidth);
 
   if ((frameSize % 2) == 1) {
     frameSize--;
@@ -280,15 +284,15 @@ void OpticFlow::onInit() {
   scanDiameter = (2 * scanRadius + 1);
   scanCount    = (scanDiameter * scanDiameter);
 
-  // nh_.getParam("camera_rotation_matrix/data", camRot);
-  nh_.getParam("alpha", gamma);
+  // param_loader.load_param("camera_rotation_matrix/data", camRot);
+  param_loader.load_param("alpha", gamma);
 
-  nh_.getParam("max_px_speed", max_px_speed_t);
-  nh_.getParam("max_horiz_speed", maxSpeed);
-  nh_.getParam("max_vert_speed", maxVertSpeed);
-  nh_.getParam("max_yaw_speed", maxYawSpeed);
-  nh_.getParam("max_acceleration", maxAccel);
-  nh_.getParam("speed_noise", speed_noise);
+  param_loader.load_param("max_px_speed", max_px_speed_t);
+  param_loader.load_param("max_horiz_speed", maxSpeed);
+  param_loader.load_param("max_vert_speed", maxVertSpeed);
+  param_loader.load_param("max_yaw_speed", maxYawSpeed);
+  param_loader.load_param("max_acceleration", maxAccel);
+  param_loader.load_param("speed_noise", speed_noise);
 
   ROS_INFO(
       "Loaded physical constraints:\n - maximal optic flow: %f\n - maximal horizontal speed: %f\n - maximal vertical speed: %f\n - maximal acceleration: "
@@ -373,7 +377,15 @@ void OpticFlow::onInit() {
 
   cam_init_timer = nh_.createTimer(ros::Rate(10), &OpticFlow::camInitTimer, this);
 
+  // | ----------------------- finish init ---------------------- |
+
+  if (!param_loader.loaded_successfully()) {
+    ros::shutdown();
+  }
+
   is_initialized = true;
+
+  ROS_INFO("[OpticFlow]: initialized");
 }
 
 //}
@@ -403,22 +415,27 @@ void OpticFlow::camInitTimer(const ros::TimerEvent& event) {
 
   if (!got_camera_info || negativeCamInfo) {
 
-    ROS_WARN(
-        "[OpticFlow]: missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loading default parameters");
+    mrs_lib::ParamLoader param_loader(nh_, "OpticFlow");
+
+    ROS_WARN("[OpticFlow]: missing camera calibration parameters! (nothing on camera_info topic/wrong calibration matricies). Loading default parameters");
     std::vector<double> camMat;
-    nh_.getParam("camera_matrix/data", camMat);
+    param_loader.load_param("camera_matrix/data", camMat);
     fx = camMat[0];
     cx = camMat[2];
     fy = camMat[4];
     cy = camMat[5];
     std::vector<double> distCoeffs;
-    nh_.getParam("distortion_coefficients/data", distCoeffs);
+    param_loader.load_param("distortion_coefficients/data", distCoeffs);
     k1              = distCoeffs[0];
     k2              = distCoeffs[1];
     k3              = distCoeffs[4];
     p1              = distCoeffs[2];
     p2              = distCoeffs[3];
     got_camera_info = true;
+
+    if (!param_loader.loaded_successfully()) {
+      ros::shutdown();
+    }
 
   } else {
     ROS_INFO("[OpticFlow]: camera parameters loaded");
@@ -733,11 +750,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   std::vector<cv::Point2f> speeds = processClass->processImage(imCurr, gui, DEBUG, midPoint, angular_velocity.z * dur.toSec(), tiltCorr);
 
   // Check for wrong values
-  /*speeds = removeNanPoints(speeds);
-    if(speeds.size() <= 0){
+  speeds = removeNanPoints(speeds);
+  if (speeds.size() <= 0) {
     ROS_WARN("[OpticFlow]: Processing function returned no valid points!");
     return;
-    }*/
+  }
 
   // RAW velocity without tilt corrections
   if (raw_enable) {

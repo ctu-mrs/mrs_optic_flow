@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  mrs_lib
   )
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -fno-diagnostics-color")
@@ -37,7 +38,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES block_method fft_method # fastSpaced_method
-  CATKIN_DEPENDS cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
+  CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
   #  DEPENDS system_lib
   DEPENDS Eigen
   LIBRARIES OpticFlow
