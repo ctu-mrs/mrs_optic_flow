@@ -122,6 +122,7 @@ private:
   bool DEBUG;
   bool silent_debug;
   bool storeVideo;
+
   // std::vector<double> camRot;
   double gamma;  // rotation of camera in the helicopter frame (positive)
 
@@ -353,7 +354,7 @@ void OpticFlow::onInit() {
   AllsacChosenPublisher   = nh_.advertise<geometry_msgs::Vector3>("allsac_chosen_out", 1);    // just for testing
 
   // Camera info subscriber
-  RangeSubscriber = nh_.subscribe("ranger_in", 1, &OpticFlow::callbackRangefinder, this);
+  RangeSubscriber = nh_.subscribe("rangefinder_in", 1, &OpticFlow::callbackRangefinder, this);
   TiltSubscriber  = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this);
 
   if (ImgCompressed) {

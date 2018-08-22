@@ -105,10 +105,10 @@
 
       <param name="maxFPS" type="double" value="$(arg maxFPS)" />
 
-      <remap from="~odometry_in" to="mavros_interface/converted_mavros_odom" />
+      <remap from="~odometry_in" to="odometry/new_odom" />
       <remap from="~camera_in" to="bluefox/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
-      <remap from="~ranger_in" to="garmin/range" />
+      <remap from="~rangefinder_in" to="garmin/range" />
       <remap from="~imu_in" to="mavros/imu/data_raw" />
 
       <remap from="~velocity_out" to="~velocity" />
