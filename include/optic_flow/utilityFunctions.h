@@ -22,7 +22,7 @@ struct SpeedBox
 {
   ros::Time   time;
   cv::Point2f speed;
-  cv::Point2f odomSpeed;
+  cv::Point2f odometry_speed;
 };
 
 void                     rotate2d(double &x, double &y, double alpha);

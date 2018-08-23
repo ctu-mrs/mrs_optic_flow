@@ -296,17 +296,17 @@ StatData analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds) {
 
     if (sb.time > fromTime) {
       num++;
-      dif = getDistSq(sb.speed, sb.odomSpeed);
+      dif = getDistSq(sb.speed, sb.odometry_speed);
       sumsq += dif;
       sum += sqrt(dif);
 
 
-      dif = absf(sb.odomSpeed.x - sb.speed.x);
+      dif = absf(sb.odometry_speed.x - sb.speed.x);
       sumx += dif;
       sumxsq += dif * dif;
 
 
-      dif = absf(sb.odomSpeed.y - sb.speed.y);
+      dif = absf(sb.odometry_speed.y - sb.speed.y);
       sumy += dif;
       sumysq += dif * dif;
     }

@@ -1,7 +1,0 @@
-max_px_speed: 80
-max_horiz_speed: 8.0
-# Don't touch max vertical speed, magic going on (keep on 10m/s)
-max_vert_speed: 2
-max_yaw_speed: 1
-max_acceleration: 2.77
-speed_noise: 1.5
