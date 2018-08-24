@@ -46,8 +46,8 @@ optic_flow:
 constraints:
   max_pixel_speed: 80
 
-  max_horizontal_speed: 8.3
-  max_horizontal_acceleration: 2.77
+  max_horizontal_speed: 5.0
+  max_horizontal_acceleration: 1.5
 
   max_vertical_speed: 2.0
 

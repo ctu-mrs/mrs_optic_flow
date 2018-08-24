@@ -39,6 +39,7 @@ using namespace std;
 #endif
 
 #include <mrs_lib/ParamLoader.h>
+#include <mrs_lib/Profiler.h>
 #include <mutex>
 
 namespace enc = sensor_msgs::image_encodings;
@@ -191,6 +192,13 @@ private:
   std::vector<SpeedBox> lastSpeeds;
   int                   last_speeds_size_;
   double                analyze_duration_;
+
+private:
+  mrs_lib::Profiler* profiler;
+  mrs_lib::Routine*  routine_callback_image;
+  mrs_lib::Routine*  routine_callback_height;
+  mrs_lib::Routine*  routine_callback_imu;
+  mrs_lib::Routine*  routine_callback_odometry;
 
 private:
   bool is_initialized = false;
@@ -372,6 +380,16 @@ void OpticFlow::onInit() {
   }
 
   // --------------------------------------------------------------
+  // |                          profiler                          |
+  // --------------------------------------------------------------
+
+  profiler                  = new mrs_lib::Profiler(nh_, "OpticFlow");
+  routine_callback_image    = profiler->registerRoutine("callbackImage");
+  routine_callback_imu      = profiler->registerRoutine("callbackImu");
+  routine_callback_height   = profiler->registerRoutine("callbackHeight");
+  routine_callback_odometry = profiler->registerRoutine("callbackOdometry");
+
+  // --------------------------------------------------------------
   // |                           timers                           |
   // --------------------------------------------------------------
 
@@ -452,11 +470,15 @@ void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
     return;
   }
 
+  routine_callback_height->start();
+
   got_height = true;
 
   mutex_uav_height.lock();
   { uav_height = msg->value; }
   mutex_uav_height.unlock();
+
+  routine_callback_height->end();
 }
 
 //}
@@ -468,6 +490,8 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
   if (!is_initialized)
     return;
 
+  routine_callback_imu->start();
+
   // angular rate source is imu aka gyro
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
     mutex_angular_rate.lock();
@@ -475,6 +499,8 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
     mutex_angular_rate.unlock();
     got_imu = true;
   }
+
+  routine_callback_imu->end();
 }
 
 //}
@@ -485,6 +511,8 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
   if (!is_initialized)
     return;
+
+  routine_callback_odometry->start();
 
   got_odometry = true;
 
@@ -504,6 +532,8 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
     odometry_stamp = ros::Time::now();
   }
   mutex_odometry.unlock();
+
+  routine_callback_odometry->end();
 }
 
 //}
@@ -526,6 +556,8 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     return;
   }
 
+  routine_callback_image->start();
+
   dur   = nowTime - begin;
   begin = nowTime;
   if (debug_) {
@@ -535,6 +567,8 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   cv_bridge::CvImagePtr image;
   image = cv_bridge::toCvCopy(msg, enc::BGR8);
   processImage(image);
+
+  routine_callback_image->end();
 }
 
 //}
@@ -562,10 +596,11 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
   } else {
 
-    fx              = msg->K.at(0);
-    fy              = msg->K.at(4);
-    cx              = msg->K.at(2);
-    cy              = msg->K.at(5);
+    fx = msg->K.at(0);
+    fy = msg->K.at(4);
+    cx = msg->K.at(2);
+    cy = msg->K.at(5);
+
     k1              = msg->D.at(0);
     k2              = msg->D.at(1);
     p1              = msg->D.at(2);
@@ -620,11 +655,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   int yi             = image_center_y - (frame_size_ / 2);
 
   // rectification
-  cv::Rect    frame_rectification = cv::Rect(xi, yi, frame_size_, frame_size_);
-  cv::Point2i mid_point           = cv::Point2i((frame_size_ / 2), (frame_size_ / 2));
+  cv::Rect    cropping_rectangle = cv::Rect(xi, yi, frame_size_, frame_size_);
+  cv::Point2i mid_point          = cv::Point2i((frame_size_ / 2), (frame_size_ / 2));
 
   //  convert to grayscale
-  cv::cvtColor(image_scaled(frame_rectification), imCurr, CV_RGB2GRAY);
+  cv::cvtColor(image_scaled(cropping_rectangle), imCurr, CV_RGB2GRAY);
 
   // | ----------------- angular rate correction ---------------- |
 
