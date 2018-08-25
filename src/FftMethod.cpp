@@ -133,7 +133,7 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   imPrev = imCurr.clone();
 
   if (gui) {
-    cv::imshow("main", imView);
+    cv::imshow("optic_flow", imView);
     cv::waitKey(1);
   }
 
