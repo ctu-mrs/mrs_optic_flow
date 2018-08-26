@@ -1,6 +1,5 @@
 #include "../include/optic_flow/FftMethod.h"
 
-
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
                      bool i_tilt_corr_enable, std::string *videoPath, int videoFPS) {
 

@@ -286,6 +286,10 @@ void OpticFlow::onInit() {
   // |                    end of loading params                   |
   // --------------------------------------------------------------
 
+  if (gui_) {
+    cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
+  }
+
   if (scale_rotation && d3d_method_.compare("advanced") != 0 && d3d_method_.compare("logpol") != 0) {
     ROS_ERROR("[OpticFlow]: Wrong parameter 3d_method. Possible values: logpol, advanced. Entered: %s", d3d_method_.c_str());
     ros::shutdown();
@@ -719,8 +723,9 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   // process image
   std::vector<cv::Point2f> optic_flow_speed;
   mutex_angular_rate.lock();
-  { optic_flow_speed = processClass->processImage(imCurr, gui_, debug_, mid_point, angular_rate.z * dur.toSec(), tiltCorr); }
+  double temp_angular_rate = angular_rate.z;
   mutex_angular_rate.unlock();
+  { optic_flow_speed = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr); }
 
   // check for nans
   optic_flow_speed = removeNanPoints(optic_flow_speed);
