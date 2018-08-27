@@ -49,7 +49,7 @@ namespace enc = sensor_msgs::image_encodings;
 namespace optic_flow
 {
 
-//{ class OpticFlow
+/* //{ class OpticFlow */
 
 struct PointValue
 {
@@ -206,7 +206,7 @@ private:
 
 //}
 
-//{ onInit()
+/* //{ onInit() */
 
 void OpticFlow::onInit() {
 
@@ -391,7 +391,7 @@ void OpticFlow::onInit() {
   routine_callback_image    = profiler->registerRoutine("callbackImage");
   routine_callback_imu      = profiler->registerRoutine("callbackImu");
   routine_callback_height   = profiler->registerRoutine("callbackHeight");
-  routine_callback_odometry = profiler->registerRoutine("callbackOdometry");
+  routine_callback_odometry = profiler->registerRoutine("opticFlow");
 
   // --------------------------------------------------------------
   // |                           timers                           |
@@ -416,7 +416,7 @@ void OpticFlow::onInit() {
 // |                           timers                           |
 // --------------------------------------------------------------
 
-//{ camInitTimer()
+/* //{ camInitTimer() */
 
 void OpticFlow::camInitTimer(const ros::TimerEvent& event) {
 
@@ -463,7 +463,7 @@ void OpticFlow::camInitTimer(const ros::TimerEvent& event) {
 // |                          callbacks                         |
 // --------------------------------------------------------------
 
-//{ callbackUavHeight()
+/* //{ callbackUavHeight() */
 
 void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
 
@@ -487,7 +487,7 @@ void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
 
 //}
 
-//{ callbackImu()
+/* //{ callbackImu() */
 
 void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
 
@@ -509,7 +509,7 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
 
 //}
 
-//{ callbackOdometry()
+/* //{ callbackOdometry() */
 
 void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
@@ -542,7 +542,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
 //}
 
-//{ callbackImage()
+/* //{ callbackImage() */
 
 void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
@@ -577,7 +577,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
 //}
 
-//{ callbackCameraInfo()
+/* //{ callbackCameraInfo() */
 
 void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
@@ -624,7 +624,7 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 // |                       custom methods                       |
 // --------------------------------------------------------------
 
-//{ processImage()
+/* //{ processImage() */
 
 void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
@@ -884,7 +884,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   int af_abs = 0;
   int af_acc = 0;
 
-  /* absolute bounding //{ */
+  /* absolute bouding //{ */
 
   if (apply_abs_bounding_) {
 
