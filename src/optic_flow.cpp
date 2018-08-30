@@ -219,7 +219,7 @@ void OpticFlow::onInit() {
 
   // | -------------------- basic node params ------------------- |
 
-  param_loader.load_param("profiler", profiler_enabled_);
+  param_loader.load_param("enable_profiler", profiler_enabled_);
   param_loader.load_param("debug", debug_);
   param_loader.load_param("gui", gui_);
   param_loader.load_param("silent_debug", silent_debug_);

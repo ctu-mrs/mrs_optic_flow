@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="uav_name" default="$(optenv UAV_NAME)" />
+  <arg name="profiler" default="$(optenv PROFILER false)" />
 
   <!-- Bluefox2  -->
   <arg name="device" default="$(env BLUEFOX)" />
@@ -63,6 +64,7 @@
     <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg uav_name)_vision_nodelet_manager" output="screen">
 
       <rosparam file="$(find optic_flow)/config/simulation.yaml" />
+      <param name="enable_profiler" value="$(arg profiler)" />
 
       <!-- File with camera parameters - loaded when nothing found on Camera info -->
       <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
