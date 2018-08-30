@@ -195,6 +195,7 @@ private:
 
 private:
   mrs_lib::Profiler* profiler;
+  bool profiler_enabled_ = false;
   mrs_lib::Routine*  routine_callback_image;
   mrs_lib::Routine*  routine_callback_height;
   mrs_lib::Routine*  routine_callback_imu;
@@ -218,6 +219,7 @@ void OpticFlow::onInit() {
 
   // | -------------------- basic node params ------------------- |
 
+  param_loader.load_param("profiler", profiler_enabled_);
   param_loader.load_param("debug", debug_);
   param_loader.load_param("gui", gui_);
   param_loader.load_param("silent_debug", silent_debug_);
@@ -387,7 +389,7 @@ void OpticFlow::onInit() {
   // |                          profiler                          |
   // --------------------------------------------------------------
 
-  profiler                  = new mrs_lib::Profiler(nh_, "OpticFlow");
+  profiler                  = new mrs_lib::Profiler(nh_, "OpticFlow", profiler_enabled_);
   routine_callback_image    = profiler->registerRoutine("callbackImage");
   routine_callback_imu      = profiler->registerRoutine("callbackImu");
   routine_callback_height   = profiler->registerRoutine("callbackHeight");
