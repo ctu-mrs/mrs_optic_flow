@@ -24,7 +24,9 @@
 
     <arg name="idpf" default="0" />
     <arg name="aec" default="false" />
-    <arg name="expose_us" default="75" /> <!-- zkusit 1000 a 5000 -->
+    <!-- sunny -->
+    <!-- <arg name="expose_us" default="75" /> -->
+    <arg name="expose_us" default="400" /> <!-- dusk -->
     <arg name="agc" default="true" />
     <arg name="gain_db" default="0.0" />
     <arg name="cbm" default="0" />

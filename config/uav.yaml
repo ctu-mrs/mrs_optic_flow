@@ -1,7 +1,7 @@
 camera_yaw_offset: -1.57
 
 gui: false
-debug: true
+debug: false
 silent_debug: false
 
 ang_rate_source: "imu" # "imu" / "odometry"
