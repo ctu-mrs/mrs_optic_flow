@@ -6,8 +6,9 @@
 class OpticFlowCalc {
 
 public:
-  virtual std::vector<cv::Point2f> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr) {
-  }
+  virtual std::vector<cv::Point2f> processImage([[maybe_unused]] cv::Mat imCurr, [[maybe_unused]] bool gui, [[maybe_unused]] bool debug,
+                                                [[maybe_unused]] cv::Point midPoint_t, [[maybe_unused]] double yaw_angle,
+                                                [[maybe_unused]] cv::Point2d tiltCorr) = 0;
 
   void setImPrev(cv::Mat imPrev_t) {
     imPrev = imPrev_t;
