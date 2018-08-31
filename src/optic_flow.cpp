@@ -420,7 +420,7 @@ void OpticFlow::onInit() {
 
 /* //{ camInitTimer() */
 
-void OpticFlow::camInitTimer(const ros::TimerEvent& event) {
+void OpticFlow::camInitTimer([[maybe_unused]] const ros::TimerEvent& event) {
 
   if (!got_image) {
 
