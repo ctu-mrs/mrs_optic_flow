@@ -195,11 +195,7 @@ private:
 
 private:
   mrs_lib::Profiler* profiler;
-  bool profiler_enabled_ = false;
-  mrs_lib::Routine*  routine_callback_image;
-  mrs_lib::Routine*  routine_callback_height;
-  mrs_lib::Routine*  routine_callback_imu;
-  mrs_lib::Routine*  routine_callback_odometry;
+  bool               profiler_enabled_ = false;
 
 private:
   bool is_initialized = false;
@@ -389,11 +385,7 @@ void OpticFlow::onInit() {
   // |                          profiler                          |
   // --------------------------------------------------------------
 
-  profiler                  = new mrs_lib::Profiler(nh_, "OpticFlow", profiler_enabled_);
-  routine_callback_image    = profiler->registerRoutine("callbackImage");
-  routine_callback_imu      = profiler->registerRoutine("callbackImu");
-  routine_callback_height   = profiler->registerRoutine("callbackHeight");
-  routine_callback_odometry = profiler->registerRoutine("opticFlow");
+  profiler = new mrs_lib::Profiler(nh_, "OpticFlow", profiler_enabled_);
 
   // --------------------------------------------------------------
   // |                           timers                           |
@@ -476,15 +468,13 @@ void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
     return;
   }
 
-  routine_callback_height->start();
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackHeight");
 
   got_height = true;
 
   mutex_uav_height.lock();
   { uav_height = msg->value; }
   mutex_uav_height.unlock();
-
-  routine_callback_height->end();
 }
 
 //}
@@ -496,7 +486,7 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  routine_callback_imu->start();
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImu");
 
   // angular rate source is imu aka gyro
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
@@ -505,8 +495,6 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
     mutex_angular_rate.unlock();
     got_imu = true;
   }
-
-  routine_callback_imu->end();
 }
 
 //}
@@ -518,7 +506,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  routine_callback_odometry->start();
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("opticFlow");
 
   got_odometry = true;
 
@@ -538,8 +526,6 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
     odometry_stamp = ros::Time::now();
   }
   mutex_odometry.unlock();
-
-  routine_callback_odometry->end();
 }
 
 //}
@@ -562,7 +548,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     return;
   }
 
-  routine_callback_image->start();
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImage");
 
   dur   = nowTime - begin;
   begin = nowTime;
@@ -573,8 +559,6 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   cv_bridge::CvImagePtr image;
   image = cv_bridge::toCvCopy(msg, enc::BGR8);
   processImage(image);
-
-  routine_callback_image->end();
 }
 
 //}
