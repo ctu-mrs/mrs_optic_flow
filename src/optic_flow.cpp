@@ -1,5 +1,7 @@
 // #define OPENCL_ENABLE
 
+/* includes //{ */
+
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
 
@@ -42,6 +44,8 @@ using namespace std;
 #include <mrs_lib/Profiler.h>
 #include <mutex>
 
+//}
+
 namespace enc = sensor_msgs::image_encodings;
 
 #define STRING_EQUAL 0
@@ -64,7 +68,7 @@ public:
   ros::NodeHandle nh_;
 
 private:
-  void callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg);
+  void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg);
   void callbackImu(const sensor_msgs::ImuConstPtr& msg);
   void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg);
@@ -369,7 +373,7 @@ void OpticFlow::onInit() {
 
   subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this);
   subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this);
-  subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackUavHeight, this);
+  subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this);
   subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this);
 
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
@@ -457,9 +461,9 @@ void OpticFlow::camInitTimer([[maybe_unused]] const ros::TimerEvent& event) {
 // |                          callbacks                         |
 // --------------------------------------------------------------
 
-/* //{ callbackUavHeight() */
+/* //{ callbackHeight() */
 
-void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
+void OpticFlow::callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
 
   if (!is_initialized)
     return;
@@ -607,7 +611,7 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 //}
 
 // --------------------------------------------------------------
-// |                       custom methods                       |
+// |                          routines                          |
 // --------------------------------------------------------------
 
 /* //{ processImage() */
