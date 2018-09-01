@@ -371,10 +371,10 @@ void OpticFlow::onInit() {
   // |                         subscribers                        |
   // --------------------------------------------------------------
 
-  subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this);
-  subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this);
-  subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this);
-  subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this);
+  subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
+  subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
+  subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
+  subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
 
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
     subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
@@ -400,6 +400,7 @@ void OpticFlow::onInit() {
   // | ----------------------- finish init ---------------------- |
 
   if (!param_loader.loaded_successfully()) {
+    ROS_ERROR("[OpticFlow]: Could not load all parameters!");
     ros::shutdown();
   }
 
@@ -712,10 +713,13 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // process image
   std::vector<cv::Point2f> optic_flow_speed;
+  double                   temp_angular_rate;
+
   mutex_angular_rate.lock();
-  double temp_angular_rate = angular_rate.z;
+  { temp_angular_rate = angular_rate.z; }
   mutex_angular_rate.unlock();
-  { optic_flow_speed = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr); }
+
+  optic_flow_speed = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr);
 
   // check for nans
   optic_flow_speed = removeNanPoints(optic_flow_speed);

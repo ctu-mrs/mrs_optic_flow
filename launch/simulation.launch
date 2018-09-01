@@ -5,7 +5,12 @@
 
   <group ns="$(arg uav_name)">
 
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone optic_flow/OpticFlow" output="screen" >
+    <!-- Vision Nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+      <param name="num_worker_threads" value="4" />
+    </node>
+
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg uav_name)_vision_nodelet_manager" output="screen" >
 
       <rosparam file="$(find optic_flow)/config/simulation.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />

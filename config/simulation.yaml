@@ -1,6 +1,6 @@
 camera_yaw_offset: -1.57
 
-gui: true
+gui: false
 debug: false
 silent_debug: false
 
