@@ -464,11 +464,11 @@ void OpticFlow::callbackUavHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
   if (!is_initialized)
     return;
 
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackHeight");
+
   if (absf(msg->value) < 0.001) {
     return;
   }
-
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackHeight");
 
   got_height = true;
 
@@ -506,7 +506,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("opticFlow");
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackOdometry");
 
   got_odometry = true;
 
@@ -537,6 +537,8 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   if (!is_initialized)
     return;
 
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImage");
+
   got_image = true;
 
   ros::Time nowTime = msg->header.stamp;
@@ -547,8 +549,6 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     }
     return;
   }
-
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImage");
 
   dur   = nowTime - begin;
   begin = nowTime;
