@@ -10,7 +10,7 @@
   <group ns="$(arg uav_name)">
 
     <!-- Vision Nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" respawn="true">
       <param name="num_worker_threads" value="4" />
     </node>
 
@@ -39,7 +39,7 @@
     <arg name="jpeg_quality" default="90" />
 
     <!-- Node -->
-    <node pkg="nodelet" type="nodelet" name="bluefox" args="load bluefox2/SingleNodelet $(arg uav_name)_vision_nodelet_manager" output="screen">
+    <node pkg="nodelet" type="nodelet" name="bluefox" args="load bluefox2/SingleNodelet $(arg uav_name)_vision_nodelet_manager" output="screen" respawn="true">
 
       <param name="identifier" type="string" value="$(arg serial)" />
       <param name="frame_id" type="string" value="$(arg frame_id)" />
@@ -68,7 +68,7 @@
 
     </node>
 
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg uav_name)_vision_nodelet_manager" output="screen">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg uav_name)_vision_nodelet_manager" output="screen" respawn="true">
 
       <rosparam file="$(find optic_flow)/config/uav.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />
