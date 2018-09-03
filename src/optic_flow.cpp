@@ -477,9 +477,11 @@ void OpticFlow::callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
 
   got_height = true;
 
-  mutex_uav_height.lock();
-  { uav_height = msg->value; }
-  mutex_uav_height.unlock();
+  {
+    std::scoped_lock lock(mutex_uav_height);
+
+    uav_height = msg->value;
+  }
 }
 
 //}
@@ -495,9 +497,13 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
 
   // angular rate source is imu aka gyro
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
-    mutex_angular_rate.lock();
-    { angular_rate = cv::Point3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z); }
-    mutex_angular_rate.unlock();
+
+    {
+      std::scoped_lock lock(mutex_angular_rate);
+
+      angular_rate = cv::Point3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+    }
+
     got_imu = true;
   }
 }
@@ -520,17 +526,19 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
   tf::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
 
   if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
-    mutex_angular_rate.lock();
-    { angular_rate = cv::Point3d(msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z); }
-    mutex_angular_rate.unlock();
+    {
+      std::scoped_lock lock(mutex_angular_rate);
+
+      angular_rate = cv::Point3d(msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z);
+    }
   }
 
-  mutex_odometry.lock();
   {
+    std::scoped_lock lock(mutex_odometry);
+
     odometry_speed = cv::Point2f(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
     odometry_stamp = ros::Time::now();
   }
-  mutex_odometry.unlock();
 }
 
 //}
@@ -663,19 +671,15 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   if (tilt_correction_) {
 
     // do tilt correction (in pixels)
-    mutex_angular_rate.lock();
     {
+      std::scoped_lock lock(mutex_angular_rate);
+
       tiltCorr.x = -angular_rate.x * fx * dur.toSec();  // version 4
       tiltCorr.y = angular_rate.y * fy * dur.toSec();
-    }
-    mutex_angular_rate.unlock();
 
-    /* mutex_angular_rate.lock(); */
-    /* { */
-    /*   double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
-    /*   double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
-    /* } */
-    /* mutex_angular_rate.unlock(); */
+      /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
+      /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
+    }
 
     geometry_msgs::Vector3 tiltCorrOut;
     tiltCorrOut.x = tiltCorr.x;  // (tan(angular_rate.y*dur.toSec())*uav_height)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
@@ -705,9 +709,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
     } else {
       // Velocity from altitude
-      mutex_uav_height.lock();
-      { scale_and_rotation.x = ((scale_and_rotation.x - 1) / uav_height) / dur.toSec(); }
-      mutex_uav_height.unlock();
+      {
+        std::scoped_lock lock(mutex_uav_height);
+
+        scale_and_rotation.x = ((scale_and_rotation.x - 1) / uav_height) / dur.toSec();
+      }
     }
   }
 
@@ -715,9 +721,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   std::vector<cv::Point2f> optic_flow_speed;
   double                   temp_angular_rate;
 
-  mutex_angular_rate.lock();
-  { temp_angular_rate = angular_rate.z; }
-  mutex_angular_rate.unlock();
+  {
+    std::scoped_lock lock(mutex_angular_rate);
+
+    temp_angular_rate = angular_rate.z;
+  }
 
   optic_flow_speed = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr);
 
@@ -756,9 +764,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
     speeds_no_rot_corr = removeNanPoints(speeds_no_rot_corr);
 
-    mutex_uav_height.lock();
-    { multiplyAllPts(speeds_no_rot_corr, -uav_height / (fx * dur.toSec()), uav_height / (fy * dur.toSec())); }
-    mutex_uav_height.unlock();
+    {
+      std::scoped_lock lock(mutex_uav_height);
+
+      multiplyAllPts(speeds_no_rot_corr, -uav_height / (fx * dur.toSec()), uav_height / (fy * dur.toSec()));
+    }
 
     rotateAllPts(speeds_no_rot_corr, camera_yaw_offset_);
     rotateAllPts(speeds_no_rot_corr, odometry_yaw);
@@ -822,12 +832,12 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     }
 
     std::vector<cv::Point2f> trvv;
-    mutex_uav_height.lock();
     {
+      std::scoped_lock lock(mutex_uav_height);
+
       trvv = estimateTranRotVvel(optic_flow_speed, (double)sample_point_size_, fx, fy, uav_height, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_,
                                  max_yaw_rate_);
     }
-    mutex_uav_height.unlock();
 
     optic_flow_speed.clear();
     optic_flow_speed.push_back(trvv[0]);  // translation in px
@@ -846,9 +856,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   // |               scale the velocity using height              |
   // --------------------------------------------------------------
 
-  mutex_uav_height.lock();
-  { multiplyAllPts(optic_flow_speed, -uav_height / (fx * dur.toSec()), uav_height / (fy * dur.toSec())); }
-  mutex_uav_height.unlock();
+  {
+    std::scoped_lock lock(mutex_uav_height);
+
+    multiplyAllPts(optic_flow_speed, -uav_height / (fx * dur.toSec()), uav_height / (fy * dur.toSec()));
+  }
 
   // rotate by camera yaw
   rotateAllPts(optic_flow_speed, camera_yaw_offset_);
@@ -901,9 +913,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   if (apply_rel_bouding_) {
 
-    mutex_odometry.lock();
-    { optic_flow_speed = getOnlyInRadiusFromTruth(odometry_speed, optic_flow_speed, max_sp_dif_from_accel); }
-    mutex_odometry.unlock();
+    {
+      std::scoped_lock lock(mutex_odometry);
+
+      optic_flow_speed = getOnlyInRadiusFromTruth(odometry_speed, optic_flow_speed, max_sp_dif_from_accel);
+    }
 
     if (silent_debug_) {
       af_acc = optic_flow_speed.size();
@@ -917,8 +931,9 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       ROS_WARN("[OpticFlow]: No optic_flow_speed after bounding, can't publish!");
 
       if (silent_debug_) {
-        mutex_odometry.lock();
         {
+          std::scoped_lock lock(mutex_odometry);
+
           for (uint i = 0; i < bck_speeds.size(); i++) {
             ROS_INFO_THROTTLE(0.1, "[OpticFlow]: %d -> vx = %f; vy=%f; v=%f; dist from odom=%f", i, bck_speeds[i].x, bck_speeds[i].y,
                               sqrt(getNormSq(bck_speeds[i])), sqrt(getDistSq(bck_speeds[i], odometry_speed)));
@@ -927,7 +942,6 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
                             odometry_speed.x, odometry_speed.y, sqrt(getNormSq(odometry_speed)), max_sp_dif_from_accel);
           ROS_INFO_THROTTLE(0.1, "[OpticFlow]: After absoulute bound: #%d, after accel: #%d", af_abs, af_acc);
         }
-        mutex_odometry.unlock();
       }
 
       return;
@@ -983,18 +997,22 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   velocity.twist.angular.z = -scale_and_rotation.y;
 
   if (debug_) {
-    mutex_uav_height.lock();
-    { ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", vxm, vym, vam, uav_height, odometry_yaw); }
-    mutex_uav_height.unlock();
+    {
+      std::scoped_lock lock(mutex_uav_height);
+
+      ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", vxm, vym, vam, uav_height, odometry_yaw);
+    }
   }
 
   // Add speedbox to lastspeeds array
   SpeedBox sb;
   sb.time  = ros::Time::now();
   sb.speed = out;
-  mutex_odometry.lock();
-  { sb.odometry_speed = odometry_speed; }
-  mutex_odometry.unlock();
+  {
+    std::scoped_lock lock(mutex_odometry);
+
+    sb.odometry_speed = odometry_speed;
+  }
 
   if (int(lastSpeeds.size()) >= last_speeds_size_) {
     lastSpeeds.erase(lastSpeeds.begin());
@@ -1019,9 +1037,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   if (method_ == 5) {
 
     std_msgs::Float32 maxVel;
-    mutex_uav_height.lock();
-    { maxVel.data = scan_radius_ * uav_height / (dur.toSec() * std::max(fx, fy)); }
-    mutex_uav_height.unlock();
+    {
+      std::scoped_lock lock(mutex_uav_height);
+
+      maxVel.data = scan_radius_ * uav_height / (dur.toSec() * std::max(fx, fy));
+    }
 
     publisher_max_allowed_velocity.publish(maxVel);
   }
