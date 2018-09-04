@@ -7,14 +7,18 @@
   <arg name="device" default="$(env BLUEFOX)" />
   <arg name="rate" default="60" />
 
-  <include file="$(find auto_exposure)/launch/uav.launch" />
-
   <group ns="$(arg uav_name)">
 
     <!-- Vision Nodelet manager -->
     <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" respawn="true">
-      <param name="num_worker_threads" value="4" />
+      <param name="num_worker_threads" value="8" />
     </node>
+
+  </group>
+
+  <include file="$(find auto_exposure)/launch/uav.launch" />
+
+  <group ns="$(arg uav_name)">
 
     <!-- Camera Settings -->
     <arg name="serial" default="$(arg device)" />
@@ -29,7 +33,7 @@
     <!-- sunny -->
     <!-- <arg name="expose_us" default="75" /> -->
     <arg name="expose_us" default="400" /> <!-- dusk -->
-    <arg name="agc" default="true" />
+    <arg name="agc" default="false" />
     <arg name="gain_db" default="0.0" />
     <arg name="cbm" default="0" />
     <arg name="ctm" default="1" />
