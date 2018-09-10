@@ -1,11 +1,22 @@
 <launch>
 
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
+  <arg name="standalone" default="$(optenv STANDALONE false)" />
   <arg name="profiler" default="$(optenv PROFILER false)" />
+
+  <arg unless="$(arg standalone)" name="nodelet" value="load"/>
+  <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
+  <arg unless="$(arg standalone)" name="nodelet_manager" value="$(arg uav_name)_vision_nodelet_manager"/>
+  <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
 
   <group ns="$(arg uav_name)">
 
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone optic_flow/OpticFlow" output="screen" >
+    <!-- Vision Nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+      <param name="num_worker_threads" value="4" />
+    </node>
+
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" >
 
       <rosparam file="$(find optic_flow)/config/simulation.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />
@@ -14,7 +25,7 @@
       <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~odometry_in" to="odometry/new_odom" />
+      <remap from="~odometry_in" to="odometry/odom_main" />
       <remap from="~camera_in" to="bluefox/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
