@@ -994,14 +994,20 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   /* apply odometry calibration coefficients //{ */
 
   {
-    double coeff_x = calibration_coeff_x_;
-    double coeff_y = calibration_coeff_y_;
+    double unrot_x = out.x;
+    double unrot_y = out.y;
     // rotate to UAV frame
-    rotate2d(coeff_x, coeff_y, camera_yaw_offset_);
+    rotate2d(unrot_x, unrot_y, -odometry_yaw);
+    // rotate to camera frame
+    rotate2d(unrot_x, unrot_y, -camera_yaw_offset_);
+    unrot_x = unrot_x * calibration_coeff_x_;
+    unrot_y = unrot_y * calibration_coeff_y_;
+    // rotate to UAV frame
+    rotate2d(unrot_x, unrot_y, camera_yaw_offset_);
     // rotate to world frame
-    rotate2d(coeff_x, coeff_y, odometry_yaw);
-    out.x = out.x * coeff_x;
-    out.y = out.y * coeff_y;
+    rotate2d(unrot_x, unrot_y, odometry_yaw);
+    out.x = unrot_x;
+    out.y = unrot_y;
   }
 
   //}

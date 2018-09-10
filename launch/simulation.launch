@@ -12,7 +12,7 @@
   <group ns="$(arg uav_name)">
 
     <!-- Vision Nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
       <param name="num_worker_threads" value="4" />
     </node>
 
