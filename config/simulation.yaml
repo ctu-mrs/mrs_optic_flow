@@ -44,7 +44,8 @@ optic_flow:
     last_speeds_size: 60
 
   calibration:
-    both_velocity_correction_ratio: 0.973
+    both_velocity_correction_ratio: 1.0
+    # both_velocity_correction_ratio: 0.973
     # x_velocity_correction_ratio: 0.973
     # y_velocity_correction_ratio: 0.973
 
