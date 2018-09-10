@@ -172,6 +172,9 @@ private:
   int frame_size_;
   int sample_point_size_;
 
+  double calibration_coeff_x_;
+  double calibration_coeff_y_;
+
   double cx, cy, fx, fy, s;
   double k1, k2, p1, p2, k3;
 
@@ -250,6 +253,13 @@ void OpticFlow::onInit() {
 
   param_loader.load_param("optic_flow/apply_abs_bouding", apply_abs_bounding_);
   param_loader.load_param("optic_flow/apply_rel_bouding", apply_rel_bouding_);
+
+  {
+    double calibration_coeff_both; // use this as a backup value in case calibrations for separate axes are not available
+    param_loader.load_param("optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
+    param_loader.load_param("optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
+    param_loader.load_param("optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
+  }
 
   param_loader.load_param("optic_flow/scale_factor", scale_factor_);
 
@@ -977,6 +987,21 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   } else {
     ROS_ERROR("[OpticFlow]: Entered filtering method (filter_method_) does not match to any of these: average,ransac,allsac.");
+  }
+
+  //}
+  
+  /* apply odometry calibration coefficients //{ */
+
+  {
+    double coeff_x = calibration_coeff_x_;
+    double coeff_y = calibration_coeff_y_;
+    // rotate to UAV frame
+    rotate2d(coeff_x, coeff_y, camera_yaw_offset_);
+    // rotate to world frame
+    rotate2d(coeff_x, coeff_y, odometry_yaw);
+    out.x = out.x * coeff_x;
+    out.y = out.y * coeff_y;
   }
 
   //}

@@ -43,6 +43,11 @@ optic_flow:
   filtering:
     last_speeds_size: 60
 
+  calibration:
+    both_velocity_correction_ratio: 0.973
+    # x_velocity_correction_ratio: 0.973
+    # y_velocity_correction_ratio: 0.973
+
 constraints:
   max_pixel_speed: 80
 
