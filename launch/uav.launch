@@ -6,11 +6,17 @@
   <!-- Bluefox2  -->
   <arg name="device" default="$(env BLUEFOX)" />
   <arg name="rate" default="60" />
+  <arg name="plugin" default="true"/>
+  <arg name="manager" default="$(arg uav_name)_vision_nodelet_manager" />
+  <arg name="output" default="screen"/>
+  <arg name="proc" default="false"/>
+  <arg name="view" default="false"/>
+  <arg name="calib" default="false"/>
 
   <group ns="$(arg uav_name)">
 
     <!-- Vision Nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" respawn="true">
+    <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen" respawn="true">
       <param name="num_worker_threads" value="8" />
     </node>
 
@@ -42,39 +48,61 @@
     <arg name="wbp" default="-1" />
     <arg name="request" default="0" />
     <arg name="mm" default="0" />
-    <arg name="jpeg_quality" default="90" />
+
+    <!-- Arguments for theora quality, images being compressed into "stream" -->
+    <arg name="compressed_jpeg_quality" default="90" />
+    <arg name="theora_keyframe_frequency" default="60"  />
+    <arg name="theora_target_bitrate" default="50000"  />
+    <arg name="theora_quality" default="8"  />
+    <arg name="theora_optimize_for" default="0"  />
 
     <!-- Node -->
-    <node pkg="nodelet" type="nodelet" name="bluefox" args="load bluefox2/SingleNodelet $(arg uav_name)_vision_nodelet_manager" output="screen" respawn="true">
+    <!-- <node pkg="nodelet" type="nodelet" name="bluefox" args="load bluefox2/SingleNodelet $(arg uav_name)_vision_nodelet_manager" output="screen" respawn="true"> -->
 
-      <param name="identifier" type="string" value="$(arg serial)" />
-      <param name="frame_id" type="string" value="$(arg frame_id)" />
-      <param name="camera_name" type="string" value="$(arg camera_name)" />
-      <param name="calib_url" type="string" value="$(arg calib_url)" />
-      <param name="fps" type="double" value="$(arg fps)" />
-      <param name="idpf" type="int" value="$(arg idpf)" />
-      <param name="aec" type="bool" value="$(arg aec)" />
-      <param name="expose_us" type="int" value="$(arg expose_us)" />
-      <param name="agc" type="bool" value="$(arg agc)" />
-      <param name="gain_db" type="double" value="$(arg gain_db)" />
-      <param name="cbm" type="int" value="$(arg cbm)" />
-      <param name="ctm" type="int" value="$(arg ctm)" />
-      <param name="dcfm" type="int" value="$(arg dcfm)" />
-      <param name="hdr" type="bool" value="$(arg hdr)" />
-      <param name="wbp" type="int" value="$(arg wbp)" />
-      <param name="request" type="int" value="$(arg request)" />
-      <param name="mm" type="int" value="$(arg mm)" />
+      <include file="$(find bluefox2)/launch/single_nodelet.launch" >
 
-      <!-- Params for theora quality, images being compressed into "stream" -->
-      <param name="image_raw/compressed/jpeg_quality" type="int" value="$(arg jpeg_quality)" />
-      <param name="image_raw/theora/keyframe_frequency" value="60"  />
-      <param name="image_raw/theora/target_bitrate" value="50000"  />
-      <param name="image_raw/theora/quality" value="8"  />
-      <param name="image_raw/theora/optimize_for" value="0"  />
+        <!-- Common Interface -->
+        <arg name="device" value="$(arg device)"/>
+        <arg name="rate" value="$(arg rate)"/>
 
-    </node>
+        <!-- Camera Settings -->
+        <arg name="serial" value="$(arg device)"/>
+        <arg name="camera_name" value="$(arg camera_name)"/>
+        <arg name="camera" value="$(arg camera)"/>
+        <arg name="frame_id" value="$(arg frame_id)"/>
+        <arg name="calib_url" value="$(arg calib_url)"/>
+        <arg name="fps" value="$(arg fps)"/>
+        <arg name="color" value="$(arg color)"/>
+        <arg name="aec" value="$(arg aec)"/>
+        <arg name="cbm" value="$(arg cbm)"/>
+        <arg name="ctm" value="$(arg ctm)"/>
+        <arg name="dcfm" value="$(arg dcfm)"/>
+        <arg name="hdr" value="$(arg hdr)"/>
+        <arg name="wbp" value="$(arg wbp)"/>
+        <arg name="expose_us" value="$(arg expose_us)"/>
+        <arg name="gain_db" value="$(arg gain_db)"/>
+        <arg name="boost" value="$(arg boost)"/>
+        <arg name="mm" value="$(arg mm)"/>
+        <arg name="jpeg_quality" value="$(arg jpeg_quality)"/>
 
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg uav_name)_vision_nodelet_manager" output="screen" respawn="true">
+        <!-- Node Settings -->
+        <arg name="plugin" value="$(arg plugin)"/>
+        <arg name="manager" value="$(arg manager)"/>
+        <arg name="output" value="$(arg output)"/>
+        <arg name="proc" value="$(arg proc)"/>
+        <arg name="view" value="$(arg view)"/>
+        <arg name="calib" value="$(arg calib)"/>
+
+        <!-- Arguments for theora quality, images being compressed into "stream" -->
+        <arg name="compressed_jpeg_quality" default="$(arg compressed_jpeg_quality)" />
+        <arg name="theora_keyframe_frequency" default="$(arg theora_keyframe_frequency)"  />
+        <arg name="theora_target_bitrate" default="$(arg theora_target_bitrate)"  />
+        <arg name="theora_quality" default="$(arg theora_quality)"  />
+        <arg name="theora_optimize_for" default="$(arg theora_optimize_for)"  />
+      </include>
+      <!-- </node> -->
+
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
 
       <rosparam file="$(find optic_flow)/config/uav.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />
