@@ -16,16 +16,18 @@
   <arg name="view" default="false"/>
   <arg name="calib" default="false"/>
 
-  <group ns="$(arg uav_name)">
 
+  <group ns="$(arg uav_name)">
     <!-- Vision Nodelet manager -->
     <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen" respawn="true">
       <param name="num_worker_threads" value="8" />
     </node>
+  </group>
 
-    <!-- Autoexposure nodelet -->
-    <include file="$(find auto_exposure)/launch/uav.launch" />
+  <!-- Autoexposure nodelet -->
+  <include file="$(find auto_exposure)/launch/uav.launch" />
 
+  <group ns="$(arg uav_name)">
     <!-- Bluefox2 nodelet -->
     <!-- Camera Settings -->
     <arg name="serial" default="$(arg device)" />
@@ -41,6 +43,7 @@
     <!-- <arg name="expose_us" default="75" /> -->
     <arg name="expose_us" default="400" /> <!-- dusk -->
     <arg name="agc" default="false" />
+    <arg name="boost" value="false"/>
     <arg name="gain_db" default="0.0" />
     <arg name="cbm" default="0" />
     <arg name="ctm" default="1" />
@@ -81,7 +84,6 @@
       <arg name="gain_db" value="$(arg gain_db)"/>
       <arg name="boost" value="$(arg boost)"/>
       <arg name="mm" value="$(arg mm)"/>
-      <arg name="jpeg_quality" value="$(arg jpeg_quality)"/>
 
       <!-- Node Settings -->
       <arg name="plugin" value="$(arg plugin)"/>
