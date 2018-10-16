@@ -1,7 +1,7 @@
 <launch>
 
   <!-- Link to the custom libsub (LD_LIBRARY_PATH is searched before ld.so.conf.d, so the custom libusb will be used instead of the system default-->
-  <env name="LD_LIBRARY_PATH" value="/opt/mvIMPACT_acquire_libusb$(env LD_LIBRARY_PATH)" />
+  <env name="LD_LIBRARY_PATH" value="/opt/mvIMPACT_acquire_libusb:$(env LD_LIBRARY_PATH)" />
 
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
   <arg name="profiler" default="$(optenv PROFILER false)" />
