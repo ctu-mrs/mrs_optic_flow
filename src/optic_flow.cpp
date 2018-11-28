@@ -202,7 +202,7 @@ private:
 
 private:
   mrs_lib::Profiler* profiler;
-  bool               profiler_enabled_ = false;
+  bool profiler_enabled_ = false;
 
 private:
   bool is_initialized = false;
@@ -479,7 +479,7 @@ void OpticFlow::callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackHeight");
+  mrs_lib::Routine routine_callback_height = profiler->createRoutine("callbackUavHeight");
 
   if (absf(msg->value) < 0.001) {
     return;
@@ -503,7 +503,7 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImu");
+  mrs_lib::Routine routine_callback_imu = profiler->createRoutine("callbackImu");
 
   // angular rate source is imu aka gyro
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
@@ -527,7 +527,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackOdometry");
+  mrs_lib::Routine routine_callback_odometry = profiler->createRoutine("callbackOdometry");
 
   got_odometry = true;
 
@@ -560,7 +560,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   if (!is_initialized)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackImage");
+  mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
 
   got_image = true;
 
