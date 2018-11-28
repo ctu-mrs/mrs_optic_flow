@@ -31,3 +31,6 @@
 [submodule "ros_packages/auto_exposure"]
 	path = pes/ros_packages/auto_exposure
 	url = git@mrs.felk.cvut.cz:uav/auto_exposure.git
+[submodule "ros_packages/apriltag2_ros"]
+	path = pes/ros_packages/apriltag2_ros
+	url = git@mrs.felk.cvut.cz:uav/apriltag2_ros.git
