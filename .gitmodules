@@ -34,3 +34,6 @@
 [submodule "ros_packages/apriltag2_ros"]
 	path = pes/ros_packages/apriltag2_ros
 	url = git@mrs.felk.cvut.cz:uav/apriltag2_ros.git
+[submodule "ros_packages/teraranger_array"]
+	path = pes/ros_packages/teraranger_array
+	url = https://github.com/Terabee/teraranger_array.git
