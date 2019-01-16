@@ -12,8 +12,8 @@
   branch = master
 [submodule "ros_packages/usb_cam"]
 	path = pes/ros_packages/usb_cam
-  url = https://github.com/bosch-ros-pkg/usb_cam
-  branch = master
+  url = git@mrs.felk.cvut.cz:uav/drivers/usb_cam
+  branch = develop
 [submodule "ros_packages/terarangerone-ros"]
 	path = pes/ros_packages/terarangerone-ros
   url = git@mrs.felk.cvut.cz:uav/terarangerone-ros.git
