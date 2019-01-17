@@ -8,10 +8,10 @@ ang_rate_source: "imu" # "imu" / "odometry"
 raw_output: true # should publish raw data?
 
 analyze_duration: 1.0 # ??
-scale_rotation: false # ??
+scale_rotation: true # ??
 scale_rot_magnitude: 49.9 # ??
 scale_rot_output: "velocity"
-d3d_method: "" # ??
+d3d_method: "logpol" # ??
 
 store_video: false
 video_path: "/dev/null"
