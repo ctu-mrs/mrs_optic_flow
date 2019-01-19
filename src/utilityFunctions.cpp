@@ -141,11 +141,25 @@ double allsacMean(std::vector<double> pts, double thresholdRadius, int *chosen) 
   return bestIter;
 }
 
-void multiplyAllPts(std::vector<cv::Point2d> &v, double mulx, double muly) {
-  for (uint i = 0; i < v.size(); i++) {
-    v[i].x *= mulx;
-    v[i].y *= muly;
+std::vector<cv::Point2d> multiplyAllPts(std::vector<cv::Point2d> &v, double mulx, double muly, bool affect_input){
+  if (affect_input){
+    for (uint i = 0; i < v.size(); i++) {
+      v[i].x *= mulx;
+      v[i].y *= muly;
+    }
+    return v;
   }
+  else{
+    std::vector<cv::Point2d> output;
+    cv::Point2d currVal;
+    for (uint i = 0; i < v.size(); i++) {
+      currVal.x=v[i].x*mulx;
+      currVal.y=v[i].y*muly;
+      output.push_back(currVal);
+    }
+    return output;
+  }
+
 }
 
 void multiplyAllPts(std::vector<double> &v, double mul) {
@@ -250,7 +264,7 @@ std::vector<double> removeNanPoints(std::vector<double> v) {
   return ret;
 }
 
-std::vector<cv::Point2d> getOnlyInRadiusFromTruth(cv::Point2d truth, std::vector<cv::Point2d> v, double rad) {
+std::vector<cv::Point2d> getOnlyInRadiusFromExpected(cv::Point2d expected, std::vector<cv::Point2d> v, double rad) {
 
   std::vector<cv::Point2d> ret;
   double                    radSq = rad * rad;
@@ -258,7 +272,7 @@ std::vector<cv::Point2d> getOnlyInRadiusFromTruth(cv::Point2d truth, std::vector
 
   for (int i = 0; i < int(v.size()); i++) {
 
-    n = getDistSq(truth, v[i]);
+    n = getDistSq(expected, v[i]);
 
     if (n < radSq) {
       ret.push_back(v[i]);
