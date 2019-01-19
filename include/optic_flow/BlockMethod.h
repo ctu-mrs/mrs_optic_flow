@@ -41,7 +41,7 @@ private:
 public:
   BlockMethod(int frameSize, int samplePointSize, int scanRadius, int scanDiameter, int scanCount, int stepSize);
 
-  std::vector<cv::Point2f> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr);
+  std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr);
 };
 
 #endif  // BLOCKMETHOD_H

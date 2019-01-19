@@ -11,7 +11,7 @@ void rotate2d(double &x, double &y, double alpha) {
   y          = y_n;
 }
 
-void rotate2d(cv::Point2f &pt, double alpha) {
+void rotate2d(cv::Point2d &pt, double alpha) {
   double cs = cos(alpha);  // cos and sin of rot maxtrix
   double sn = sin(alpha);
 
@@ -22,9 +22,9 @@ void rotate2d(cv::Point2f &pt, double alpha) {
 }
 
 
-cv::Point2f pointMean(std::vector<cv::Point2f> pts) {
-  float mx     = 0;
-  float my     = 0;
+cv::Point2d pointMean(std::vector<cv::Point2d> pts) {
+  double mx     = 0;
+  double my     = 0;
   int   numPts = 0;
   for (uint i = 0; i < pts.size(); i++) {
     if (!std::isnan(pts[i].x) && !std::isnan(pts[i].y)) {
@@ -36,36 +36,36 @@ cv::Point2f pointMean(std::vector<cv::Point2f> pts) {
 
   if (numPts > 0) {
     // now we're talking..
-    return cv::Point2f(mx / (float)numPts, my / (float)numPts);
+    return cv::Point2d(mx / (double)numPts, my / (double)numPts);
   }
 
   // what do you want me to do with this?
-  return cv::Point2f(nanf(""), nanf(""));
+  return cv::Point2d(nanf(""), nanf(""));
 }
 
-float getDistSq(cv::Point2f p1, cv::Point2f p2) {
+double getDistSq(cv::Point2d p1, cv::Point2d p2) {
   return pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
 }
 
-float getNormSq(cv::Point2f p1) {
+double getNormSq(cv::Point2d p1) {
   return pow(p1.x, 2) + pow(p1.y, 2);
 }
 
-cv::Point2f twoPointMean(cv::Point2f p1, cv::Point2f p2) {
-  return cv::Point2f((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+cv::Point2d twoPointMean(cv::Point2d p1, cv::Point2d p2) {
+  return cv::Point2d((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
 }
 
-cv::Point2f allsacMean(std::vector<cv::Point2f> pts, float thresholdRadius_sq, int *chosen) {
+cv::Point2d allsacMean(std::vector<cv::Point2d> pts, double thresholdRadius_sq, int *chosen) {
   // For every two points get their mean and do the typical RANSAC things...
   if (pts.size() <= 2) {  // weve got less or same number (or zero?) of points as number to choose
     return pointMean(pts);
   }
 
-  cv::Point2f              currMean;
-  std::vector<cv::Point2f> currIter;
+  cv::Point2d              currMean;
+  std::vector<cv::Point2d> currIter;
 
   int         bestIter_num = 0;
-  cv::Point2f bestIter;
+  cv::Point2d bestIter;
 
   for (uint i = 0; i < pts.size(); i++) {
     for (uint j = i; j < pts.size(); j++) {  // iterate over all pairs
@@ -102,7 +102,7 @@ double calcMean(std::vector<double> pts) {
   return sum / pts.size();
 }
 
-double allsacMean(std::vector<double> pts, float thresholdRadius, int *chosen) {
+double allsacMean(std::vector<double> pts, double thresholdRadius, int *chosen) {
   // For every two points get their mean and do the typical RANSAC things...
   if (pts.size() <= 2) {  // weve got less or same number (or zero?) of points as number to choose
     return calcMean(pts);
@@ -141,41 +141,41 @@ double allsacMean(std::vector<double> pts, float thresholdRadius, int *chosen) {
   return bestIter;
 }
 
-void multiplyAllPts(std::vector<cv::Point2f> &v, float mulx, float muly) {
+void multiplyAllPts(std::vector<cv::Point2d> &v, double mulx, double muly) {
   for (uint i = 0; i < v.size(); i++) {
     v[i].x *= mulx;
     v[i].y *= muly;
   }
 }
 
-void multiplyAllPts(std::vector<double> &v, float mul) {
+void multiplyAllPts(std::vector<double> &v, double mul) {
   for (uint i = 0; i < v.size(); i++) {
     v[i] *= mul;
   }
 }
 
-void rotateAllPts(std::vector<cv::Point2f> &v, double alpha) {
+void rotateAllPts(std::vector<cv::Point2d> &v, double alpha) {
   for (uint i = 0; i < v.size(); i++) {
     rotate2d(v[i], alpha);
   }
 }
 
-void addToAll(std::vector<cv::Point2f> &v, float adx, float ady) {
+void addToAll(std::vector<cv::Point2d> &v, double adx, double ady) {
   for (uint i = 0; i < v.size(); i++) {
     v[i].x += adx;
     v[i].y += ady;
   }
 }
 
-cv::Point2f ransacMean(std::vector<cv::Point2f> pts, int numOfChosen, float thresholdRadius_sq, int numOfIterations) {
+cv::Point2d ransacMean(std::vector<cv::Point2d> pts, int numOfChosen, double thresholdRadius_sq, int numOfIterations) {
   if (int(pts.size()) <= numOfChosen) {  // weve got less or same number (or zero?) of points as number to choose
     return pointMean(pts);
   }
 
-  cv::Point2f              bestIter;          // save the best mean here
+  cv::Point2d              bestIter;          // save the best mean here
   uint                     bestIter_num = 0;  // save number of points in best mean
-  std::vector<cv::Point2f> currIter;          // here goes current iteration
-  cv::Point2f              currMean;
+  std::vector<cv::Point2d> currIter;          // here goes current iteration
+  cv::Point2d              currMean;
 
   for (uint i = 0; i < uint(numOfIterations); i++) {  // ITERATE!!!
     currIter.clear();
@@ -203,12 +203,12 @@ cv::Point2f ransacMean(std::vector<cv::Point2f> pts, int numOfChosen, float thre
   return bestIter;
 }
 
-std::vector<cv::Point2f> getOnlyInAbsBound(std::vector<cv::Point2f> v, float up) {
+std::vector<cv::Point2d> getOnlyInAbsBound(std::vector<cv::Point2d> v, double up) {
 
-  std::vector<cv::Point2f> ret;
+  std::vector<cv::Point2d> ret;
 
-  float                    upSq = up * up;
-  float                    n;
+  double                    upSq = up * up;
+  double                    n;
 
   for (int i = 0; i < int(v.size()); i++) {
     n = getNormSq(v[i]);
@@ -230,8 +230,8 @@ std::vector<double> getOnlyInAbsBound(std::vector<double> v, double up) {
   return ret;
 }
 
-std::vector<cv::Point2f> removeNanPoints(std::vector<cv::Point2f> v) {
-  std::vector<cv::Point2f> ret;
+std::vector<cv::Point2d> removeNanPoints(std::vector<cv::Point2d> v) {
+  std::vector<cv::Point2d> ret;
   for (int i = 0; i < int(v.size()); i++) {
     if (!isnanf(v[i].x) && !isnanf(v[i].y)) {
       ret.push_back(v[i]);
@@ -250,11 +250,11 @@ std::vector<double> removeNanPoints(std::vector<double> v) {
   return ret;
 }
 
-std::vector<cv::Point2f> getOnlyInRadiusFromTruth(cv::Point2f truth, std::vector<cv::Point2f> v, float rad) {
+std::vector<cv::Point2d> getOnlyInRadiusFromTruth(cv::Point2d truth, std::vector<cv::Point2d> v, double rad) {
 
-  std::vector<cv::Point2f> ret;
-  float                    radSq = rad * rad;
-  float                    n;
+  std::vector<cv::Point2d> ret;
+  double                    radSq = rad * rad;
+  double                    n;
 
   for (int i = 0; i < int(v.size()); i++) {
 
@@ -268,7 +268,7 @@ std::vector<cv::Point2f> getOnlyInRadiusFromTruth(cv::Point2f truth, std::vector
   return ret;
 }
 
-float absf(float x) {
+double absf(double x) {
   return x > 0 ? x : -x;
 }
 
@@ -279,17 +279,17 @@ double absd(double x) {
 StatData analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds) {
   SpeedBox sb;
 
-  float sum   = 0;
-  float sumsq = 0;
+  double sum   = 0;
+  double sumsq = 0;
   uint  num   = 0;
 
-  float dif;
+  double dif;
 
-  float sumx   = 0;
-  float sumxsq = 0;
+  double sumx   = 0;
+  double sumxsq = 0;
 
-  float sumy   = 0;
-  float sumysq = 0;
+  double sumy   = 0;
+  double sumysq = 0;
 
   for (uint i = 0; i < speeds.size(); i++) {
     sb = speeds[i];
@@ -313,9 +313,9 @@ StatData analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds) {
   }
 
 
-  float numf = (float)num;
-  float exx  = sumsq / numf;  // E(X^2)
-  float ex   = sum / numf;
+  double numf = (double)num;
+  double exx  = sumsq / numf;  // E(X^2)
+  double ex   = sum / numf;
 
   StatData sd;
   sd.mean   = ex;
@@ -332,30 +332,30 @@ StatData analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds) {
 }
 
 
-std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, double a, double fx, double fy, double range, double allsac_radiusSQ,
+std::vector<cv::Point2d> estimateTranRotVvel(std::vector<cv::Point2d> vectors, double a, double fx, double fy, double range, double allsac_radiusSQ,
                                              double duration, double max_vert_speed, double max_yaw_speed) {
   // a is the distance of points from origin (typ. 40px)
-  std::vector<cv::Point2f> ret;
+  std::vector<cv::Point2d> ret;
   if (vectors.size() != 9) {
-    ret.push_back(cv::Point2f(0, 0));
-    ret.push_back(cv::Point2f(0, 0));
+    ret.push_back(cv::Point2d(0, 0));
+    ret.push_back(cv::Point2d(0, 0));
     return ret;
   }
 
   multiplyAllPts(vectors, 1, -1);
 
-  cv::Point2f r1 = vectors[0];
-  cv::Point2f r4 = vectors[1];
-  cv::Point2f r7 = vectors[2];
-  cv::Point2f r2 = vectors[3];
-  cv::Point2f r5 = vectors[4];
-  cv::Point2f r8 = vectors[5];
-  cv::Point2f r3 = vectors[6];
-  cv::Point2f r6 = vectors[7];
-  cv::Point2f r9 = vectors[8];
+  cv::Point2d r1 = vectors[0];
+  cv::Point2d r4 = vectors[1];
+  cv::Point2d r7 = vectors[2];
+  cv::Point2d r2 = vectors[3];
+  cv::Point2d r5 = vectors[4];
+  cv::Point2d r8 = vectors[5];
+  cv::Point2d r3 = vectors[6];
+  cv::Point2d r6 = vectors[7];
+  cv::Point2d r9 = vectors[8];
 
   // estimate translation
-  std::vector<cv::Point2f> t_est;
+  std::vector<cv::Point2d> t_est;
   t_est.push_back((r1 + r9));
   t_est.push_back((r3 + r7));
   t_est.push_back((r2 + r8));
@@ -378,7 +378,7 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
 
   int ch;
 
-  cv::Point2f tr = allsacMean(t_est, allsac_radiusSQ, &ch);
+  cv::Point2d tr = allsacMean(t_est, allsac_radiusSQ, &ch);
 
   // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Translation est %f,%f m/s - chosen: %d",tr.x,tr.y,ch);
 
@@ -478,6 +478,6 @@ std::vector<cv::Point2f> estimateTranRotVvel(std::vector<cv::Point2f> vectors, d
 
   // ROS_INFO_THROTTLE(0.5,"[OpticFlow]: Rot est %f rad/s, VVel est %f m/s",rot,vert);
 
-  ret.push_back(cv::Point2f(rot, vert));
+  ret.push_back(cv::Point2d(rot, vert));
   return ret;
 }

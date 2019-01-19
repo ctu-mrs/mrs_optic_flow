@@ -37,7 +37,7 @@ find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES block_method fft_method # fastSpaced_method
+  LIBRARIES fft_method # block_method  fastSpaced_method
   CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
   #  DEPENDS system_lib
   DEPENDS Eigen
@@ -61,13 +61,13 @@ include_directories(
 
 ## Declare a C++ library
 add_library(util_functions src/utilityFunctions.cpp)
-add_library(block_method src/BlockMethod.cpp)
+# add_library(block_method src/BlockMethod.cpp)
 add_library(fft_method src/FftMethod.cpp)
 add_library(scaleRotationEstimator src/scaleRotationEstimator.cpp)
 #add_library(fastSpacedOCL_method src/FastSpacedBMMethod_OCL.cpp)
 
 target_link_libraries(fft_method ${OpenCV_LIBRARIES})
-target_link_libraries(block_method ${OpenCV_LIBRARIES})
+# target_link_libraries(block_method ${OpenCV_LIBRARIES})
 target_link_libraries(scaleRotationEstimator ${OpenCV_LIBRARIES})
 #target_link_libraries(fastSpacedOCL_method ${OpenCV_LIBRARIES} ${OpenCL_LIBRARIES} ${catkin_LIBRARIES})
 
@@ -91,7 +91,7 @@ target_link_libraries(OpticFlow
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${Eigen_LIBRARIES}
-  block_method
+  # block_method
   fft_method
   # fastSpacedOCL_method
   util_functions

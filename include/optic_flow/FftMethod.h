@@ -20,7 +20,7 @@ private:
   int imCenterX, imCenterY;  // center of original image
   int xi, yi;                // frame corner coordinates
 
-  std::vector<cv::Point2f> speeds;
+  std::vector<cv::Point2d> speeds;
 
   int sqNum;
 
@@ -39,7 +39,7 @@ public:
   FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
             bool i_tilt_corr_enable, std::string *videoPath, int videoFPS);
 
-  std::vector<cv::Point2f> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr);
+  std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output);
 };
 
 #endif  // FFTMETHOD_H

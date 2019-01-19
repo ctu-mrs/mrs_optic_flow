@@ -1,6 +1,6 @@
-camera_yaw_offset: -1.57
+camera_yaw_offset: 0 # 0 means
 
-gui: false
+gui: true
 debug: false
 silent_debug: false
 
@@ -30,7 +30,7 @@ optic_flow:
   apply_abs_bouding: true
   apply_rel_bouding: false
 
-  scale_factor: 1.0
+  scale_factor: 1.0 # 2 means 1/4 the image area
 
   rotation_correction: true
   tilt_correction: true

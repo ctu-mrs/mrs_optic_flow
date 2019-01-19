@@ -22,7 +22,7 @@ BlockMethod::BlockMethod(int i_frameSize, int i_samplePointSize, int i_scanRadiu
 }
 
 
-std::vector<cv::Point2f> BlockMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr) {
+std::vector<cv::Point2d> BlockMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr) {
 
   // ROS_WARN("[OpticFlow]: Really, you are using BM while it's not rewritten yet? C'mon...rewrite it for ALLsac");
 
@@ -76,7 +76,7 @@ std::vector<cv::Point2f> BlockMethod::processImage(cv::Mat imCurr, bool gui, boo
   int outputY = std::distance(yHist, std::max_element(yHist, yHist + scanDiameter)) - scanRadius;
   // ROS_INFO("[OpticFlow]: x = %d; y = %d\n",outputX,outputY);
 
-  cv::Point2f refined = Refine(imCurr, imPrev, cv::Point2i(outputX, outputY), 2);
+  cv::Point2d refined = Refine(imCurr, imPrev, cv::Point2i(outputX, outputY), 2);
 
 
   if (gui) {
@@ -87,7 +87,7 @@ std::vector<cv::Point2f> BlockMethod::processImage(cv::Mat imCurr, bool gui, boo
 
 
   imPrev = imCurr.clone();
-  std::vector<cv::Point2f> ret;
+  std::vector<cv::Point2d> ret;
   ret.push_back(refined);
   return ret;
   // return refined;

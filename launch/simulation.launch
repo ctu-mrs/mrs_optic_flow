@@ -25,7 +25,8 @@
       <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~odometry_in" to="odometry/odom_main" />
+      <remap from="~odometry_in" to="ground_truth" />
+      <!-- <remap from="~odometry_in" to="odometry/odom_main" /> -->
       <remap from="~camera_in" to="bluefox/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />

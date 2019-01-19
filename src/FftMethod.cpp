@@ -39,7 +39,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   first = true;
 }
 
-std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr) {
+std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output) {
 
   // save image for GUI
   if (gui || storeVideo) {
@@ -77,23 +77,21 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       yi    = j * samplePointSize;
       shift = cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
 
+      bool valid=true;
+      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
+          absd(shift.y) > ((double)samplePointSize / 2)) {
+        ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
+        valid=false;
+      }
+
       if (raw_enable) {
-        // push without correction first
-        if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
-            absd(shift.y) > ((double)samplePointSize / 2)) {
-          ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
-          speeds.push_back(cv::Point2f(nan(""), nan("")));
-        } else {
-          // ROS_WARN("[OpticFlow]: Hacks going on in raw...");  // hack for Gazebo Mobius
-          // speeds.push_back(cv::Point2f(-shift.x,-shift.y));
-          speeds.push_back(cv::Point2f(shift.x, shift.y));  // normal operation
-        }
+        raw_output.push_back(cv::Point2d(shift.x, shift.y));  // normal operation
       }
 
       if (rot_corr_enable) {
         // rotation correction
-        distX = xi + samplePointSize / 2 - midX;
-        distY = midY - (yi + samplePointSize / 2);
+        distX = (xi + samplePointSize / 2) - midX;
+        distY = (yi + samplePointSize / 2) - midY;
 
         corrX = distY * yaw_angle;
         corrY = distX * yaw_angle;
@@ -113,21 +111,22 @@ std::vector<cv::Point2f> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       // shift.x = - shift.x;
       // shift.y = - shift.y;
 
-      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
-          absd(shift.y) > ((double)samplePointSize / 2)) {
+      if (!valid) {
         ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
-        speeds.push_back(cv::Point2f(nan(""), nan("")));
+        speeds.push_back(cv::Point2d(nan(""), nan("")));
       } else {
-        speeds.push_back(cv::Point2f(shift.x, shift.y));
+        speeds.push_back(cv::Point2d(shift.x, shift.y));
       }
 
       // draw nice lines if gui is enabled
       if (gui || storeVideo) {
         cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2),
-                 cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255));
+                 cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255),valid?2:1);
       }
     }
   }
+
+  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tiltCorr), cv::Scalar(255),3);
 
   imPrev = imCurr.clone();
 
