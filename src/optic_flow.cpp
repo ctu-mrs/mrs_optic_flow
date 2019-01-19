@@ -276,7 +276,6 @@ namespace optic_flow
     param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
 
     param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
-
     // method check
     if (method_ < 3 || method_ > 5) {
       ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
