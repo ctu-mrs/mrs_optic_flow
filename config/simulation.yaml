@@ -33,6 +33,7 @@ optic_flow:
 
   rotation_correction: true
   tilt_correction: true
+  # minimum_tilt_correction: 0.01 # rad - to suppress fidgeting at high altitudes due to IMU noise. Value should correspond ~to the standard dev. of the imu noise.
 
   ransac:
     num_of_chosen: 2

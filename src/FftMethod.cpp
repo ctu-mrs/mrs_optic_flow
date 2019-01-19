@@ -75,7 +75,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     for (int j = 0; j < sqNum; j++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
-      shift = cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+      shift = cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
 
       bool valid=true;
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
@@ -126,7 +126,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     }
   }
 
-  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tiltCorr), cv::Scalar(255),3);
+  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tiltCorr), cv::Scalar(255),5);
 
   imPrev = imCurr.clone();
 

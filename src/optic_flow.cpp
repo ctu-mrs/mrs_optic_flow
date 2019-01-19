@@ -202,6 +202,8 @@ namespace optic_flow
       std::vector<SpeedBox> lastSpeeds;
       double                analyze_duration_;
 
+      double                min_tilt_correction_;
+
     private:
       mrs_lib::Profiler* profiler;
       bool profiler_enabled_ = false;
@@ -274,6 +276,7 @@ namespace optic_flow
 
     param_loader.load_param("optic_flow/rotation_correction", rotation_correction_);
     param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
+    param_loader.load_param("optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
 
     param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
@@ -692,13 +695,21 @@ namespace optic_flow
       {
         std::scoped_lock lock(mutex_angular_rate);
 
-        double angrateX, angrateY;
-        angrateX = angular_rate.x;
-        angrateY = angular_rate.y;
-        rotate2d(angrateX, angrateY, -camera_yaw_offset_);
+        /* if ((fabs(angular_rate.x)>min_tilt_correction_) || (fabs(angular_rate.y)>min_tilt_correction_)){ */
+        /*   ROS_INFO("LARGE TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
+          tiltCorr.x = angular_rate.x;
+          tiltCorr.y = angular_rate.y;
+        /* } */
+        /* else{ */
+        /*   ROS_INFO("SMALL TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
+        /*   tiltCorr.x = 0; */
+        /*   tiltCorr.y = 0; */
+        /* } */
 
-        tiltCorr.x = tan(-angrateX * dur.toSec())*fx;  // version V - the good one dammit
-        tiltCorr.y = tan(angrateY * dur.toSec())*fy;
+
+        tiltCorr.x = tan(tiltCorr.x * dur.toSec())*fx;  // version V - the good one dammit
+        tiltCorr.y = tan(-tiltCorr.y * dur.toSec())*fy;
+        rotate2d(tiltCorr.x, tiltCorr.y, -camera_yaw_offset_);
 
         /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
         /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
@@ -841,7 +852,7 @@ namespace optic_flow
       // scale the velocity using height
       {
         std::scoped_lock lock(mutex_uav_height);
-        physical_speed_vectors = multiplyAllPts(optic_flow_vectors, -uav_height / (fx * dur.toSec()), uav_height / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
+        physical_speed_vectors = multiplyAllPts(optic_flow_vectors, uav_height / (fx * dur.toSec()), -uav_height / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
       }
 
       // rotate by camera yaw
@@ -941,19 +952,19 @@ namespace optic_flow
       cv::Point2f filtered_speed_vector;
       if (filter_method_.compare("average") == STRING_EQUAL) {
 
-        filtered_speed_vector = -pointMean(physical_speed_vectors);
+        filtered_speed_vector = pointMean(physical_speed_vectors);
 
       } else if (filter_method_.compare("allsac") == STRING_EQUAL) {
 
         int chosen;
-        filtered_speed_vector = -allsacMean(physical_speed_vectors, RansacThresholdRadSq, &chosen);
+        filtered_speed_vector = allsacMean(physical_speed_vectors, RansacThresholdRadSq, &chosen);
         std_msgs::Int32 allsacChosen;
         allsacChosen.data = chosen;
         publisher_chosen_allsac.publish(allsacChosen);
 
       } else if (filter_method_.compare("ransac") == STRING_EQUAL) {
 
-        filtered_speed_vector = -ransacMean(physical_speed_vectors, ransac_num_of_chosen_, RansacThresholdRadSq, ransac_num_of_iter_);
+        filtered_speed_vector = ransacMean(physical_speed_vectors, ransac_num_of_chosen_, RansacThresholdRadSq, ransac_num_of_iter_);
 
       } else {
         ROS_ERROR("[OpticFlow]: Entered filtering method (filter_method_) does not match to any of these: average,ransac,allsac.");
@@ -1004,12 +1015,22 @@ namespace optic_flow
       // Create statistical data
       StatData  sd       = analyzeSpeeds(fromTime, lastSpeeds); //check what bullshit this one contains later TODO
 
+
       publisher_velocity.publish(velocity);
 
       geometry_msgs::Vector3 v3;
       v3.x = sd.stdDevX;
       v3.y = sd.stdDevY;
       v3.z = sd.stdDev;
+
+      /* { */
+      /*   std::scoped_lock lock(mutex_uav_height); */
+
+      /*     v3.x = v3.x*uav_height; */
+      /*     v3.y = v3.y*uav_height; */
+      /*     v3.y = v3.z*uav_height; */
+      /* } */
+
       publisher_velocity_std.publish(v3);
 
       if (method_ == 5) {
