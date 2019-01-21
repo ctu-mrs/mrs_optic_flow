@@ -101,9 +101,9 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       }
 
 
-      if (tilt_corr_enable) {
-        shift = shift + tiltCorr;  // should be + for bluefox, - for Gazebo Mobius
-      }
+      /* if (tilt_corr_enable) { */
+      /*   shift = shift + tiltCorr;  // should be + for bluefox, - for Gazebo Mobius */
+      /* } */
 
       // ROS_INFO("[OpticFlow]: i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
 

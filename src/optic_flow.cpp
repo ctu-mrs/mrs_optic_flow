@@ -14,6 +14,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/Quaternion.h>
 #include <std_msgs/UInt32MultiArray.h>
 #include <std_msgs/Int32.h>
 #include <sensor_msgs/CameraInfo.h>
@@ -69,6 +70,7 @@ namespace optic_flow
       ros::NodeHandle nh_;
 
     private:
+      /* void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg); */
       void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg);
       void callbackImu(const sensor_msgs::ImuConstPtr& msg);
       void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
@@ -119,9 +121,11 @@ namespace optic_flow
     private:
       cv::Point3d angular_rate;
       std::mutex  mutex_angular_rate;
+      std::mutex  mutex_static_tilt;
 
     private:
       double      odometry_roll, odometry_pitch, odometry_yaw;
+      double odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
       cv::Point2f odometry_speed;
       ros::Time   odometry_stamp;
       std::mutex  mutex_odometry;
@@ -501,6 +505,10 @@ namespace optic_flow
       std::scoped_lock lock(mutex_uav_height);
 
       uav_height = msg->value;
+      /* if (!got_imu) */
+      /*   uav_height = msg->value; */
+      /* else */
+      /*   uav_height = msg->value*cos(odometry_pitch_h)/(cos(odometry_roll_h)); */
     }
   }
 
@@ -523,6 +531,20 @@ namespace optic_flow
 
         angular_rate = cv::Point3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
       }
+
+      tf::Quaternion bt;
+      
+      {
+        std::scoped_lock lock(mutex_static_tilt);
+
+        bt = tf::Quaternion(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w); 
+      }
+
+      if (fabs(bt.length2() - 1 ) > tf::QUATERNION_TOLERANCE) 
+      {
+        bt.normalize();
+      }
+      tf::Matrix3x3(bt).getRPY(odometry_roll_h, odometry_pitch_h, odometry_yaw_h);
 
       got_imu = true;
     }
@@ -688,6 +710,8 @@ namespace optic_flow
     // | ----------------- angular rate correction ---------------- |
 
     cv::Point2d tiltCorr = cv::Point2d(0, 0);
+    cv::Point2d tiltCorrPix = cv::Point2d(0, 0);
+    cv::Point2d tiltCorrVel = cv::Point2d(0, 0);
 
     if (tilt_correction_) {
 
@@ -705,15 +729,24 @@ namespace optic_flow
         /*   tiltCorr.x = 0; */
         /*   tiltCorr.y = 0; */
         /* } */
+      }
 
 
-        tiltCorr.x = tan(tiltCorr.x * dur.toSec())*fx;  // version V - the good one dammit
-        tiltCorr.y = tan(-tiltCorr.y * dur.toSec())*fy;
-        rotate2d(tiltCorr.x, tiltCorr.y, -camera_yaw_offset_);
+      tiltCorr.x = tan(tiltCorr.x * dur.toSec());  // version V - the good one dammit
+      tiltCorr.y = tan(-tiltCorr.y * dur.toSec());
+
+      rotate2d(tiltCorr.x, tiltCorr.y, -camera_yaw_offset_);
+
+      tiltCorrPix.x = tiltCorr.x*fx;
+      tiltCorrPix.y = tiltCorr.y*fy;
+
+
+
+        /* if (fabs(tiltCorr.x)<min_tilt_correction_) tiltCorr.x=0; */
+        /* if (fabs(tiltCorr.y)<min_tilt_correction_) tiltCorr.y=0; */
 
         /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
         /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
-      }
 
       geometry_msgs::Vector3 tiltCorrOut;
       tiltCorrOut.x = tiltCorr.x;  // (tan(angular_rate.y*dur.toSec())*uav_height)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
@@ -762,7 +795,7 @@ namespace optic_flow
       temp_angular_rate = angular_rate.z;
     }
 
-    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr,optic_flow_vectors_raw);
+    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorrPix,optic_flow_vectors_raw);
 
     // check for nans
     optic_flow_vectors = removeNanPoints(optic_flow_vectors);
@@ -949,7 +982,7 @@ namespace optic_flow
       // post-process by Allsac/Ransac/Averaging
 
       // apply Allsac/Ransac/Averaging
-      cv::Point2f filtered_speed_vector;
+      cv::Point2d filtered_speed_vector;
       if (filter_method_.compare("average") == STRING_EQUAL) {
 
         filtered_speed_vector = pointMean(physical_speed_vectors);
@@ -969,6 +1002,17 @@ namespace optic_flow
       } else {
         ROS_ERROR("[OpticFlow]: Entered filtering method (filter_method_) does not match to any of these: average,ransac,allsac.");
       }
+
+
+      {
+        std::scoped_lock lock(mutex_uav_height);
+
+        tiltCorrVel.x = tiltCorr.x*uav_height;
+        tiltCorrVel.y = tiltCorr.y*uav_height;
+      }
+
+      if (tilt_correction_)
+        filtered_speed_vector = filtered_speed_vector shitshithshi + tiltCorrVel;
 
 
       vam = sqrt(getNormSq(filtered_speed_vector));
