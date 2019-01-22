@@ -520,7 +520,10 @@ namespace optic_flow
       /* if (!got_imu) */
       /*   uav_height = msg->value; */
       /* else */
-      /*   uav_height = msg->value*cos(odometry_pitch_h)/(cos(odometry_roll_h)); */
+    {
+      std::scoped_lock lock(mutex_odometry);
+      uav_height = msg->value*cos(odometry_pitch)/(cos(odometry_roll));
+    }
     }
   }
 
@@ -552,12 +555,6 @@ namespace optic_flow
         bt = tf::Quaternion(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w); 
       }
 
-      if (fabs(bt.length2() - 1 ) > tf::QUATERNION_TOLERANCE) 
-      {
-        bt.normalize();
-      }
-      tf::Matrix3x3(bt).getRPY(odometry_roll_h, odometry_pitch_h, odometry_yaw_h);
-
       got_imu = true;
     }
   }
@@ -577,7 +574,6 @@ namespace optic_flow
 
     tf::Quaternion bt;
     tf::quaternionMsgToTF(msg->pose.pose.orientation, bt);
-    tf::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
 
     if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
       {
@@ -593,6 +589,7 @@ namespace optic_flow
       odometry_speed = cv::Point2f(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
       odometry_stamp = ros::Time::now();
       odometry_orientation = bt;
+    tf::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
     }
   }
 
@@ -602,7 +599,7 @@ namespace optic_flow
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
-    if (!is_initialized)
+    if (!is_initialized || !got_odometry)
       return;
 
     mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
