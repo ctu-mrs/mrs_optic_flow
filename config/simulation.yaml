@@ -4,7 +4,8 @@ gui: true
 debug: false
 silent_debug: false
 
-ang_rate_source: "imu" # "imu" / "odometry"
+# ang_rate_source: "imu" # "imu" / "odometry"
+ang_rate_source: "odometry" # "imu" / "odometry"
 raw_output: true # should publish raw data?
 
 scale_rotation: false # Whether optical flow should be used to also estimate the vertical speed and yaw rate.
@@ -32,7 +33,7 @@ optic_flow:
 
   scale_factor: 1.0 # 2 means 1/4 the image area
 
-  rotation_correction: true
+  rotation_correction: false
   tilt_correction: true
   minimum_tilt_correction: 0.5 # rad - to suppress fidgeting at high altitudes due to IMU noise. Value should correspond ~to the standard dev. of the imu noise.
 

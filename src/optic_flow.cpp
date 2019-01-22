@@ -14,6 +14,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/TwistWithCovarianceStamped.h>
 #include <geometry_msgs/Quaternion.h>
 #include <std_msgs/UInt32MultiArray.h>
 #include <std_msgs/Int32.h>
@@ -116,10 +117,12 @@ namespace optic_flow
 
     private:
       double     uav_height;
+      double     uav_height_curr;
       std::mutex mutex_uav_height;
 
     private:
       cv::Point3d angular_rate;
+      cv::Point3d angular_rate_curr;
       std::mutex  mutex_angular_rate;
       std::mutex  mutex_static_tilt;
 
@@ -313,7 +316,7 @@ namespace optic_flow
       cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
     }
 
-    if (scale_rotation && d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0) {
+    if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
       /* ROS_ERROR("[OpticFlow]: Wrong parameter 3d_method. Possible values: logpol, advanced. Entered: %s", d3d_method_.c_str()); */
       ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
       ros::shutdown();
@@ -382,7 +385,7 @@ namespace optic_flow
     // --------------------------------------------------------------
 
     publisher_chosen_allsac        = nh_.advertise<std_msgs::Int32>("allsac_chosen_out", 1);
-    publisher_velocity             = nh_.advertise<geometry_msgs::TwistStamped>("velocity_out", 1);
+    publisher_velocity             = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out", 1);
     publisher_velocity_std         = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev_out", 1);
     publisher_max_allowed_velocity = nh_.advertise<std_msgs::Float32>("max_velocity_out", 1);
     publisher_tilt_correction      = nh_.advertise<geometry_msgs::Vector3>("tilt_correction_out", 1);
@@ -686,13 +689,23 @@ namespace optic_flow
       return;
     }
 
+    {
+      std::scoped_lock lock(mutex_uav_height);
+      uav_height_curr = uav_height;
+    }
+    {
+      std::scoped_lock lock(mutex_angular_rate);
+      angular_rate_curr = angular_rate;
+
+      }
+
     // scale the image
     if (fabs(scale_factor_ - 1.0) > 0.01) {
       cv::resize(image->image, image_scaled, cv::Size(image->image.size().width / scale_factor_, image->image.size().height / scale_factor_));
     } else {
       image_scaled = image->image.clone();
     }
-
+    
     // cropping
     /* int image_center_x = image_scaled.size().width / 2; */
     int image_center_x = cx; //The distortion will be more symmetrical ->  better compensation
@@ -716,20 +729,16 @@ namespace optic_flow
     if (tilt_correction_) {
 
       // do tilt correction (in pixels)
-      {
-        std::scoped_lock lock(mutex_angular_rate);
-
         /* if ((fabs(angular_rate.x)>min_tilt_correction_) || (fabs(angular_rate.y)>min_tilt_correction_)){ */
-        /*   ROS_INFO("LARGE TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
-          tiltCorr.x = angular_rate.x;
-          tiltCorr.y = angular_rate.y;
+          /* ROS_INFO("LARGE TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
+          tiltCorr.x = angular_rate_curr.x;
+          tiltCorr.y = angular_rate_curr.y;
         /* } */
         /* else{ */
         /*   ROS_INFO("SMALL TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
         /*   tiltCorr.x = 0; */
         /*   tiltCorr.y = 0; */
         /* } */
-      }
 
 
       tiltCorr.x = tan(tiltCorr.x * dur.toSec());  // version V - the good one dammit
@@ -748,11 +757,6 @@ namespace optic_flow
         /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
         /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
 
-      geometry_msgs::Vector3 tiltCorrOut;
-      tiltCorrOut.x = tiltCorr.x;  // (tan(angular_rate.y*dur.toSec())*uav_height)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
-      tiltCorrOut.y = tiltCorr.y;  // (tan(angular_rate.x*dur.toSec())*uav_height)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
-      tiltCorrOut.z = 0;
-      publisher_tilt_correction.publish(tiltCorrOut);
     }
 
     // Estimate scale and rotation (if enabled)
@@ -776,11 +780,8 @@ namespace optic_flow
 
       } else {
         // Velocity from altitude
-        {
-          std::scoped_lock lock(mutex_uav_height);
 
-          scale_and_rotation.x = ((scale_and_rotation.x - 1) / uav_height) / dur.toSec();
-        }
+        scale_and_rotation.x = ((scale_and_rotation.x - 1) / uav_height_curr) / dur.toSec();
       }
     }
 
@@ -789,13 +790,10 @@ namespace optic_flow
     std::vector<cv::Point2d> optic_flow_vectors_raw;
     double                   temp_angular_rate;
 
-    {
-      std::scoped_lock lock(mutex_angular_rate);
 
-      temp_angular_rate = angular_rate.z;
-    }
+    temp_angular_rate = angular_rate_curr.z;
 
-    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorrPix,optic_flow_vectors_raw);
+    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr,optic_flow_vectors_raw, fx, fy);
 
     // check for nans
     optic_flow_vectors = removeNanPoints(optic_flow_vectors);
@@ -807,31 +805,27 @@ namespace optic_flow
     // raw velocity without tilt corrections
     if (raw_enabled_) {
 
-      if (method_ == 4 && (optic_flow_vectors.size() != sample_point_count_)) {
+      if (method_ == 4 && ((int)(optic_flow_vectors.size()) != sample_point_count_)) {
         ROS_WARN("[OpticFlow]: Raw enabled and the processing function returned unexpected number of vectors. If this is not normal, disable raw veolcity.");
         return;
       }
 
       std_msgs::UInt32MultiArray msg_raw;
-      {
-        std::scoped_lock lock(mutex_uav_height);
 
-
-        msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
-        msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
-        msg_raw.layout.dim[0].size   = optic_flow_vectors_raw.size();
-        msg_raw.layout.dim[0].label  = "count";
-        msg_raw.layout.dim[0].stride = optic_flow_vectors_raw.size() * 2;
-        msg_raw.layout.dim[1].size   = 2;
-        msg_raw.layout.dim[1].label  = "value";
-        msg_raw.layout.dim[1].stride = 2;
-        std::vector< unsigned int > convert;
-        for (int i = 0; i < (int)(optic_flow_vectors_raw.size()); i++) {
-          convert.push_back(optic_flow_vectors_raw[i].x);
-          convert.push_back(optic_flow_vectors_raw[i].y);
-        }
-        msg_raw.data = convert;
+      msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
+      msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
+      msg_raw.layout.dim[0].size   = optic_flow_vectors_raw.size();
+      msg_raw.layout.dim[0].label  = "count";
+      msg_raw.layout.dim[0].stride = optic_flow_vectors_raw.size() * 2;
+      msg_raw.layout.dim[1].size   = 2;
+      msg_raw.layout.dim[1].label  = "value";
+      msg_raw.layout.dim[1].stride = 2;
+      std::vector< unsigned int > convert;
+      for (int i = 0; i < (int)(optic_flow_vectors_raw.size()); i++) {
+        convert.push_back(optic_flow_vectors_raw[i].x);
+        convert.push_back(optic_flow_vectors_raw[i].y);
       }
+      msg_raw.data = convert;
 
       try {
         publisher_points_raw.publish(msg_raw);
@@ -862,11 +856,8 @@ namespace optic_flow
       }
 
       std::vector<cv::Point2d> trvv;
-      {
-        std::scoped_lock lock(mutex_uav_height);
 
-        trvv = estimateTranRotVvel(optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_, max_yaw_rate_);
-      }
+        trvv = estimateTranRotVvel(optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height_curr, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_, max_yaw_rate_);
 
       optic_flow_vectors.clear();
       optic_flow_vectors.push_back(trvv[0]);  // translation in px
@@ -883,10 +874,7 @@ namespace optic_flow
 
       std::vector<cv::Point2d> physical_speed_vectors;
       // scale the velocity using height
-      {
-        std::scoped_lock lock(mutex_uav_height);
-        physical_speed_vectors = multiplyAllPts(optic_flow_vectors, uav_height / (fx * dur.toSec()), -uav_height / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
-      }
+        physical_speed_vectors = multiplyAllPts(optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
 
       // rotate by camera yaw
       rotateAllPts(physical_speed_vectors, -camera_yaw_offset_-(M_PI_2)); // -pi/2 to turn X,Y into the body axes.
@@ -1004,38 +992,41 @@ namespace optic_flow
       }
 
 
-      {
-        std::scoped_lock lock(mutex_uav_height);
+        tiltCorrVel.x = tiltCorr.x*uav_height_curr;
+        tiltCorrVel.y = tiltCorr.y*uav_height_curr;
 
-        tiltCorrVel.x = tiltCorr.x*uav_height;
-        tiltCorrVel.y = tiltCorr.y*uav_height;
-      }
+        geometry_msgs::Vector3 tiltCorrOut;
+        tiltCorrOut.x = tiltCorrVel.x;  // (tan(angular_rate.y*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
+        tiltCorrOut.y = tiltCorrVel.y;  // (tan(angular_rate.x*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
+        tiltCorrOut.z = 0;
+        publisher_tilt_correction.publish(tiltCorrOut);
 
-      if (tilt_correction_)
-        filtered_speed_vector = filtered_speed_vector shitshithshi + tiltCorrVel;
+      /* if (tilt_correction_) */
+      /*   filtered_speed_vector = filtered_speed_vector  + tiltCorrVel; */
 
 
       vam = sqrt(getNormSq(filtered_speed_vector));
       // | -------------------- publish velocity -------------------- |
-      geometry_msgs::TwistStamped velocity;
+      geometry_msgs::TwistWithCovarianceStamped velocity;
 
       velocity.header.frame_id = "local_origin";
       velocity.header.stamp    = ros::Time::now();
 
-      velocity.twist.linear.x  = filtered_speed_vector.x;
-      velocity.twist.linear.y  = filtered_speed_vector.y;
-      velocity.twist.linear.z  = 0;
+      velocity.twist.twist.linear.x  = filtered_speed_vector.x;
+      velocity.twist.twist.linear.y  = filtered_speed_vector.y;
+      velocity.twist.twist.linear.z  = 0;
       /* velocity.twist.linear.z  = scale_and_rotation.x; */
       /* velocity.twist.angular.z = -scale_and_rotation.y; */
-      velocity.twist.linear.z  = 0;
-      velocity.twist.angular.z = 0;
+      velocity.twist.twist.linear.z  = 0;
+      velocity.twist.twist.angular.z = 0;
+
+
+      velocity.twist.covariance[0] = pow(5*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[7] = velocity.twist.covariance[0];
 
       if (debug_) {
-        {
-          std::scoped_lock lock(mutex_uav_height);
 
-          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", filtered_speed_vector.x, filtered_speed_vector.y, vam, uav_height, odometry_yaw);
-        }
+          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", filtered_speed_vector.x, filtered_speed_vector.y, vam, uav_height_curr, odometry_yaw);
       }
 
       // Add speedbox to lastspeeds array - speedbox carries time, optflow velocity and odom. velocity
@@ -1080,11 +1071,8 @@ namespace optic_flow
       if (method_ == 5) {
         //ON ICE
         std_msgs::Float32 maxVel;
-        {
-          std::scoped_lock lock(mutex_uav_height);
 
-          maxVel.data = scan_radius_ * uav_height / (dur.toSec() * std::max(fx, fy));
-        }
+          maxVel.data = scan_radius_ * uav_height_curr / (dur.toSec() * std::max(fx, fy));
         publisher_max_allowed_velocity.publish(maxVel);
       }
 

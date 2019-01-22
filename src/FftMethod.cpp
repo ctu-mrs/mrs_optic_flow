@@ -2,8 +2,6 @@
 
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
                      bool i_tilt_corr_enable, std::string *videoPath, int videoFPS) {
-
-
   frameSize       = i_frameSize;
   samplePointSize = i_samplePointSize;
   max_px_speed_sq = pow(max_px_speed_t, 2);
@@ -39,7 +37,13 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   first = true;
 }
 
-std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output) {
+std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy) {
+
+  /* ROS_INFO("FX:%f, FY%f",i_fx,i_fy); */
+
+  fx = i_fx;
+  fy = i_fy;
+
 
   // save image for GUI
   if (gui || storeVideo) {
@@ -93,7 +97,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
         distX = (xi + samplePointSize / 2) - midX;
         distY = (yi + samplePointSize / 2) - midY;
 
-        corrX = distY * yaw_angle;
+        corrX = -distY * yaw_angle;
         corrY = distX * yaw_angle;
 
         shift.x = shift.x + corrX;
@@ -101,9 +105,16 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       }
 
 
-      /* if (tilt_corr_enable) { */
-      /*   shift = shift + tiltCorr;  // should be + for bluefox, - for Gazebo Mobius */
-      /* } */
+      if (tilt_corr_enable) {
+        distX = fabs( (xi + samplePointSize / 2) - midX);
+        distY = fabs( (yi + samplePointSize / 2) - midY);
+
+        /* double spDist = sqrt(pow(fx,2)+pow(xi,2)+pow((fx/fy)*yi,2)); */
+        cv::Point2d tiltCorrCurrSample;
+        tiltCorrCurrSample.x = tan(atan(distX/fx)+tiltCorr.x)*fx-distX;
+        tiltCorrCurrSample.y = tan(atan(distY/fy)+tiltCorr.y)*fy-distY;
+        shift = shift + tiltCorrCurrSample;
+      }
 
       // ROS_INFO("[OpticFlow]: i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
 
@@ -126,7 +137,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     }
   }
 
-  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tiltCorr), cv::Scalar(255),5);
+  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tan(tiltCorr.x)*fx*5,tan(tiltCorr.y)*fy*5), cv::Scalar(255),5);
 
   imPrev = imCurr.clone();
 
