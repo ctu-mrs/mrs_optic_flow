@@ -121,12 +121,17 @@ namespace optic_flow
       std::mutex mutex_uav_height;
 
     private:
+      tf::Quaternion tilt_prev;
+      tf::Quaternion tilt_curr;
       cv::Point3d angular_rate;
+      cv::Point3d angle_diff;
+      cv::Point3d angle_diff_curr;
       cv::Point3d angular_rate_curr;
       std::mutex  mutex_angular_rate;
       std::mutex  mutex_static_tilt;
 
     private:
+      tf::Quaternion odometry_orientation;
       double      odometry_roll, odometry_pitch, odometry_yaw;
       double odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
       cv::Point2f odometry_speed;
@@ -405,9 +410,10 @@ namespace optic_flow
 
     if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
       subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
-    } else {
+    } else if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) { }
+    else {
       if (ang_rate_source_.compare("odometry") != 0) {
-        ROS_ERROR("[OpticFlow]: Wrong parameter ang_rate_source_ - possible choices: imu, odometry. Entered: %s", ang_rate_source_.c_str());
+        ROS_ERROR("[OpticFlow]: Wrong parameter ang_rate_source_ - possible choices: imu, odometry, odometry_diff. Entered: %s", ang_rate_source_.c_str());
         ros::shutdown();
       }
     }
@@ -430,6 +436,9 @@ namespace optic_flow
       ROS_ERROR("[OpticFlow]: Could not load all parameters!");
       ros::shutdown();
     }
+
+    tilt_curr = tf::Quaternion();
+    tilt_prev = tilt_curr;
 
     is_initialized = true;
 
@@ -583,6 +592,7 @@ namespace optic_flow
 
       odometry_speed = cv::Point2f(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
       odometry_stamp = ros::Time::now();
+      odometry_orientation = bt;
     }
   }
 
@@ -615,6 +625,20 @@ namespace optic_flow
     }
 
     cv_bridge::CvImagePtr image;
+
+    if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+      {
+        std::scoped_lock lock(mutex_odometry);
+
+        tilt_curr = odometry_orientation;
+        tf::Quaternion diffquat = tilt_prev.inverse()*tilt_curr;
+        double yaw_a, pitch_a,roll_a;
+        tf::Matrix3x3(diffquat).getRPY(roll_a, pitch_a, yaw_a);
+        angle_diff = cv::Point3d(roll_a,pitch_a,yaw_a);
+      }
+      tilt_prev = tilt_curr;
+    }
+
     image = cv_bridge::toCvCopy(msg, enc::BGR8);
     processImage(image);
   }
@@ -693,11 +717,19 @@ namespace optic_flow
       std::scoped_lock lock(mutex_uav_height);
       uav_height_curr = uav_height;
     }
+    if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+    {
+      std::scoped_lock lock(mutex_odometry);
+
+      angle_diff_curr = angle_diff;
+    }
+    }else{
     {
       std::scoped_lock lock(mutex_angular_rate);
-      angular_rate_curr = angular_rate;
 
-      }
+      angular_rate_curr = angular_rate;
+    }
+    }
 
     // scale the image
     if (fabs(scale_factor_ - 1.0) > 0.01) {
@@ -728,27 +760,21 @@ namespace optic_flow
 
     if (tilt_correction_) {
 
-      // do tilt correction (in pixels)
-        /* if ((fabs(angular_rate.x)>min_tilt_correction_) || (fabs(angular_rate.y)>min_tilt_correction_)){ */
-          /* ROS_INFO("LARGE TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
+    if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+          tiltCorr.x = angle_diff_curr.x;
+          tiltCorr.y = angle_diff_curr.y;
+    }
+    else {
           tiltCorr.x = angular_rate_curr.x;
           tiltCorr.y = angular_rate_curr.y;
-        /* } */
-        /* else{ */
-        /*   ROS_INFO("SMALL TILT: x:%f, y:%f", angular_rate.x,angular_rate.y); */
-        /*   tiltCorr.x = 0; */
-        /*   tiltCorr.y = 0; */
-        /* } */
-
-
-      tiltCorr.x = tan(tiltCorr.x * dur.toSec());  // version V - the good one dammit
-      tiltCorr.y = tan(-tiltCorr.y * dur.toSec());
+    }
+      tiltCorr.x = tan(tiltCorr.x);  // version V - the good one dammit
+      tiltCorr.y = tan(-tiltCorr.y);
 
       rotate2d(tiltCorr.x, tiltCorr.y, -camera_yaw_offset_);
 
       tiltCorrPix.x = tiltCorr.x*fx;
       tiltCorrPix.y = tiltCorr.y*fy;
-
 
 
         /* if (fabs(tiltCorr.x)<min_tilt_correction_) tiltCorr.x=0; */
@@ -788,12 +814,16 @@ namespace optic_flow
     // process image
     std::vector<cv::Point2d> optic_flow_vectors;
     std::vector<cv::Point2d> optic_flow_vectors_raw;
-    double                   temp_angular_rate;
+    double                   temp_angle_diff;
 
 
-    temp_angular_rate = angular_rate_curr.z;
+    if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
+      temp_angle_diff = angle_diff_curr.z;
+    }else{
+      temp_angle_diff = angular_rate_curr.z* dur.toSec();
+    }
 
-    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angular_rate * dur.toSec(), tiltCorr,optic_flow_vectors_raw, fx, fy);
+    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff , tiltCorr,optic_flow_vectors_raw, fx, fy);
 
     // check for nans
     optic_flow_vectors = removeNanPoints(optic_flow_vectors);
