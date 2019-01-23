@@ -26,6 +26,7 @@ private:
   int sqNum;
 
   cv::Point2d shift;
+  cv::Point2d shift_raw;
 
   bool first;
   bool raw_enable;
@@ -40,7 +41,7 @@ public:
   FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
             bool i_tilt_corr_enable, std::string *videoPath, int videoFPS);
 
-  std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy);
+  std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center, cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy);
 };
 
 #endif  // FFTMETHOD_H

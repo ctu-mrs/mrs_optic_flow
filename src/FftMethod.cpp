@@ -37,7 +37,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   first = true;
 }
 
-std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d tiltCorr, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy) {
+std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center, cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy) {
 
   /* ROS_INFO("FX:%f, FY%f",i_fx,i_fy); */
 
@@ -79,7 +79,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     for (int j = 0; j < sqNum; j++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
-      shift = cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+      shift = -cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+      shift_raw = shift;
 
       bool valid=true;
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
@@ -92,29 +93,29 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
         raw_output.push_back(cv::Point2d(shift.x, shift.y));  // normal operation
       }
 
-      if (rot_corr_enable) {
-        // rotation correction
-        distX = (xi + samplePointSize / 2) - midX;
-        distY = (yi + samplePointSize / 2) - midY;
 
-        corrX = -distY * yaw_angle;
-        corrY = distX * yaw_angle;
+      /* if (tilt_corr_enable) { */
+      /*   distX = fabs( (xi + samplePointSize / 2) - midX); */
+      /*   distY = fabs( (yi + samplePointSize / 2) - midY); */
 
-        shift.x = shift.x + corrX;
-        shift.y = shift.y + corrY;
-      }
+      /*   /1* double spDist = sqrt(pow(fx,2)+pow(xi,2)+pow((fx/fy)*yi,2)); *1/ */
+      /*   cv::Point2d tiltCorrDynamicCurrSample; */
+      /*   tiltCorrDynamicCurrSample.x = tan(atan(distX/fx)+tiltCorr_dynamic.x)*fx-distX; */
+      /*   tiltCorrDynamicCurrSample.y = tan(atan(distY/fy)+tiltCorr_dynamic.y)*fy-distY; */
+      /*   shift = shift + tiltCorrDynamicCurrSample; */
+      /* } */
 
+      /* if (rot_corr_enable) { */
+      /*   // rotation correction */
+      /*   distX = (xi + samplePointSize / 2) - rot_center.x; */
+      /*   distY = (yi + samplePointSize / 2) - rot_center.y; */
 
-      if (tilt_corr_enable) {
-        distX = fabs( (xi + samplePointSize / 2) - midX);
-        distY = fabs( (yi + samplePointSize / 2) - midY);
+      /*   corrX = (distX*cos(yaw_angle) -distY*sin(yaw_angle))-distX; */
+      /*   corrY = (distX*sin(yaw_angle) +distY*cos(yaw_angle))-distY; */
 
-        /* double spDist = sqrt(pow(fx,2)+pow(xi,2)+pow((fx/fy)*yi,2)); */
-        cv::Point2d tiltCorrCurrSample;
-        tiltCorrCurrSample.x = tan(atan(distX/fx)+tiltCorr.x)*fx-distX;
-        tiltCorrCurrSample.y = tan(atan(distY/fy)+tiltCorr.y)*fy-distY;
-        shift = shift + tiltCorrCurrSample;
-      }
+      /*   shift.x = shift.x + corrX; */
+      /*   shift.y = shift.y + corrY; */
+      /* } */
 
       // ROS_INFO("[OpticFlow]: i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
 
@@ -132,12 +133,17 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       // draw nice lines if gui is enabled
       if (gui || storeVideo) {
         cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2),
-                 cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255),valid?2:1);
+                 cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255),valid?5:1);
+        /* cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2), */
+        /*          cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift_raw.x * 5.0), (int)(shift_raw.y * 5.0)), cv::Scalar(155),valid?3:1); */
+        /* cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2), */
+        /*          cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(corrX * 5.0), (int)(corrY * 5.0)), cv::Scalar(0),valid?1:1); */
       }
     }
   }
 
-  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tan(tiltCorr.x)*fx*5,tan(tiltCorr.y)*fy*5), cv::Scalar(255),5);
+  /* cv::circle(imView, cv::Point2i(rot_center), 5, cv::Scalar(255),5); */
+  cv::line(imView, cv::Point2i(imView.size()/2), cv::Point2i(imView.size()/2)+cv::Point2i(tan(tiltCorr_dynamic.x)*fx*5,tan(tiltCorr_dynamic.y)*fy*5), cv::Scalar(155),5);
 
   imPrev = imCurr.clone();
 
