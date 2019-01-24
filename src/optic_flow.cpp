@@ -5,7 +5,13 @@
 #include <nodelet/nodelet.h>
 
 #include <string>
-#include <tf/tf.h>
+#include <thread>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf/transform_datatypes.h>
+#include <tf2_ros/transform_listener.h>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
@@ -98,12 +104,22 @@ namespace optic_flow
       void callbackImage(const sensor_msgs::ImageConstPtr& msg);
       void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
 
+      std::thread tf_thread;
+
     private:
       void processImage(const cv_bridge::CvImagePtr image);
+      void getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner);
+      void TfThread();
 
     private:
       ros::Timer cam_init_timer;
       void       camInitTimer(const ros::TimerEvent& event);
+
+      tf2_ros::Buffer buffer;
+      tf2_ros::TransformListener *listener;
+      geometry_msgs::TransformStamped  transformCam2Base;
+      geometry_msgs::TransformStamped  transformBase2Cam;
+      /* geometry_msgs::Transform  transformBase2World; */
 
     private:
       double max_processing_rate_;
@@ -141,23 +157,25 @@ namespace optic_flow
       std::mutex mutex_uav_height;
 
     private:
-      tf::Quaternion tilt_prev;
-      tf::Quaternion tilt_curr;
+      tf2::Quaternion tilt_prev;
+      tf2::Quaternion tilt_curr;
       cv::Point3d angular_rate;
+      tf2::Quaternion angular_rate_tf;
       cv::Point3d angle_diff;
-      tf::Matrix3x3 rotMatDiff;
+      tf2::Matrix3x3 rotMatDiff;
       cv::Point3d angle_diff_curr;
       cv::Point3d angular_rate_curr;
       std::mutex  mutex_angular_rate;
       std::mutex  mutex_static_tilt;
 
     private:
-      tf::Quaternion odometry_orientation;
+      tf2::Quaternion odometry_orientation;
       double      odometry_roll, odometry_pitch, odometry_yaw;
       double odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
       cv::Point2f odometry_speed;
       ros::Time   odometry_stamp;
       std::mutex  mutex_odometry;
+      std::mutex  mutex_tf;
 
     private:
       std::vector<double> fallback_camera_data;
@@ -218,6 +236,9 @@ namespace optic_flow
       int         ransac_num_of_chosen_;
       int         ransac_num_of_iter_;
       double       RansacThresholdRadSq;
+      
+      std::string camera_frame_, uav_frame_;
+
       std::string filter_method_;
 
       bool                    rotation_correction_, tilt_correction_, raw_enabled_;
@@ -244,47 +265,169 @@ namespace optic_flow
 
     private:
       bool is_initialized = false;
+
+      std::string uav_name;
   };
 
   //}
+  //
+  void OpticFlow::TfThread() {
+    ros::Rate transformRate(0.1);
+    bool got_c2b, got_b2c, got_b2w;
+    got_c2b = false;
+    got_b2c = false;
+    got_b2w = false;
+    while ((!got_c2b) || (!got_b2c)) {
+      try {
+        {
+          std::scoped_lock lock(mutex_tf);
 
-  /* //{ onInit() */
+          /* transformCam2Base = tf_buffer.lookupTransform(uav_frame_, camera_frame_, time - ros::Duration(uav2_delay), timeout); */
+          transformCam2Base = buffer.lookupTransform(uav_frame_, camera_frame_, ros::Time(0),  ros::Duration(2));
+        }
+        got_c2b = true;
+      }
+      catch (tf2::TransformException ex) {
+        ROS_ERROR("TF: %s", ex.what());
+        ros::Duration(1.0).sleep();
+        continue;
+      }
+      try {
+        {
+          std::scoped_lock lock(mutex_tf);
 
-  std::vector<cv::Point2d> getExpectedShifts(cv::Point2i ulCorner){
-    camMatrixLocal = camMatrix;
-    camMatrixLocal.at<double>(0,2) -= ulCorner.x;
-    std::vector<cv::Point2d> initialPts, undistPts, differences;
-    std::vector<cv::Point3d> 3dPts, rotPts;
-    sqNum            = frameSize / samplePointSize;
-    for (int i = 0; i < sqNum; i++) {
-      for (int j = 0; j < sqNum; j++) {
-        xi    = i * samplePointSize;
-        yi    = j * samplePointSize;
-        initialPts.push_back(cv::Point2f(xi,yi));
+          transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0),  ros::Duration(2));
+        }
+        got_b2c = true;
+      }
+      catch (tf2::TransformException ex) {
+        ROS_ERROR("TF: %s", ex.what());
+        ros::Duration(1.0).sleep();
+        continue;
+      }
+      /* try { */
+      /*   listener.waitForTransform("local_origin", "fcu_" + uav_name, ros::Time::now(), ros::Duration(1.0)); */
+      /*   { */
+      /*     std::scoped_lock(mutex_tf); */
+
+      /*     listener.lookupTransform("local_origin", "fcu_" + uav_name, ros::Time(0), transformBase2World); */
+      /*   } */
+      /*   got_b2w = true; */
+      /* } */
+      /* catch (tf2::TransformException ex) { */
+      /*   ROS_ERROR("TF: %s", ex.what()); */
+      /*   ros::Duration(1.0).sleep(); */
+      /*   continue; */
+      /* } */
+      transformRate.sleep();
+      /* ROS_INFO("TF next"); */
+    }
+  }
+
+  void OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner){
+    cv::Matx33d camMatrixLocal = camMatrix;
+    camMatrixLocal(0,2) -= ulCorner.x;
+    std::vector<cv::Point2d> initialPts, shiftedPts, undistPtsA, undistPtsB;
+    int sqNum            = frame_size_ / sample_point_size_;
+    for (int j = 0; j < sqNum; j++) {
+      for (int i = 0; i < sqNum; i++) {
+        int xi    = i * sample_point_size_+(sample_point_size_ / 2);
+        int yi    = j * sample_point_size_+(sample_point_size_ / 2);
+        initialPts.push_back(cv::Point2d(xi,yi));
+        shiftedPts.push_back(cv::Point2d(xi,yi)+shifts[i+sqNum*j]);
       }
     }
 
-    cv::undistortPoints(initialPts, undistPts, camMatrixLocal, distCoeffs);
+    cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
+    cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
 
-    for (const auto& ptCurr : undistPts){
-      camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1)
-      3dPts.push_back(camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1));
+
+
+    /* std::cout << "Undist, vs orig: " << std::endl; */
+    /* for (int i=0;i<(int)(undistPtsA.size()); i++){ */
+    /*   std::cout << "A - Orig: " << initialPts[i] << " Undist: " << camMatrixLocal*undistPtsA[i] << std::endl; */
+    /*   std::cout << "B - Orig: " << shiftedPts[i] << " Undist: " << camMatrixLocal*undistPtsB[i] << std::endl; */
+
+    /*     } */
+
+
+
+    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3);
+    std::cout << "CamMat: " << camMatrixLocal << std::endl;
+    std::cout << "NO HOMO: " << homography << std::endl;
+    std::vector<cv::Mat> rot, tran, normals;
+    int solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
+
+    tf2::Transform tempTf;
+    tf2::fromMsg(transformCam2Base, tempTf);
+    /* tf2::Quaternion cam_orientation = tempTf*odometry_orientation; */
+    /* tf2::Vector3 expNormal = */ 
+    /* std::cout << "C2B: " << cam_orientation(tf2::Vector3(0,0,1)) << std::endl; */
+
+
+    std::cout << "Next: " << std::endl;
+    std::cout << "ExpectedRate: " << (tempTf*angular_rate_tf) << std::endl;
+    tf2::Matrix3x3 tempRotMat;
+    tf2::Transform tempTransform;
+    std::cout << std::endl;
+    for (int i=0; i<solutions; i++){
+      /* NormExp = tf::Matrix3x3(bt)*tf::Vector3(0,0,1); */
+      /* if (normals[i].at<double>(2)<0) { */
+      for (int j=0; j<3; j++){
+        for (int k=0; k<3; k++){
+          tempRotMat[j][k] = rot[i].at<double>(j,k);
+        }
+      }
+      tempTransform = tf2::Transform(tempRotMat);
+      std::cout << "ANGLE: " << tempTransform.getRotation().angle(angular_rate_tf) << std::endl;
+        std::cout << "Rotations: " << rot[i]/dur.toSec() << std::endl;
+        std::cout << "Det: " << cv::determinant(rot[i]) << std::endl;
+        cv::Vec3d angles;
+        cv::Rodrigues(rot[i], angles);
+        std::cout << "Angles: " << angles << std::endl;
+        std::cout << "Translations: " << tran[i]*uav_height/dur.toSec() << std::endl;
+        std::cout << "Normals: " << normals[i] << std::endl;
+      /* } */
     }
+    std::cout << std::endl;
 
-    cv::Matx33d rotMatDiffCv = cv::Matx33d::zeros();
-    for (int i=0;i<9;i++){
-      output(i) = rotMatDiff(3dPts,rotPts,rotMatDiffCv*rotZ());
-    }
-
-    cv::transform(3dPts
-
-
-
-    
-
-
-    
   }
+
+  /* std::vector<cv::Point2d> getExpectedShifts(cv::Point2i ulCorner){ */
+  /*   camMatrixLocal = camMatrix; */
+  /*   camMatrixLocal.at<double>(0,2) -= ulCorner.x; */
+  /*   std::vector<cv::Point2d> initialPts, undistPts, differences; */
+  /*   std::vector<cv::Point3d> 3dPts, rotPts; */
+  /*   sqNum            = frameSize / samplePointSize; */
+  /*   for (int i = 0; i < sqNum; i++) { */
+  /*     for (int j = 0; j < sqNum; j++) { */
+  /*       xi    = i * samplePointSize; */
+  /*       yi    = j * samplePointSize; */
+  /*       initialPts.push_back(cv::Point2f(xi,yi)); */
+  /*     } */
+  /*   } */
+
+  /*   cv::undistortPoints(initialPts, undistPts, camMatrixLocal, distCoeffs); */
+
+  /*   for (const auto& ptCurr : undistPts){ */
+  /*     camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1) */
+  /*     3dPts.push_back(camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1)); */
+  /*   } */
+
+  /*   cv::Matx33d rotMatDiffCv = cv::Matx33d::zeros(); */
+  /*   for (int i=0;i<9;i++){ */
+  /*     output(i) = rotMatDiff(3dPts,rotPts,rotMatDiffCv*rotZ()); */
+  /*   } */
+
+  /*   cv::transform(3dPts */
+
+
+
+    
+
+
+    
+  /* } */
 
   void OpticFlow::onInit() {
 
@@ -295,6 +438,10 @@ namespace optic_flow
     mrs_lib::ParamLoader param_loader(nh_, "OpticFlow");
 
     // | -------------------- basic node params ------------------- |
+    param_loader.load_param("uav_name", uav_name, std::string());
+
+    param_loader.load_param("camera_frame", camera_frame_);
+    param_loader.load_param("uav_frame", uav_frame_);
 
     param_loader.load_param("enable_profiler", profiler_enabled_);
     param_loader.load_param("debug", debug_);
@@ -495,8 +642,11 @@ namespace optic_flow
       ros::shutdown();
     }
 
-    tilt_curr = tf::Quaternion();
-    tilt_prev = tilt_curr;
+    /* tilt_curr = tf::Quaternion(); */
+    /* tilt_prev = tilt_curr; */
+
+    listener = new tf2_ros::TransformListener(buffer);
+    tf_thread   = std::thread(&OpticFlow::TfThread, this);
 
 
     is_initialized = true;
@@ -595,7 +745,7 @@ namespace optic_flow
       /* else */
     {
       std::scoped_lock lock(mutex_odometry);
-      uav_height = msg->value*cos(odometry_pitch)/(cos(odometry_roll));
+      uav_height = msg->value/(cos(odometry_pitch)*(cos(odometry_roll)));
     }
     }
     got_height = true;
@@ -619,14 +769,15 @@ namespace optic_flow
         std::scoped_lock lock(mutex_angular_rate);
 
         angular_rate = cv::Point3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+        angular_rate_tf.setRPY(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
       }
 
-      tf::Quaternion bt;
+      tf2::Quaternion bt;
       
       {
         std::scoped_lock lock(mutex_static_tilt);
 
-        bt = tf::Quaternion(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w); 
+        bt = tf2::Quaternion(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w); 
       }
 
       got_imu = true;
@@ -645,8 +796,8 @@ namespace optic_flow
     mrs_lib::Routine routine_callback_odometry = profiler->createRoutine("callbackOdometry");
 
 
-    tf::Quaternion bt;
-    tf::quaternionMsgToTF(msg->pose.pose.orientation, bt);
+    tf2::Quaternion bt(msg->pose.pose.orientation.x,msg->pose.pose.orientation.y,msg->pose.pose.orientation.z,msg->pose.pose.orientation.w);
+    /* tf2::quaternionMsgToTF(msg->pose.pose.orientation, bt); */
 
     if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
       {
@@ -662,7 +813,7 @@ namespace optic_flow
       odometry_speed = cv::Point2f(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
       odometry_stamp = ros::Time::now();
       odometry_orientation = bt;
-    tf::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
+    tf2::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
     }
 
     got_odometry = true;
@@ -703,10 +854,10 @@ namespace optic_flow
         std::scoped_lock lock(mutex_odometry);
 
         tilt_curr = odometry_orientation;
-        tf::Quaternion diffquat = tilt_prev.inverse()*tilt_curr;
+        tf2::Quaternion diffquat = tilt_prev.inverse()*tilt_curr;
         double yaw_a, pitch_a,roll_a;
-        tf::Matrix3x3(diffquat).getRPY(roll_a, pitch_a, yaw_a);
-        rotMatDiff = tf::Matrix3x3(diffquat);
+        tf2::Matrix3x3(diffquat).getRPY(roll_a, pitch_a, yaw_a);
+        rotMatDiff = tf2::Matrix3x3(diffquat);
         angle_diff = cv::Point3d(roll_a,pitch_a,yaw_a);
       }
       tilt_prev = tilt_curr;
@@ -933,6 +1084,7 @@ namespace optic_flow
     /* std::cout << "CENTER: " << rot_center <<std::endl; */
 
     optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, rot_center, tiltCorr, optic_flow_vectors_raw, fx, fy);
+    getRT(optic_flow_vectors, cv::Point2d(xi,yi));
 
     // check for nans
     optic_flow_vectors = removeNanPoints(optic_flow_vectors);

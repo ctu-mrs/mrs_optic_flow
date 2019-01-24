@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   sensor_msgs
   std_msgs
+  geometry_msgs
   tf
   mrs_lib
   )
@@ -38,7 +39,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES fft_method # block_method  fastSpaced_method
-  CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs message_runtime
+  CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs geometry_msgs message_runtime
   #  DEPENDS system_lib
   DEPENDS Eigen
   LIBRARIES OpticFlow

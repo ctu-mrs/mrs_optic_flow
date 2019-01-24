@@ -75,8 +75,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   double corrX, corrY;  // yaw corrections
 
   // calculate correlation for each window and store it if it doesn't exceed the limit
-  for (int i = 0; i < sqNum; i++) {
-    for (int j = 0; j < sqNum; j++) {
+  for (int j = 0; j < sqNum; j++) {
+    for (int i = 0; i < sqNum; i++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
       shift = -cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
