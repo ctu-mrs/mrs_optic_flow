@@ -79,7 +79,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     for (int i = 0; i < sqNum; i++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
-      shift = -cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+      shift = cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
       shift_raw = shift;
 
       bool valid=true;

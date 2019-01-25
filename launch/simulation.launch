@@ -11,6 +11,7 @@
 
   <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
+  <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
 
   <group ns="$(arg uav_name)">
 
@@ -18,7 +19,9 @@
     name="optflow_cam_tf"
     pkg="tf2_ros"
     type="static_transform_publisher"
-    args="0 0 -0.1 -3.14159275358 0.00000000000 -1.57079632679 $(arg uav_frame) $(arg camera_frame) "/>
+    args="0 0 -0.1 -1.57079632679 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
+    <!-- <origin xyz="0.108 0 0.085" rpy="1.57079632679 4.71238898038 1.57079632679" /> -->
+    <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
     <!-- Vision Nodelet manager -->
     <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
@@ -33,6 +36,7 @@
 
       <param name="camera_frame" value="$(arg camera_frame)" />
       <param name="uav_frame" value="$(arg uav_frame)" />
+      <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
       <!-- Subscribers -->
       <!--remap from="~odometry_in" to="ground_truth" /-->
@@ -40,7 +44,7 @@
       <remap from="~camera_in" to="bluefox/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
-      <remap from="~imu_in" to="mavros/imu/data_raw" />
+      <remap from="~imu_in" to="mavros/imu/data" />
 
       <!-- Publishers -->
       <remap from="~velocity_out" to="~velocity" />
