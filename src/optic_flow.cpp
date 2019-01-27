@@ -392,8 +392,12 @@ namespace optic_flow
     double bestAngDiff2 = M_PI;
     tf2::Quaternion bestQuatRateOF2;
 
+
     tf2::Quaternion quatRateOF, quatRateOFB;
     for (int i=0; i<solutions; i++){
+    std::cout << normals[i] << std::endl;
+    std::cout << normals[i].at<double>(2) << std::endl;
+
       if (normals[i].at<double>(2)<0) {
         for (int j=0; j<3; j++){ for (int k=0; k<3; k++){
             tempRotMat[k][j] = rot[i].at<double>(j,k); } }
@@ -416,9 +420,9 @@ namespace optic_flow
           bestIndex = i;
           bestQuatRateOF = quatRateOF;
         }
-        }
+      }
     }
-    if (bestIndex != -1) {
+    if ((bestIndex != -1) && (solutions>1)) {
       if( cv::determinant(rot[bestIndex]) <0){
         std::cout << "Invalid rotation found" << std::endl;
       }
@@ -452,12 +456,15 @@ namespace optic_flow
       /*   std::cout << std::endl; */
       /* } */
     }
-    /* else if (cv::norm(tran[0]) < 0.01) { */
-    /*   std::cout << "No motion detected" << std::endl; */
-    /*   o_rot = tf2::Quaternion(tf2::Vector3(0,0,1), 0); */
-    /*   o_tran = tf2::Vector3(0,0,0); */
-    /*   return true; */
-    /* } */
+    /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
+    else if (solutions == 1){
+      if (cv::norm(tran[0]) < 0.001){
+        std::cout << "No motion detected" << std::endl;
+        o_rot = tf2::Quaternion(tf2::Vector3(0,0,1), 0);
+        o_tran = tf2::Vector3(0,0,0);
+        return true;
+      }
+    }
     else {
       std::cout << "ERROR" << std::endl;
     }
@@ -1176,10 +1183,13 @@ namespace optic_flow
     tf2::Quaternion detilt;
     
     {
-      std::scoped_lock lock(mutex_odometry);
+      /* std::scoped_lock lock(mutex_odometry); */
 
-      detilt.setRPY(imu_roll,imu_pitch,0);
-      /* detilt.setRPY(odometry_roll,odometry_pitch,0); */
+        std::scoped_lock lock(mutex_static_tilt);
+
+      /* detilt.setRPY(imu_roll,imu_pitch,0); */
+      detilt.setRPY(imu_roll,imu_pitch,imu_yaw);
+      /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
       /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << std::endl; */
     }
 
@@ -1440,7 +1450,7 @@ namespace optic_flow
       velocity.twist.twist.angular.z = 0;
 
 
-      velocity.twist.covariance[0] = pow(5*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[0] = pow(10*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7] = velocity.twist.covariance[0];
 
       if (debug_) {
