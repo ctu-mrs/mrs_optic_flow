@@ -1,4 +1,4 @@
-#include "../include/optic_flow/FastSpacedBMMethod_OCL.h"
+#include "../include/mrs_optic_flow/FastSpacedBMMethod_OCL.h"
 #include <ostream>
 #include <dirent.h>
 
@@ -48,8 +48,8 @@ FastSpacedBMMethod::FastSpacedBMMethod(int i_samplePointSize, int i_scanRadius, 
 
   FILE * program_handle;
   size_t program_size;
-  // ROS_INFO((ros::package::getPath("[OpticFlow]: optic_flow")+"/src/FastSpacedBMMethod.cl").c_str());
-  program_handle = fopen((ros::package::getPath("optic_flow") + "/src/FastSpacedBMMethod.cl").c_str(), "r");
+  // ROS_INFO((ros::package::getPath("[OpticFlow]: mrs_optic_flow")+"/src/FastSpacedBMMethod.cl").c_str());
+  program_handle = fopen((ros::package::getPath("mrs_optic_flow") + "/src/FastSpacedBMMethod.cl").c_str(), "r");
   if (program_handle == NULL) {
     std::cout << "Couldn't find the program file" << std::endl;
     return;

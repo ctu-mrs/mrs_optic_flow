@@ -1,4 +1,4 @@
-#include "../include/optic_flow/FftMethod.h"
+#include "../include/mrs_optic_flow/FftMethod.h"
 
 static void magSpectrums( cv::InputArray _src, cv::OutputArray _dst)
 {
@@ -774,7 +774,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   imPrev = imCurr.clone();
 
   if (gui) {
-    cv::imshow("optic_flow", imView);
+    cv::imshow("mrs_optic_flow", imView);
     cv::waitKey(1);
   }
 

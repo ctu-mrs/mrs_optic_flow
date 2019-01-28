@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(optic_flow)
+project(mrs_optic_flow)
 
 FILE(GLOB_RECURSE HEADER_FILES include *.h)
 FILE(GLOB_RECURSE OPENCL_FILES include *.cl)

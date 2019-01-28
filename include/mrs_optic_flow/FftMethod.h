@@ -8,10 +8,10 @@
 #include <opencv2/core/ocl.hpp>
 
 #include <image_transport/image_transport.h>
-#include "optic_flow/OpticFlowCalc.h"
+#include "mrs_optic_flow/OpticFlowCalc.h"
 #include <iostream>
 #include <string.h>
-#include "optic_flow/utilityFunctions.h"
+#include "mrs_optic_flow/utilityFunctions.h"
 
 class FftMethod : public OpticFlowCalc {
 private:

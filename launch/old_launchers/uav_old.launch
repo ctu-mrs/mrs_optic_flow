@@ -107,12 +107,12 @@
       <param name="image_raw/theora/optimize_for" value="0"  />
     </node>
 
-    <node name="optic_flow" pkg="optic_flow" type="optic_flow_node" output="screen" >
+    <node name="mrs_optic_flow" pkg="mrs_optic_flow" type="mrs_optic_flow_node" output="screen" >
 
-      <rosparam file="$(find optic_flow)/config/physical_constraints.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/physical_constraints.yaml" />
 
       <!-- File with camera parameters - loaded when nothing found on Camera info --> 
-      <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
 
       <param name="DEBUG" type="bool" value="$(arg DEBUG)" />
       <param name="gui" type="bool" value="$(arg gui)" />

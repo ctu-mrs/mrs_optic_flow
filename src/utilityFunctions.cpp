@@ -1,4 +1,4 @@
-#include "../include/optic_flow/utilityFunctions.h"
+#include "../include/mrs_optic_flow/utilityFunctions.h"
 #include <ros/ros.h>
 
 void rotate2d(double &x, double &y, double alpha) {

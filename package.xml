@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
 
-  <name>optic_flow</name>
+  <name>mrs_optic_flow</name>
   <version>1.0.0</version>
   <description>The optic_flow package</description>
 
@@ -25,8 +25,6 @@
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
-
-
 
   <export>
     <nodelet plugin="${prefix}/optic_flow.xml" />

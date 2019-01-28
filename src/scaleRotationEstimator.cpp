@@ -1,4 +1,4 @@
-#include "../include/optic_flow/scaleRotationEstimator.h"
+#include "../include/mrs_optic_flow/scaleRotationEstimator.h"
 
 scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVideo, std::string *videoPath, int videoFPS) {
 

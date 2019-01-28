@@ -37,16 +37,16 @@ using namespace std;
 //#include <opencv2/gpuimgproc.hpp>
 //#include <time.h>
 
-#include "optic_flow/OpticFlowCalc.h"
-#include "optic_flow/BlockMethod.h"
-#include "optic_flow/FftMethod.h"
-#include "optic_flow/utilityFunctions.h"
-#include "optic_flow/scaleRotationEstimator.h"
+#include "mrs_optic_flow/OpticFlowCalc.h"
+#include "mrs_optic_flow/BlockMethod.h"
+#include "mrs_optic_flow/FftMethod.h"
+#include "mrs_optic_flow/utilityFunctions.h"
+#include "mrs_optic_flow/scaleRotationEstimator.h"
 
 /* #ifdef OPENCL_ENABLE */
 
-/* #include "optic_flow/FastSpacedBMMethod_OCL.h" */
-/* #include "optic_flow/FastSpacedBMOptFlow.h" */
+/* #include "mrs_optic_flow/FastSpacedBMMethod_OCL.h" */
+/* #include "mrs_optic_flow/FastSpacedBMOptFlow.h" */
 /* #include <opencv2/gpu/gpu.hpp> */
 
 /* #endif */
@@ -61,7 +61,7 @@ namespace enc = sensor_msgs::image_encodings;
 
 #define STRING_EQUAL 0
 
-namespace optic_flow
+namespace mrs_optic_flow
 {
 
   cv::Matx33d rotX(double ang){
@@ -508,44 +508,44 @@ namespace optic_flow
     int videoFPS = param_loader.load_param2<int>("video_fps");
 
     // | -------------------- optic flow params ------------------- |
-  param_loader.load_param("optic_flow/scale_factor", scale_factor_);
+  param_loader.load_param("mrs_optic_flow/scale_factor", scale_factor_);
 
-    param_loader.load_param("optic_flow/max_processing_rate", max_processing_rate_);
-    param_loader.load_param("optic_flow/method", method_);
-    param_loader.load_param("optic_flow/scan_radius", scan_radius_);
-    param_loader.load_param("optic_flow/step_size", step_size_);
-    param_loader.load_param("optic_flow/frame_size", frame_size_);
+    param_loader.load_param("mrs_optic_flow/max_processing_rate", max_processing_rate_);
+    param_loader.load_param("mrs_optic_flow/method", method_);
+    param_loader.load_param("mrs_optic_flow/scan_radius", scan_radius_);
+    param_loader.load_param("mrs_optic_flow/step_size", step_size_);
+    param_loader.load_param("mrs_optic_flow/frame_size", frame_size_);
 
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     frame_size_=frame_size_/scale_factor_;
   }
 
-    param_loader.load_param("optic_flow/sample_point_size", sample_point_size_);
+    param_loader.load_param("mrs_optic_flow/sample_point_size", sample_point_size_);
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     sample_point_size_=sample_point_size_/scale_factor_;
   }
     sample_point_count_sqrt_ = frame_size_/sample_point_size_;
     sample_point_count_ = sample_point_count_sqrt_*sample_point_count_sqrt_;
-    param_loader.load_param("optic_flow/filter_method", filter_method_);
-    param_loader.load_param("optic_flow/apply_abs_bouding", apply_abs_bounding_);
-    param_loader.load_param("optic_flow/apply_rel_bouding", apply_rel_bouding_);
+    param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
+    param_loader.load_param("mrs_optic_flow/apply_abs_bouding", apply_abs_bounding_);
+    param_loader.load_param("mrs_optic_flow/apply_rel_bouding", apply_rel_bouding_);
 
     {
       double calibration_coeff_both; // use this as a backup value in case calibrations for separate axes are not available
-      param_loader.load_param("optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
-      param_loader.load_param("optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
-      param_loader.load_param("optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
+      param_loader.load_param("mrs_optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
     }
 
 
-    param_loader.load_param("optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
-    param_loader.load_param("optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
-    RansacThresholdRadSq = pow(param_loader.load_param2<double>("optic_flow/ransac/threshold_rad"), 2);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
+    RansacThresholdRadSq = pow(param_loader.load_param2<double>("mrs_optic_flow/ransac/threshold_rad"), 2);
 
-    param_loader.load_param("optic_flow/rotation_correction", rotation_correction_);
-    param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
-    param_loader.load_param("optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
-    param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
+    param_loader.load_param("mrs_optic_flow/rotation_correction", rotation_correction_);
+    param_loader.load_param("mrs_optic_flow/tilt_correction", tilt_correction_);
+    param_loader.load_param("mrs_optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
+    param_loader.load_param("mrs_optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
   if (method_ < 3 || method_ > 5) {
     ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
@@ -584,7 +584,7 @@ namespace optic_flow
 
 
     if (gui_) {
-      cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
+      cv::namedWindow("mrs_optic_flow", cv::WINDOW_FREERATIO);
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
@@ -1151,8 +1151,8 @@ namespace optic_flow
     }
 
     // process image
-    std::vector<cv::Point2d> optic_flow_vectors;
-    std::vector<cv::Point2d> optic_flow_vectors_raw;
+    std::vector<cv::Point2d> mrs_optic_flow_vectors;
+    std::vector<cv::Point2d> mrs_optic_flow_vectors_raw;
     double                   temp_angle_diff;
 
 
@@ -1181,7 +1181,7 @@ namespace optic_flow
     tf2::Stamped<tf2::Transform> tempTfC2B;
     tf2::fromMsg(transformCam2Base, tempTfC2B);
 
-    optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, optic_flow_vectors_raw, fx, fy);
+    mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
     tf2::Quaternion rot;
     tf2::Vector3 tran;
     geometry_msgs::TwistWithCovarianceStamped velocity;
@@ -1203,7 +1203,7 @@ namespace optic_flow
     /* detilt = tf2::Quaternion(tf2::Vector3(0,0,1),0); */
     /* std::cout << "Detilt: [" << odometry_roll << " " << odometry_pitch << " " << 0 << "]" << std::endl; */
 
-    if (getRT(optic_flow_vectors, cv::Point2d(xi,yi), rot, tran)){
+    if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi,yi), rot, tran)){
 
       tran = tf2::Transform(detilt)*(tf2::Transform(tempTfC2B.getRotation())*tran);
       std::cout << "Detilted: " << tran.x() << " " << tran.y() << " "<< tran.z() << " "<< std::endl;
@@ -1230,8 +1230,8 @@ namespace optic_flow
     return; 
 
     // check for nans
-    optic_flow_vectors = removeNanPoints(optic_flow_vectors);
-    if (optic_flow_vectors.size() <= 0) {
+    mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
+    if (mrs_optic_flow_vectors.size() <= 0) {
       ROS_WARN("[OpticFlow]: Processing function returned no valid points!");
       return;
     }
@@ -1239,7 +1239,7 @@ namespace optic_flow
     // raw velocity without tilt corrections
     if (raw_enabled_) {
 
-      if (method_ == 4 && ((int)(optic_flow_vectors.size()) != sample_point_count_)) {
+      if (method_ == 4 && ((int)(mrs_optic_flow_vectors.size()) != sample_point_count_)) {
         ROS_WARN("[OpticFlow]: Raw enabled and the processing function returned unexpected number of vectors. If this is not normal, disable raw veolcity.");
         return;
       }
@@ -1248,16 +1248,16 @@ namespace optic_flow
 
       msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
       msg_raw.layout.dim.push_back(std_msgs::MultiArrayDimension());
-      msg_raw.layout.dim[0].size   = optic_flow_vectors_raw.size();
+      msg_raw.layout.dim[0].size   = mrs_optic_flow_vectors_raw.size();
       msg_raw.layout.dim[0].label  = "count";
-      msg_raw.layout.dim[0].stride = optic_flow_vectors_raw.size() * 2;
+      msg_raw.layout.dim[0].stride = mrs_optic_flow_vectors_raw.size() * 2;
       msg_raw.layout.dim[1].size   = 2;
       msg_raw.layout.dim[1].label  = "value";
       msg_raw.layout.dim[1].stride = 2;
       std::vector< unsigned int > convert;
-      for (int i = 0; i < (int)(optic_flow_vectors_raw.size()); i++) {
-        convert.push_back(optic_flow_vectors_raw[i].x);
-        convert.push_back(optic_flow_vectors_raw[i].y);
+      for (int i = 0; i < (int)(mrs_optic_flow_vectors_raw.size()); i++) {
+        convert.push_back(mrs_optic_flow_vectors_raw[i].x);
+        convert.push_back(mrs_optic_flow_vectors_raw[i].y);
       }
       msg_raw.data = convert;
 
@@ -1274,7 +1274,7 @@ namespace optic_flow
       ROS_ERROR("[opticflow]: This implementation of R3xS1 motion called \"advanced\" is stupid. Wait for a new one, named \"pnp\". ~Viktor");
       return;
 
-      if (optic_flow_vectors.size() != 9) {
+      if (mrs_optic_flow_vectors.size() != 9) {
         ROS_ERROR("[opticflow]: Advanced 3D positioning requires 3X3 sample points! Skipping...");
         return;
       }
@@ -1291,17 +1291,17 @@ namespace optic_flow
 
       std::vector<cv::Point2d> trvv;
 
-        trvv = estimateTranRotVvel(optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height_curr, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_, max_yaw_rate_);
+        trvv = estimateTranRotVvel(mrs_optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height_curr, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_, max_yaw_rate_);
 
-      optic_flow_vectors.clear();
-      optic_flow_vectors.push_back(trvv[0]);  // translation in px
+      mrs_optic_flow_vectors.clear();
+      mrs_optic_flow_vectors.push_back(trvv[0]);  // translation in px
       scale_and_rotation.x = trvv[1].y;     // rotation in rad/s
       scale_and_rotation.y = trvv[1].x;     // vertical velocity
     } else{
 
-      optic_flow_vectors = removeNanPoints(optic_flow_vectors);
+      mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
 
-      if (optic_flow_vectors.size() <= 0) {
+      if (mrs_optic_flow_vectors.size() <= 0) {
         ROS_WARN("[OpticFlow]: Processing function returned no valid points!");
         return;
       }
@@ -1360,7 +1360,7 @@ namespace optic_flow
 
       std::vector<cv::Point2d> physical_speed_vectors;
       // scale the velocity using height
-        physical_speed_vectors = multiplyAllPts(optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
+        physical_speed_vectors = multiplyAllPts(mrs_optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
 
       // rotate by camera yaw
   rotateAllPts(physical_speed_vectors, -camera_yaw_offset_-(M_PI_2)); // -pi/2 to turn X,Y into the body axes.
@@ -1369,7 +1369,7 @@ namespace optic_flow
       rotateAllPts(physical_speed_vectors, odometry_yaw); //is it wise to do here? It should be done with tf, and the output should be in the body frame, or even better, the camera frame! TODO
 
       //apply odometry calibration coefficients
-      multiplyAllPts(optic_flow_vectors, calibration_coeff_x_, calibration_coeff_y_);
+      multiplyAllPts(mrs_optic_flow_vectors, calibration_coeff_x_, calibration_coeff_y_);
 
       // Print output
       if (debug_) {
@@ -1577,7 +1577,7 @@ namespace optic_flow
       }
     }
   }
-}  // namespace optic_flow
+}  // namespace mrs_optic_flow
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(optic_flow::OpticFlow, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(mrs_optic_flow::OpticFlow, nodelet::Nodelet)

@@ -1,4 +1,4 @@
-#include "../include/optic_flow/BlockMethod.h"
+#include "../include/mrs_optic_flow/BlockMethod.h"
 
 BlockMethod::BlockMethod(int i_frameSize, int i_samplePointSize, int i_scanRadius, int i_scanDiameter, int i_scanCount, int i_stepSize) {
   frameSize       = i_frameSize;

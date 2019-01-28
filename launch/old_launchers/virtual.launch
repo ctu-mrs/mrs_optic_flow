@@ -48,7 +48,7 @@
 	<!-- <node pkg="rosbag" type="play" name="player"  args="-clock $(env HOME)/Desktop/bags/_2017-02-17-14-29-12.bag -s 64 -u 15" /> -->
 	<node pkg="rosbag" type="play" name="player"  args="--clock $(env HOME)/Desktop/bags/spambag.bag" />
 
-	<node name="optic_flow" pkg="optic_flow" type="optic_flow_node" output="screen" >
+	<node name="mrs_optic_flow" pkg="mrs_optic_flow" type="mrs_optic_flow_node" output="screen" >
 
 		<param name="DEBUG" type="bool" value="$(arg DEBUG)"/>
 		<param name="gui" type="bool" value="$(arg gui)"/>
@@ -59,8 +59,8 @@
 		<param name="ScanRadius" type="int" value="$(arg ScanRadius)"/>
 		<param name="StepSize" type="int" value="$(arg StepSize)"/>
 
-		<rosparam file="$(find optic_flow)/config/cam_uav5.yaml"/>
-		<rosparam file="$(find optic_flow)/config/cam_rot.yaml"/>
+		<rosparam file="$(find mrs_optic_flow)/config/cam_uav5.yaml"/>
+		<rosparam file="$(find mrs_optic_flow)/config/cam_rot.yaml"/>
 
 		<param name="ScaleFactor" type="int" value="1"/>
 		<param name="CameraImageCompressed" type="bool" value="true"/>
@@ -112,7 +112,7 @@
 		<remap from="allsac_chosen" to="~allsac_chosen"/>
 	</node>
 
-	<node pkg="rosbag" type="record" name="recorder"  args="/$(arg uav_name)/mbzirc_odom/new_odom /$(arg uav_name)/optic_flow/velocity /$(arg uav_name)/optic_flow/velocity_raw /$(arg uav_name)/optic_flow/velocity_stddev /$(arg uav_name)/optic_flow/tilt_correction -O $(env HOME)/Desktop/bags/straight_gazebo/Eval_Meth$(arg method)_SPsize$(arg SamplePointSize)_Filtering-$(arg filterMethod)_tiltCorr-$(arg tilt_correction_enable)_rotCorr-$(arg rotation_correction_enable)_maxFPS-$(arg maxFPS)_$(arg info).bag" />
+	<node pkg="rosbag" type="record" name="recorder"  args="/$(arg uav_name)/mbzirc_odom/new_odom /$(arg uav_name)/mrs_optic_flow/velocity /$(arg uav_name)/mrs_optic_flow/velocity_raw /$(arg uav_name)/mrs_optic_flow/velocity_stddev /$(arg uav_name)/mrs_optic_flow/tilt_correction -O $(env HOME)/Desktop/bags/straight_gazebo/Eval_Meth$(arg method)_SPsize$(arg SamplePointSize)_Filtering-$(arg filterMethod)_tiltCorr-$(arg tilt_correction_enable)_rotCorr-$(arg rotation_correction_enable)_maxFPS-$(arg maxFPS)_$(arg info).bag" />
 
 	</group>
 </launch>

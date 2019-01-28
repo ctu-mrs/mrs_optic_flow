@@ -30,11 +30,11 @@
       <!-- <param name="num_worker_threads" value="4" /> -->
     <!-- </node> -->
 
-    <!--node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch">
+    <!--node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" -->
+    <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch">
 
-      <rosparam file="$(find optic_flow)/config/simulation.yaml" />
-      <rosparam file="$(find optic_flow)/config/bluefox_simulation.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />
 
       <param name="camera_frame" value="$(arg camera_frame)" />
@@ -50,11 +50,11 @@
       <remap from="~imu_in" to="/uav1/mavros/imu/data" />
 
       <!-- Publishers -->
-      <remap from="~velocity_out" to="/uav1/optic_flow/velocity" />
-      <remap from="~velocity_raw_out" to="/uav1/optic_flow/velocity_raw" />
-      <remap from="~velocity_stddev_out" to="/uav1/optic_flow/velocity_stddev" />
-      <remap from="~tilt_correction_out" to="/uav1/optic_flow/tilt_correction" />
-      <remap from="~allsac_chosen_out" to="/uav1/optic_flow/allsac_chosen" />
+      <remap from="~velocity_out" to="/uav1/mrs_optic_flow/velocity" />
+      <remap from="~velocity_raw_out" to="/uav1/mrs_optic_flow/velocity_raw" />
+      <remap from="~velocity_stddev_out" to="/uav1/mrs_optic_flow/velocity_stddev" />
+      <remap from="~tilt_correction_out" to="/uav1/mrs_optic_flow/tilt_correction" />
+      <remap from="~allsac_chosen_out" to="/uav1/mrs_optic_flow/allsac_chosen" />
       <remap from="~profiler" to="/uav1/profiler" />
 
     </node>
