@@ -1,5 +1,5 @@
 <library path="lib/libOpticFlow">
-  <class name="optic_flow/OpticFlow" type="optic_flow::OpticFlow" base_class_type="nodelet::Nodelet">
+  <class name="mrs_optic_flow/OpticFlow" type="mrs_optic_flow::OpticFlow" base_class_type="nodelet::Nodelet">
     <description>the OpticFlow nodelet</description>
   </class>
 </library>
