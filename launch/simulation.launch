@@ -1,7 +1,8 @@
 <launch>
 
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
-  <arg name="standalone" default="$(optenv STANDALONE false)" />
+  <arg name="standalone" default="true" />
+  <!-- <arg name="standalone" default="$(optenv STANDALONE false)" /> -->
   <arg name="profiler" default="$(optenv PROFILER false)" />
 
   <arg unless="$(arg standalone)" name="nodelet" value="load"/>
@@ -13,7 +14,7 @@
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
 
-  <group ns="$(arg uav_name)">
+  <!-- <group ns="$(arg uav_name)"> -->
 
   <node
     name="optflow_cam_tf"
@@ -24,11 +25,13 @@
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
     <!-- Vision Nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
-      <param name="num_worker_threads" value="4" />
-    </node>
+    <!-- <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" > -->
+      <!-- <node name="$(arg uav_name)_vision_nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="screen" launch-prefix="urxvt -e gdb -q -x /home/viktor/gdb.cmds -/-args"> -->
+      <!-- <param name="num_worker_threads" value="4" /> -->
+    <!-- </node> -->
 
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" >
+    <!--node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" -->
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch">
 
       <rosparam file="$(find optic_flow)/config/simulation.yaml" />
       <rosparam file="$(find optic_flow)/config/bluefox_simulation.yaml" />
@@ -40,22 +43,22 @@
 
       <!-- Subscribers -->
       <!--remap from="~odometry_in" to="ground_truth" /-->
-      <remap from="~odometry_in" to="mavros/local_position/odom" />
-      <remap from="~camera_in" to="bluefox/image_raw" />
-      <remap from="~camera_info_in" to="bluefox/camera_info" />
-      <remap from="~uav_height_in" to="odometry/altitude" />
-      <remap from="~imu_in" to="mavros/imu/data" />
+      <remap from="~odometry_in" to="/uav1/mavros/local_position/odom" />
+      <remap from="~camera_in" to="/uav1/bluefox/image_raw" />
+      <remap from="~camera_info_in" to="/uav1/bluefox/camera_info" />
+      <remap from="~uav_height_in" to="/uav1/odometry/altitude" />
+      <remap from="~imu_in" to="/uav1/mavros/imu/data" />
 
       <!-- Publishers -->
-      <remap from="~velocity_out" to="~velocity" />
-      <remap from="~velocity_raw_out" to="~velocity_raw" />
-      <remap from="~velocity_stddev_out" to="~velocity_stddev" />
-      <remap from="~tilt_correction_out" to="~tilt_correction" />
-      <remap from="~allsac_chosen_out" to="~allsac_chosen" />
-      <remap from="~profiler" to="profiler" />
+      <remap from="~velocity_out" to="/uav1/optic_flow/velocity" />
+      <remap from="~velocity_raw_out" to="/uav1/optic_flow/velocity_raw" />
+      <remap from="~velocity_stddev_out" to="/uav1/optic_flow/velocity_stddev" />
+      <remap from="~tilt_correction_out" to="/uav1/optic_flow/tilt_correction" />
+      <remap from="~allsac_chosen_out" to="/uav1/optic_flow/allsac_chosen" />
+      <remap from="~profiler" to="/uav1/profiler" />
 
     </node>
 
-  </group>
+  <!-- </group> -->
 
 </launch>

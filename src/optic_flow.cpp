@@ -83,8 +83,6 @@ namespace optic_flow
     return output;
   }
 
-  /* //{ class OpticFlow */
-
   struct PointValue
   {
     int         value;
@@ -98,19 +96,17 @@ namespace optic_flow
       ros::NodeHandle nh_;
 
     private:
-      /* void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg); */
       void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg);
       void callbackImu(const sensor_msgs::ImuConstPtr& msg);
       void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
       void callbackImage(const sensor_msgs::ImageConstPtr& msg);
       void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
 
-      std::thread tf_thread;
-
     private:
       void processImage(const cv_bridge::CvImagePtr image);
       bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran);
       void TfThread();
+      std::thread tf_thread;
 
     private:
       ros::Timer cam_init_timer;
@@ -226,6 +222,7 @@ namespace optic_flow
 
       int frame_size_;
       int sample_point_size_;
+
       int sample_point_count_;
       int sample_point_count_sqrt_;
 
@@ -261,19 +258,13 @@ namespace optic_flow
       double                analyze_duration_;
 
       double                min_tilt_correction_;
-
     private:
       mrs_lib::Profiler* profiler;
       bool profiler_enabled_ = false;
-
     private:
       bool is_initialized = false;
-
       std::string uav_name;
   };
-
-  //}
-  //
   void OpticFlow::TfThread() {
     ros::Rate transformRate(0.1);
     bool got_c2b, got_b2c, got_b2w;
@@ -284,7 +275,6 @@ namespace optic_flow
       try {
         {
           std::scoped_lock lock(mutex_tf);
-
           /* transformCam2Base = tf_buffer.lookupTransform(uav_frame_, camera_frame_, time - ros::Duration(uav2_delay), timeout); */
           transformCam2Base = buffer.lookupTransform(uav_frame_, camera_frame_, ros::Time(0),  ros::Duration(2));
         }
@@ -298,7 +288,6 @@ namespace optic_flow
       try {
         {
           std::scoped_lock lock(mutex_tf);
-
           transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0),  ros::Duration(2));
         }
         got_b2c = true;
@@ -326,7 +315,6 @@ namespace optic_flow
       /* ROS_INFO("TF next"); */
     }
   }
-
   bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran){
     cv::Matx33d camMatrixLocal = camMatrix;
     camMatrixLocal(0,2) -= ulCorner.x;
@@ -340,21 +328,13 @@ namespace optic_flow
         shiftedPts.push_back(cv::Point2d(xi,yi)+shifts[i+sqNum*j]);
       }
     }
-
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
     cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
-
-
 
     /* std::cout << "Undist, vs orig: " << std::endl; */
     /* for (int i=0;i<(int)(undistPtsA.size()); i++){ */
     /*   std::cout << "A - Orig: " << initialPts[i] << " Undist: " << camMatrixLocal*undistPtsA[i] << std::endl; */
     /*   std::cout << "B - Orig: " << shiftedPts[i] << " Undist: " << camMatrixLocal*undistPtsB[i] << std::endl; */
-
-    /*     } */
-
-
-
     cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3);
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
@@ -471,7 +451,6 @@ namespace optic_flow
     return false;
 
   }
-
   /* std::vector<cv::Point2d> getExpectedShifts(cv::Point2i ulCorner){ */
   /*   camMatrixLocal = camMatrix; */
   /*   camMatrixLocal.at<double>(0,2) -= ulCorner.x; */
@@ -485,28 +464,17 @@ namespace optic_flow
   /*       initialPts.push_back(cv::Point2f(xi,yi)); */
   /*     } */
   /*   } */
-
   /*   cv::undistortPoints(initialPts, undistPts, camMatrixLocal, distCoeffs); */
 
   /*   for (const auto& ptCurr : undistPts){ */
   /*     camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1) */
   /*     3dPts.push_back(camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1)); */
   /*   } */
-
   /*   cv::Matx33d rotMatDiffCv = cv::Matx33d::zeros(); */
   /*   for (int i=0;i<9;i++){ */
   /*     output(i) = rotMatDiff(3dPts,rotPts,rotMatDiffCv*rotZ()); */
   /*   } */
-
   /*   cv::transform(3dPts */
-
-
-
-    
-
-
-    
-  /* } */
 
   void OpticFlow::onInit() {
 
@@ -518,18 +486,16 @@ namespace optic_flow
 
     // | -------------------- basic node params ------------------- |
     param_loader.load_param("uav_name", uav_name, std::string());
-
     param_loader.load_param("camera_frame", camera_frame_);
     param_loader.load_param("uav_frame", uav_frame_);
     param_loader.load_param("uav_untilted_frame", uav_untilted_frame_);
-
     param_loader.load_param("enable_profiler", profiler_enabled_);
     param_loader.load_param("debug", debug_);
     param_loader.load_param("gui", gui_);
     param_loader.load_param("silent_debug", silent_debug_);
 
     // | --------------------- general params --------------------- |
-
+ 
     param_loader.load_param("ang_rate_source", ang_rate_source_);
     param_loader.load_param("raw_output", raw_enabled_);
     param_loader.load_param("camera_yaw_offset", camera_yaw_offset_);
@@ -542,19 +508,25 @@ namespace optic_flow
     int videoFPS = param_loader.load_param2<int>("video_fps");
 
     // | -------------------- optic flow params ------------------- |
+  param_loader.load_param("optic_flow/scale_factor", scale_factor_);
 
     param_loader.load_param("optic_flow/max_processing_rate", max_processing_rate_);
     param_loader.load_param("optic_flow/method", method_);
     param_loader.load_param("optic_flow/scan_radius", scan_radius_);
     param_loader.load_param("optic_flow/step_size", step_size_);
     param_loader.load_param("optic_flow/frame_size", frame_size_);
+
+  if (fabs(scale_factor_ - 1.0) > 0.01) {
+    frame_size_=frame_size_/scale_factor_;
+  }
+
     param_loader.load_param("optic_flow/sample_point_size", sample_point_size_);
+  if (fabs(scale_factor_ - 1.0) > 0.01) {
+    sample_point_size_=sample_point_size_/scale_factor_;
+  }
     sample_point_count_sqrt_ = frame_size_/sample_point_size_;
     sample_point_count_ = sample_point_count_sqrt_*sample_point_count_sqrt_;
-
-
     param_loader.load_param("optic_flow/filter_method", filter_method_);
-
     param_loader.load_param("optic_flow/apply_abs_bouding", apply_abs_bounding_);
     param_loader.load_param("optic_flow/apply_rel_bouding", apply_rel_bouding_);
 
@@ -565,7 +537,6 @@ namespace optic_flow
       param_loader.load_param("optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
     }
 
-    param_loader.load_param("optic_flow/scale_factor", scale_factor_);
 
     param_loader.load_param("optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
     param_loader.load_param("optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
@@ -574,14 +545,15 @@ namespace optic_flow
     param_loader.load_param("optic_flow/rotation_correction", rotation_correction_);
     param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
     param_loader.load_param("optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
-
     param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
-    if (method_ < 3 || method_ > 5) {
-      ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
-    }
+  if (method_ < 3 || method_ > 5) {
+    ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
+  }
 
-    // | ------------------------ filtering ----------------------- |
+  // | ------------------------ filtering ----------------------- |
+
+
 
     param_loader.load_param("store_video", store_video_);
     std::string video_path_ = param_loader.load_param2<std::string>("video_path");
@@ -598,18 +570,26 @@ namespace optic_flow
     param_loader.load_param("camera_matrix/data", fallback_camera_data);
     param_loader.load_param("distortion_coefficients/data", fallback_distortion_coeffs);
 
+
+
     // --------------------------------------------------------------
     // |                    end of loading params                   |
     // --------------------------------------------------------------
+ 
+
+
+
+
+
+
 
     if (gui_) {
       cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
     }
 
-    if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
-      /* ROS_ERROR("[OpticFlow]: Wrong parameter 3d_method. Possible values: logpol, advanced. Entered: %s", d3d_method_.c_str()); */
-      ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
-      ros::shutdown();
+  if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
+    ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
+    ros::shutdown();
     }
 
     if (filter_method_.compare("ransac") && ransac_num_of_chosen_ != 2) {
@@ -638,10 +618,46 @@ namespace optic_flow
                 break;
               }
       case 4: {
-                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS);
 
+              std::cout << cv::getBuildInformation() << std::endl;
+
+              if (!cv::ocl::haveOpenCL())
+              {
+                ROS_INFO("NO OCL SUPPORT");
+                //return;
+              }
+
+              cv::ocl::Context context;
+              if (!context.create(cv::ocl::Device::TYPE_ALL))
+              {
+                ROS_INFO("Failed creating the context...");
+                //return;
+              }
+
+              ROS_INFO(" GPU devices are detected."); //This bit provides an overview of the OpenCL devices you have in your computer
+              for (int i = 0; i < int(context.ndevices()); i++)
+              {
+                cv::ocl::Device device = context.device(i);
+                ROS_INFO("name:              %s", device.name().c_str() );
+                if(device.available() )
+                  ROS_INFO("available!");
+                else
+                  ROS_INFO("unavailable");
+                if( device.imageSupport() )
+                  ROS_INFO("image support!");
+                else
+                  ROS_INFO("no image support");
+                ROS_INFO("OpenCL_C_Version:  %s", device.OpenCL_C_Version().c_str() );
+              }
+
+              cv::ocl::Device(context.device(0)); //Here is where you change which GPU to use (e.g. 0 or 1)
+
+              cv::ocl::setUseOpenCL(true);
+
+                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS);
                 break;
               }
+
       case 5: {
                 ROS_ERROR("Method 5 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
                 /* processClass = new FastSpacedBMMethod(sample_point_size_, scan_radius_, step_size_, cx, cy, fx, fy, k1, k2, k3, p1, p2, store_video_, &video_path_); */
@@ -702,21 +718,17 @@ namespace optic_flow
         ros::shutdown();
       }
     }
-
     // --------------------------------------------------------------
     // |                          profiler                          |
     // --------------------------------------------------------------
-
     profiler = new mrs_lib::Profiler(nh_, "OpticFlow", profiler_enabled_);
-
     // --------------------------------------------------------------
     // |                           timers                           |
     // --------------------------------------------------------------
-
     cam_init_timer = nh_.createTimer(ros::Rate(10), &OpticFlow::camInitTimer, this);
 
     // | ----------------------- finish init ---------------------- |
-
+    //
     if (!param_loader.loaded_successfully()) {
       ROS_ERROR("[OpticFlow]: Could not load all parameters!");
       ros::shutdown();
@@ -724,13 +736,10 @@ namespace optic_flow
 
     /* tilt_curr = tf::Quaternion(); */
     /* tilt_prev = tilt_curr; */
-
     listener = new tf2_ros::TransformListener(buffer);
     tf_thread   = std::thread(&OpticFlow::TfThread, this);
-
-
     is_initialized = true;
-
+    
     ROS_INFO("[OpticFlow]: initialized");
   }
 
@@ -739,7 +748,7 @@ namespace optic_flow
   // --------------------------------------------------------------
   // |                           timers                           |
   // --------------------------------------------------------------
-
+  //
   /* //{ camInitTimer() */
 
   void OpticFlow::camInitTimer([[maybe_unused]] const ros::TimerEvent& event) {
@@ -793,15 +802,13 @@ namespace optic_flow
       ROS_INFO("[OpticFlow]: camera parameters loaded");
     }
 
-    cam_init_timer.stop();
+  cam_init_timer.stop();
   }
-
-  //}
 
   // --------------------------------------------------------------
   // |                          callbacks                         |
   // --------------------------------------------------------------
-
+  //
   /* //{ callbackHeight() */
 
   void OpticFlow::callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
@@ -818,7 +825,6 @@ namespace optic_flow
 
     {
       std::scoped_lock lock(mutex_uav_height);
-
       /* uav_height = msg->value; */
       /* if (!got_imu) */
       /*   uav_height = msg->value; */
@@ -832,7 +838,13 @@ namespace optic_flow
     got_height = true;
   }
 
-  //}
+
+
+
+
+
+
+
 
   /* //{ callbackImu() */
 
@@ -865,11 +877,10 @@ namespace optic_flow
       /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " << imu_orientation.getAngle() << std::endl; */
       /* std::cout << "RP IMU CB: " << imu_roll << " " << imu_pitch << std::endl; */
       }
-
   }
 
   //}
-
+  //
   /* //{ callbackOdometry() */
 
   void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
@@ -879,13 +890,15 @@ namespace optic_flow
 
     mrs_lib::Routine routine_callback_odometry = profiler->createRoutine("callbackOdometry");
 
-
     /* tf2::quaternionMsgToTF(msg->pose.pose.orientation, bt); */
+
+
+
+
 
     if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
       {
         std::scoped_lock lock(mutex_angular_rate);
-
         angular_rate = cv::Point3d(msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z);
       }
     }
@@ -895,7 +908,7 @@ namespace optic_flow
     tf2::fromMsg(msg->pose.pose.orientation, bt);
       std::scoped_lock lock(mutex_odometry);
 
-      odometry_speed = cv::Point2f(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
+      odometry_speed = cv::Point2d(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
       odometry_stamp = ros::Time::now();
       odometry_orientation = bt;
     tf2::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
@@ -905,7 +918,7 @@ namespace optic_flow
   }
 
   //}
-
+  //
   /* //{ callbackImage() */
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
@@ -937,7 +950,6 @@ namespace optic_flow
     if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
       {
         std::scoped_lock lock(mutex_odometry);
-
         tilt_curr = odometry_orientation;
         tf2::Quaternion diffquat = tilt_prev.inverse()*tilt_curr;
         double yaw_a, pitch_a,roll_a;
@@ -947,7 +959,6 @@ namespace optic_flow
       }
       tilt_prev = tilt_curr;
     }
-
     image = cv_bridge::toCvCopy(msg, enc::BGR8);
     processImage(image);
   }
@@ -990,24 +1001,19 @@ namespace optic_flow
 
       camMatrix = cv::Mat(3,3,CV_64F,cv::Scalar(0));
       distCoeffs = cv::Mat(1,5,CV_64F,cv::Scalar(0));
-
       camMatrix.at<double>(0,0)=fx;
       camMatrix.at<double>(1,1)=fy;
       camMatrix.at<double>(0,2)=cx;
       camMatrix.at<double>(1,2)=cy;
       camMatrix.at<double>(2,2)=1;
-
       distCoeffs.at<double>(0)=k1;
       distCoeffs.at<double>(1)=k2;
       distCoeffs.at<double>(2)=p1;
       distCoeffs.at<double>(3)=p2;
       distCoeffs.at<double>(4)=k3;
-
-
       got_camera_info = true;
 
       //maybe mutex this later
-
 
       if (debug_) {
         ROS_INFO("[OpticFlow]: Camera params: %f %f %f %f %f %f %f %f %f", fx, fy, cx, cy, k1, k2, p1, p2, k3);
@@ -1015,12 +1021,12 @@ namespace optic_flow
     }
   }
 
-  //}
+
 
   // --------------------------------------------------------------
   // |                          routines                          |
   // --------------------------------------------------------------
-
+  //
   /* //{ processImage() */
 
   void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
@@ -1116,9 +1122,8 @@ namespace optic_flow
 
         /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
         /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
-
     }
-
+    
     // Estimate scale and rotation (if enabled)
     cv::Point2d scale_and_rotation = cv::Point2d(0, 0);
 
@@ -1222,8 +1227,7 @@ namespace optic_flow
       velocity.twist.covariance[36] = velocity.twist.covariance[21];
       publisher_velocity.publish(velocity);
     }
-    return;
-
+    return; 
 
     // check for nans
     optic_flow_vectors = removeNanPoints(optic_flow_vectors);
@@ -1302,12 +1306,64 @@ namespace optic_flow
         return;
       }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       std::vector<cv::Point2d> physical_speed_vectors;
       // scale the velocity using height
         physical_speed_vectors = multiplyAllPts(optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
 
       // rotate by camera yaw
-      rotateAllPts(physical_speed_vectors, -camera_yaw_offset_-(M_PI_2)); // -pi/2 to turn X,Y into the body axes.
+  rotateAllPts(physical_speed_vectors, -camera_yaw_offset_-(M_PI_2)); // -pi/2 to turn X,Y into the body axes.
 
       // rotate to global system
       rotateAllPts(physical_speed_vectors, odometry_yaw); //is it wise to do here? It should be done with tf, and the output should be in the body frame, or even better, the camera frame! TODO
@@ -1338,6 +1394,7 @@ namespace optic_flow
       int af_acc = 0;
 
       // absolute bouding 
+      //
       if (apply_abs_bounding_) {
 
         // Bounding of physical_speed_vectors, if enabled
@@ -1391,14 +1448,18 @@ namespace optic_flow
 
           return;
         }
-
       } else if (debug_) {
         ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Acceleration-based bounding of physical_speed_vectors not enabled.");
+
       }
 
 
       // post-process by Allsac/Ransac/Averaging
 
+      
+      
+      
+      
       // apply Allsac/Ransac/Averaging
       cv::Point2d filtered_speed_vector;
       if (filter_method_.compare("average") == STRING_EQUAL) {
@@ -1435,7 +1496,19 @@ namespace optic_flow
       /*   filtered_speed_vector = filtered_speed_vector  + tiltCorrVel; */
 
 
+
+
+
+
+
+
+
+
+
       vam = sqrt(getNormSq(filtered_speed_vector));
+
+
+
       // | -------------------- publish velocity -------------------- |
       geometry_msgs::TwistWithCovarianceStamped velocity;
 
@@ -1449,15 +1522,16 @@ namespace optic_flow
       /* velocity.twist.angular.z = -scale_and_rotation.y; */
       velocity.twist.twist.linear.z  = 0;
       velocity.twist.twist.angular.z = 0;
-
-
       velocity.twist.covariance[0] = pow(10*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7] = velocity.twist.covariance[0];
-
+      publisher_velocity.publish(velocity);
       if (debug_) {
 
           ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", filtered_speed_vector.x, filtered_speed_vector.y, vam, uav_height_curr, odometry_yaw);
       }
+
+
+
 
       // Add speedbox to lastspeeds array - speedbox carries time, optflow velocity and odom. velocity
       SpeedBox sb;
@@ -1478,38 +1552,31 @@ namespace optic_flow
       lastSpeeds.push_back(sb);
 
       // Create statistical data
+
       StatData  sd       = analyzeSpeeds(fromTime, lastSpeeds); //check what bullshit this one contains later TODO
 
 
-      publisher_velocity.publish(velocity);
 
       geometry_msgs::Vector3 v3;
       v3.x = sd.stdDevX;
       v3.y = sd.stdDevY;
       v3.z = sd.stdDev;
 
-      /* { */
-      /*   std::scoped_lock lock(mutex_uav_height); */
-
-      /*     v3.x = v3.x*uav_height; */
-      /*     v3.y = v3.y*uav_height; */
-      /*     v3.y = v3.z*uav_height; */
-      /* } */
 
       publisher_velocity_std.publish(v3);
 
       if (method_ == 5) {
         //ON ICE
         std_msgs::Float32 maxVel;
+        {
+          std::scoped_lock lock(mutex_uav_height);
 
           maxVel.data = scan_radius_ * uav_height_curr / (dur.toSec() * std::max(fx, fy));
+        }
         publisher_max_allowed_velocity.publish(maxVel);
       }
-
     }
   }
-
-
 }  // namespace optic_flow
 
 #include <pluginlib/class_list_macros.h>

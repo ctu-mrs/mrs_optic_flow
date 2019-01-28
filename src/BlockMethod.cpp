@@ -93,7 +93,7 @@ std::vector<cv::Point2d> BlockMethod::processImage(cv::Mat imCurr, bool gui, boo
   // return refined;
 }
 
-cv::Point2f BlockMethod::Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i fullpixFlow, int passes) {
+cv::Point2d BlockMethod::Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i fullpixFlow, int passes) {
   cv::Mat imCurr2x = imCurr.clone();
   ;
   cv::Mat imPrev2x = imPrev.clone();
@@ -141,7 +141,7 @@ cv::Point2f BlockMethod::Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i full
 
     totalOffset = totalOffset + min_loc - cv::Point2i(1, 1);
   }
-  cv::Point2f output = cv::Point2f(totalOffset.x / (float)pixScale, totalOffset.y / (float)pixScale);
+  cv::Point2d output = cv::Point2d(totalOffset.x / (float)pixScale, totalOffset.y / (float)pixScale);
 
   return output;
 }

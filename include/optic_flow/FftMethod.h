@@ -5,6 +5,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/ocl.hpp>
 
 #include <image_transport/image_transport.h>
 #include "optic_flow/OpticFlowCalc.h"
@@ -14,6 +15,10 @@
 
 class FftMethod : public OpticFlowCalc {
 private:
+    cv::UMat usrc1, usrc2;
+    cv::UMat window1, window2;
+    cv::UMat FFT1, FFT2, P, Pm, C;
+
   int frameSize;
   int samplePointSize;
 
@@ -36,6 +41,9 @@ private:
   bool storeVideo;
 
   cv::VideoWriter outputVideo;
+
+  std::vector<cv::Point2d> phaseCorrelateField(cv::Mat &_src1, cv::Mat &_src2, unsigned int X,unsigned int Y,
+                                     CV_OUT double* response = 0);
 
 public:
   FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,

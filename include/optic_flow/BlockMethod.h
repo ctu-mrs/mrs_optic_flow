@@ -36,7 +36,7 @@ private:
   int *xHist;
   int *yHist;
 
-  cv::Point2f Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i fullpixFlow, int passes);
+  cv::Point2d Refine(cv::Mat imCurr, cv::Mat imPrev, cv::Point2i fullpixFlow, int passes);
 
 public:
   BlockMethod(int frameSize, int samplePointSize, int scanRadius, int scanDiameter, int scanCount, int stepSize);
