@@ -825,8 +825,8 @@ namespace optic_flow
       /* else */
     {
       std::scoped_lock lock(mutex_odometry);
-      uav_height = msg->value/(cos(odometry_pitch)*(cos(odometry_roll)));
-      /* uav_height = msg->value; */
+      /* uav_height = msg->value/(cos(odometry_pitch)*(cos(odometry_roll))); */
+      uav_height = msg->value;
     }
     }
     got_height = true;
@@ -1188,7 +1188,8 @@ namespace optic_flow
         std::scoped_lock lock(mutex_static_tilt);
 
       /* detilt.setRPY(imu_roll,imu_pitch,0); */
-      detilt.setRPY(imu_roll,imu_pitch,imu_yaw);
+      /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
+      detilt.setRPY(imu_roll,imu_pitch,odometry_yaw);
       /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
       /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << std::endl; */
     }
