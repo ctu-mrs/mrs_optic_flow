@@ -1,0 +1,87 @@
+<launch>
+
+  <!-- Link to the custom libsub (LD_LIBRARY_PATH is searched before ld.so.conf.d, so the custom libusb will be used instead of the system default-->
+  <env name="LD_LIBRARY_PATH" value="/opt/mvIMPACT_acquire_libusb:$(env LD_LIBRARY_PATH)" />
+
+  <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
+  <arg name="profiler" default="$(optenv PROFILER false)" />
+
+  <!-- Bluefox2  -->
+  <arg name="rate" default="60" />
+  <arg name="plugin" default="true"/>
+  <arg name="manager" default="$(arg uav_name)_vision_nodelet_manager" />
+  <arg name="output" default="screen"/>
+  <arg name="proc" default="false"/>
+  <arg name="view" default="false"/>
+  <arg name="calib" default="false"/>
+
+  <group ns="$(arg uav_name)">
+    <!-- Vision Nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen" respawn="true">
+      <param name="num_worker_threads" value="8" />
+    </node>
+  </group>
+
+  <group ns="$(arg uav_name)">
+
+    <node pkg="image_transport" type="republish" name="republish_bluefox" output="screen" args="compressed in:=bluefox/image_raw raw out:=bluefox2/image_raw"  />
+
+    <!-- Bluefox2 nodelet -->
+    <!-- Camera Settings -->
+    <arg name="camera_name" default="bluefox" />
+    <arg name="camera" default="$(arg camera_name)" />
+    <arg name="frame_id" default="$(arg camera)" />
+    <arg name="fps" default="$(arg rate)" />
+    <arg name="color" default="false"/>
+    <arg name="idpf" default="0" />
+    <arg name="aec" default="false" />
+    <!-- sunny -->
+    <!-- <arg name="expose_us" default="75" /> -->
+    <arg name="expose_us" default="400" /> <!-- dusk -->
+    <arg name="agc" default="false" />
+    <arg name="boost" value="false"/>
+    <arg name="gain_db" default="0.0" />
+    <arg name="cbm" default="0" />
+    <arg name="ctm" default="1" />
+    <arg name="dcfm" default="0" />
+    <arg name="hdr" default="false" />
+    <arg name="wbp" default="-1" />
+    <arg name="request" default="0" />
+    <arg name="mm" default="0" />
+
+    <!-- Arguments for theora quality, images being compressed into "stream" -->
+    <arg name="compressed_jpeg_quality" default="90" />
+    <arg name="theora_keyframe_frequency" default="60"  />
+    <arg name="theora_target_bitrate" default="50000"  />
+    <arg name="theora_quality" default="8"  />
+    <arg name="theora_optimize_for" default="0"  />
+
+    <!-- Optic flow nodelet -->
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
+
+      <rosparam file="$(find optic_flow)/config/uav.yaml" />
+      <param name="enable_profiler" value="$(arg profiler)" />
+
+      <!-- File with camera parameters - loaded when nothing found on Camera info -->
+      <rosparam file="$(find optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" />
+
+      <!-- Subscribers -->
+      <remap from="~odometry_in" to="odometry/odom_main" />
+      <remap from="~camera_in" to="bluefox2/image_raw" />
+      <remap from="~camera_info_in" to="bluefox/camera_info" />
+      <remap from="~uav_height_in" to="odometry/altitude" />
+      <remap from="~imu_in" to="mavros/imu/data_raw" />
+
+      <!-- Publishers -->
+      <remap from="~velocity_out" to="~velocity" />
+      <remap from="~velocity_raw_out" to="~velocity_raw" />
+      <remap from="~velocity_stddev_out" to="~velocity_stddev" />
+      <remap from="~tilt_correction_out" to="~tilt_correction" />
+      <remap from="~allsac_chosen_out" to="~allsac_chosen" />
+      <remap from="~profiler" to="profiler" />
+
+    </node>
+
+  </group>
+
+</launch>
