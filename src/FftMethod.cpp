@@ -1,5 +1,442 @@
 #include "../include/mrs_optic_flow/FftMethod.h"
 
+
+cv::ocl::ProgramSource prep_ocl_kernel(const char* filename){
+  std::cout << "Loading OpenCL kernel file \" " << filename << std::endl;
+  std::ifstream ist(filename, std::ifstream::in);
+  std::string str((std::istreambuf_iterator<char>(ist)),
+      std::istreambuf_iterator<char>());
+
+  if (str.empty())
+    std::cerr << "Could not load the file. Aborting" << std::endl;
+
+  return cv::ocl::ProgramSource(str.c_str());
+}
+
+enum FftType
+{
+    R2R = 0, // real to CCS in case forward transform, CCS to real otherwise
+    C2R = 1, // complex to real in case inverse transform
+    R2C = 2, // real to complex in case forward transform
+    C2C = 3  // complex to complex
+};
+
+static int
+DFTFactorize( int n, int* factors )
+{
+    int nf = 0, f, i, j;
+
+    if( n <= 5 )
+    {
+        factors[0] = n;
+        return 1;
+    }
+
+    f = (((n - 1)^n)+1) >> 1;
+    if( f > 1 )
+    {
+        factors[nf++] = f;
+        n = f == n ? 1 : n/f;
+    }
+
+    for( f = 3; n > 1; )
+    {
+        int d = n/f;
+        if( d*f == n )
+        {
+            factors[nf++] = f;
+            n = d;
+        }
+        else
+        {
+            f += 2;
+            if( f*f > n )
+                break;
+        }
+    }
+
+    if( n > 1 )
+        factors[nf++] = n;
+
+    f = (factors[0] & 1) == 0;
+    for( i = f; i < (nf+f)/2; i++ )
+        CV_SWAP( factors[i], factors[nf-i-1+f], j );
+
+    return nf;
+}
+
+
+OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_depth), status(true)
+    {
+        CV_Assert( dft_depth == CV_32F || dft_depth == CV_64F );
+
+        int min_radix;
+        std::vector<int> radixes, blocks;
+        ocl_getRadixes(dft_size, radixes, blocks, min_radix);
+        thread_count = dft_size / min_radix;
+
+        if (thread_count > (int) cv::ocl::Device::getDefault().maxWorkGroupSize())
+        {
+            status = false;
+            return;
+        }
+
+        // generate string with radix calls
+        cv::String radix_processing;
+        int n = 1, twiddle_size = 0;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i], block = blocks[i];
+            if (block > 1)
+                radix_processing += cv::format("fft_radix%d_B%d(smem,twiddles+%d,ind,%d,%d);", radix, block, twiddle_size, n, dft_size/radix);
+            else
+                radix_processing += cv::format("fft_radix%d(smem,twiddles+%d,ind,%d,%d);", radix, twiddle_size, n, dft_size/radix);
+            twiddle_size += (radix-1)*n;
+            n *= radix;
+        }
+
+        twiddles.create(1, twiddle_size, CV_MAKE_TYPE(dft_depth, 2));
+        if (dft_depth == CV_32F)
+            fillRadixTable<float>(twiddles, radixes);
+        else
+            fillRadixTable<double>(twiddles, radixes);
+
+        buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
+                              dft_size, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
+                              dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str());
+
+    }
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src, cv::OutputArray _dst, int num_dfts, int flags, int fftType, bool rows)
+    {
+        if (!status)
+            return false;
+
+        cv::UMat src = _src.getUMat();
+        cv::UMat dst = _dst.getUMat();
+
+        size_t globalsize[2];
+        size_t localsize[2];
+        cv::String kernel_name;
+
+        bool inv = (flags & cv::DFT_INVERSE) != 0;
+        cv::String options = buildOptions;
+
+        if (rows)
+        {
+            globalsize[0] = thread_count;
+            globalsize[1] = src.rows;
+            localsize[0] = thread_count;
+            localsize[1] = 1;
+            kernel_name = !inv ? "fft_multi_radix_rows" : "ifft_multi_radix_rows";
+            if ((inv) && (flags & cv::DFT_SCALE))
+                options += " -D DFT_SCALE";
+        }
+        else
+        {
+            globalsize[0] = num_dfts;
+            globalsize[1] = thread_count;
+            localsize[0] = 1;
+            localsize[1] = thread_count;
+            kernel_name = !inv ? "fft_multi_radix_cols" : "ifft_multi_radix_cols";
+            if (flags & cv::DFT_SCALE)
+                options += " -D DFT_SCALE";
+        }
+
+        options += src.channels() == 1 ? " -D REAL_INPUT" : " -D COMPLEX_INPUT";
+        if (flags & cv::DFT_REAL_OUTPUT){
+          options += " -D REAL_OUTPUT";
+        }
+        else {
+          options += " -D COMPLEX_OUTPUT";
+        }
+
+        if (!inv)
+        {
+            if ((src.channels() == 1) || (rows && (fftType == R2R)))
+                options += " -D NO_CONJUGATE";
+        }
+        else
+        {
+            if (rows && (fftType == C2R || fftType == R2R))
+                options += " -D NO_CONJUGATE";
+            if (dst.cols % 2 == 0)
+                options += " -D EVEN";
+        }
+
+
+        if (rows)
+        {
+          if (inv){
+            if (k_fft_inv_row.empty())
+              k_fft_inv_row = cv::ocl::Kernel(kernel_name.c_str(), prep_ocl_kernel("FftMethod.cl"), options);
+            if (k_fft_inv_row.empty()){
+              return false;
+            }
+            k_fft_inv_row.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
+            return k_fft_inv_row.run(2, globalsize, localsize, false);
+          }
+          else{
+            if (k_fft_forw_row.empty())
+              k_fft_forw_row = cv::ocl::Kernel(kernel_name.c_str(), prep_ocl_kernel("FftMethod.cl"), options);
+            if (k_fft_forw_row.empty()){
+              return false;
+            }
+            k_fft_forw_row.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
+            return k_fft_forw_row.run(2, globalsize, localsize, false);
+          }
+        }else{
+          if (inv){
+            if (k_fft_inv_col.empty())
+              k_fft_inv_col = cv::ocl::Kernel(kernel_name.c_str(), prep_ocl_kernel("FftMethod.cl"), options);
+            if (k_fft_inv_col.empty()){
+              return false;
+            }
+            k_fft_inv_col.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
+            return k_fft_inv_col.run(2, globalsize, localsize, false);
+          }
+          else{
+            if (k_fft_forw_col.empty())
+              k_fft_forw_col = cv::ocl::Kernel(kernel_name.c_str(), prep_ocl_kernel("FftMethod.cl"), options);
+            if (k_fft_forw_col.empty()){
+              return false;
+            }
+            k_fft_forw_col.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
+            return k_fft_forw_col.run(2, globalsize, localsize, false);
+          }
+        }
+
+
+    }
+
+    void OCL_FftPlan::ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix)
+    {
+        int factors[34];
+        int nf = DFTFactorize(cols, factors);
+
+        int n = 1;
+        int factor_index = 0;
+        min_radix = INT_MAX;
+
+        // 2^n transforms
+        if ((factors[factor_index] & 1) == 0)
+        {
+            for( ; n < factors[factor_index];)
+            {
+                int radix = 2, block = 1;
+                if (8*n <= factors[0])
+                    radix = 8;
+                else if (4*n <= factors[0])
+                {
+                    radix = 4;
+                    if (cols % 12 == 0)
+                        block = 3;
+                    else if (cols % 8 == 0)
+                        block = 2;
+                }
+                else
+                {
+                    if (cols % 10 == 0)
+                        block = 5;
+                    else if (cols % 8 == 0)
+                        block = 4;
+                    else if (cols % 6 == 0)
+                        block = 3;
+                    else if (cols % 4 == 0)
+                        block = 2;
+                }
+
+                radixes.push_back(radix);
+                blocks.push_back(block);
+                min_radix = cv::min(min_radix, block*radix);
+                n *= radix;
+            }
+            factor_index++;
+        }
+
+        // all the other transforms
+        for( ; factor_index < nf; factor_index++)
+        {
+            int radix = factors[factor_index], block = 1;
+            if (radix == 3)
+            {
+                if (cols % 12 == 0)
+                    block = 4;
+                else if (cols % 9 == 0)
+                    block = 3;
+                else if (cols % 6 == 0)
+                    block = 2;
+            }
+            else if (radix == 5)
+            {
+                if (cols % 10 == 0)
+                    block = 2;
+            }
+            radixes.push_back(radix);
+            blocks.push_back(block);
+            min_radix = cv::min(min_radix, block*radix);
+        }
+    }
+
+    template <typename T>
+    void OCL_FftPlan::fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixes)
+    {
+      cv::Mat tw = twiddles.getMat(cv::ACCESS_WRITE);
+        T* ptr = tw.ptr<T>();
+        int ptr_index = 0;
+
+        int n = 1;
+        for (size_t i=0; i<radixes.size(); i++)
+        {
+            int radix = radixes[i];
+            n *= radix;
+
+            for (int j=1; j<radix; j++)
+            {
+                double theta = -CV_2PI*j/n;
+
+                for (int k=0; k<(n/radix); k++)
+                {
+                    ptr[ptr_index++] = (T) cos(k*theta);
+                    ptr[ptr_index++] = (T) sin(k*theta);
+                }
+            }
+        }
+    }
+
+
+
+
+bool FftMethod::ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonzero_rows, int flags, int fftType)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(_src.cols(), depth);
+    return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
+}
+
+bool FftMethod::ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonzero_cols, int flags, int fftType)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(_src.rows(), depth);
+    return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
+}
+
+bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, int nonzero_rows)
+{
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    cv::Size ssize = _src.size();
+    bool doubleSupport = cv::ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !((cn == 1 || cn == 2) && (depth == CV_32F || (depth == CV_64F && doubleSupport))) )
+        return false;
+
+    // if is not a multiplication of prime numbers { 2, 3, 5 }
+    if (ssize.area() != cv::getOptimalDFTSize(ssize.area()))
+        return false;
+
+    cv::UMat src = _src.getUMat();
+    int complex_input = cn == 2 ? 1 : 0;
+    int complex_output = (flags & cv::DFT_COMPLEX_OUTPUT) != 0;
+    int real_input = cn == 1 ? 1 : 0;
+    int real_output = (flags & cv::DFT_REAL_OUTPUT) != 0;
+    bool inv = (flags & cv::DFT_INVERSE) != 0 ? 1 : 0;
+
+    if( nonzero_rows <= 0 || nonzero_rows > _src.rows() )
+        nonzero_rows = _src.rows();
+    bool is1d = (flags & cv::DFT_ROWS) != 0 || nonzero_rows == 1;
+
+    // if output format is not specified
+    if (complex_output + real_output == 0)
+    {
+        if (real_input)
+            real_output = 1;
+        else
+            complex_output = 1;
+    }
+
+    FftType fftType = (FftType)(complex_input << 0 | complex_output << 1);
+
+    // Forward Complex to CCS not supported
+    if (fftType == C2R && !inv)
+        fftType = C2C;
+
+    // Inverse CCS to Complex not supported
+    if (fftType == R2C && inv)
+        fftType = R2R;
+
+    cv::UMat output;
+    if (fftType == C2C || fftType == R2C)
+    {
+        // complex output
+        _dst.create(src.size(), CV_MAKETYPE(depth, 2));
+        output = _dst.getUMat();
+    }
+    else
+    {
+        // real output
+        if (is1d)
+        {
+            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
+            output = _dst.getUMat();
+        }
+        else
+        {
+            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
+            output.create(src.size(), CV_MAKETYPE(depth, 2));
+        }
+    }
+
+    if (!inv)
+    {
+        if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+            return false;
+
+        if (!is1d)
+        {
+            int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
+            if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
+                return false;
+        }
+    }
+    else
+    {
+        if (fftType == C2C)
+        {
+            // complex output
+            if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+                return false;
+
+            if (!is1d)
+            {
+                if (!ocl_dft_cols(output, output, output.cols, flags, fftType))
+                    return false;
+            }
+        }
+        else
+        {
+            if (is1d)
+            {
+                if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
+                    return false;
+            }
+            else
+            {
+                int nonzero_cols = src.cols/2 + 1;
+                if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
+                    return false;
+
+                if (!ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+void FftMethod::dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags)
+{
+  ocl_dft(_src0, _dst, flags,0);
+}
+
 static void magSpectrums( cv::InputArray _src, cv::OutputArray _dst)
 {
   cv::Mat src = _src.getMat();
@@ -476,16 +913,19 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   CV_Assert( _src1.type() == CV_32FC1 || _src1.type() == CV_64FC1 );
   CV_Assert( _src1.size() == _src2.size());
 
-    clock_t                    begin, end,begin_overall;
-    double                     elapsedTimeI,elapsedTime1,elapsedTime2,elapsedTime3,elapsedTime4,elapsedTime5,elapsedTime6,elapsedTimeO;
-    elapsedTimeI=0;
-    elapsedTime1=0;
-    elapsedTime2=0;
-    elapsedTime3=0;
-    elapsedTime4=0;
-    elapsedTime5=0;
-    elapsedTime6=0;
-    elapsedTimeO=0;
+  useOCL = true;
+
+
+  clock_t                    begin, end,begin_overall;
+  double                     elapsedTimeI,elapsedTime1,elapsedTime2,elapsedTime3,elapsedTime4,elapsedTime5,elapsedTime6,elapsedTimeO;
+  elapsedTimeI=0;
+  elapsedTime1=0;
+  elapsedTime2=0;
+  elapsedTime3=0;
+  elapsedTime4=0;
+  elapsedTime5=0;
+  elapsedTime6=0;
+  elapsedTimeO=0;
 
   begin = std::clock();
   begin_overall= std::clock();
@@ -511,7 +951,6 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
     ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI);
 
 
-
     for (int i = 0; i < X; i++) {
       for (int j = 0; j < Y; j++) {
         begin = std::clock();
@@ -522,21 +961,33 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
 
 
+        /* if (useOCL) { */
+        /*   FFT1 = FFT1_field[j][i]; */
+        /*   FFT2 = FFT2_field[j][i]; */
+        /* } */
 
-        window1 = usrc1(roi);
-        window2 = usrc2(roi);
+        /* if (!useOCL) { */
+          window1 = usrc1(roi);
+          window2 = usrc2(roi);
+        /* } */
           /* ROS_INFO_ONCE("padded size: %dx%d",padded2.rows,padded2.cols); */
 
-        end         = std::clock();
-        elapsedTime1 += double(end - begin) / CLOCKS_PER_SEC;
-        begin = std::clock();
+          end         = std::clock();
+          elapsedTime1 += double(end - begin) / CLOCKS_PER_SEC;
+          begin = std::clock();
 
         // execute phase correlation equation
         // Reference: http://en.wikipedia.org/wiki/Phase_correlation
         /* dft(usrc1(roi), FFT1, cv::DFT_REAL_OUTPUT); */
         /* dft(usrc2(roi), FFT2, cv::DFT_REAL_OUTPUT); */
-        dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
-        dft(window2, FFT2, cv::DFT_REAL_OUTPUT);
+        if (useOCL){
+          dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
+          dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
+        }
+        else {
+          dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
+          dft(window2, FFT2, cv::DFT_REAL_OUTPUT);
+        }
 
         /* ROS_INFO("[%d]: FFT TYPE", FFT1.type()); */
 

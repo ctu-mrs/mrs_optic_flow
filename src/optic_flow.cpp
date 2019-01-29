@@ -619,7 +619,7 @@ namespace mrs_optic_flow
               }
       case 4: {
 
-              std::cout << cv::getBuildInformation() << std::endl;
+              /* std::cout << cv::getBuildInformation() << std::endl; */
 
               if (!cv::ocl::haveOpenCL())
               {
