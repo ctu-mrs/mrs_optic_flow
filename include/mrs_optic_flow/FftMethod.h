@@ -14,11 +14,12 @@
 #include <string.h>
 #include "mrs_optic_flow/utilityFunctions.h"
 
+cv::String buildOptions;
+
 struct OCL_FftPlan
 {
 private:
   cv::UMat twiddles;
-  cv::String buildOptions;
     int thread_count;
     int dft_size;
     int dft_depth;
