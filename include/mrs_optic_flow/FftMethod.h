@@ -116,6 +116,7 @@ private:
                                      CV_OUT double* response = 0);
 
   void dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags);
+  void idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags=0);
 
 public:
 

@@ -173,7 +173,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_de
               return false;
             }
             k_fft_inv_row.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
-            return k_fft_inv_row.run(2, globalsize, localsize, false);
+            return k_fft_inv_row.run(2, globalsize, localsize, true);
           }
           else{
             if (k_fft_forw_row.empty())
@@ -182,7 +182,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_de
               return false;
             }
             k_fft_forw_row.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
-            return k_fft_forw_row.run(2, globalsize, localsize, false);
+            return k_fft_forw_row.run(2, globalsize, localsize, true);
           }
         }else{
           if (inv){
@@ -192,7 +192,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_de
               return false;
             }
             k_fft_inv_col.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
-            return k_fft_inv_col.run(2, globalsize, localsize, false);
+            return k_fft_inv_col.run(2, globalsize, localsize, true);
           }
           else{
             if (k_fft_forw_col.empty())
@@ -201,7 +201,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_de
               return false;
             }
             k_fft_forw_col.args(cv::ocl::KernelArg::ReadOnly(src), cv::ocl::KernelArg::WriteOnly(dst), cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
-            return k_fft_forw_col.run(2, globalsize, localsize, false);
+            return k_fft_forw_col.run(2, globalsize, localsize, true);
           }
         }
 
@@ -435,6 +435,52 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
 void FftMethod::dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags)
 {
   ocl_dft(_src0, _dst, flags,0);
+}
+void FftMethod::idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags)
+{
+  ocl_dft(_src0, _dst, flags | cv::DFT_INVERSE,0);
+}
+
+static bool ocl_mulSpectrums( cv::InputArray _srcA, cv::InputArray _srcB,
+                              cv::OutputArray _dst, int flags, bool conjB )
+{
+    int atype = _srcA.type(), btype = _srcB.type(),
+            rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
+    cv::Size asize = _srcA.size(), bsize = _srcB.size();
+    CV_Assert(asize == bsize);
+    CV_Assert(atype == CV_32FC2 && btype == CV_32FC2);
+
+    if (flags != 0 )
+        return false;
+
+    cv::UMat A = _srcA.getUMat(), B = _srcB.getUMat();
+    CV_Assert(A.size() == B.size());
+
+    _dst.create(A.size(), atype);
+    cv::UMat dst = _dst.getUMat();
+
+    cv::ocl::Kernel k("mulAndScaleSpectrums",
+                  prep_ocl_kernel("FftMethod.cl"),
+                  cache. afdadsfdfagdetInstance()+"-D CONJ");
+    if (k.empty())
+        return false;
+
+    k.args(cv::ocl::KernelArg::ReadOnlyNoSize(A), cv::ocl::KernelArg::ReadOnlyNoSize(B),
+          cv::ocl::KernelArg::WriteOnly(dst), rowsPerWI);
+
+    size_t globalsize[2] = { (size_t)asize.width, ((size_t)asize.height + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+}
+
+void mulSpectrums_special( cv::InputArray _srcA, cv::InputArray _srcB,
+                       cv::OutputArray _dst, int flags, bool conjB )
+{
+  int type = _srcA.type();
+
+  CV_Assert( type == _srcB.type() && _srcA.size() == _srcB.size() );
+  CV_Assert( type == CV_32FC2 || type == CV_64FC2 );
+
+  ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB);
 }
 
 static void magSpectrums( cv::InputArray _src, cv::OutputArray _dst)
@@ -981,8 +1027,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         /* dft(usrc1(roi), FFT1, cv::DFT_REAL_OUTPUT); */
         /* dft(usrc2(roi), FFT2, cv::DFT_REAL_OUTPUT); */
         if (useOCL){
-          dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
-          dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
+          dft_special(window1, FFT1, cv::DFT_COMPLEX_OUTPUT);
+          dft_special(window2, FFT2, cv::DFT_COMPLEX_OUTPUT);
         }
         else {
           dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
@@ -995,7 +1041,12 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         elapsedTime2 += double(end - begin) / CLOCKS_PER_SEC;
         begin = std::clock();
 
-        mulSpectrums(FFT1, FFT2, P, 0, true);
+        if (useOCL){
+          mulSpectrums_special(FFT1, FFT2, P, 0, true);
+          }
+        else{
+          mulSpectrums(FFT1, FFT2, P, 0, true);
+        }
 
         end         = std::clock();
         elapsedTime3 += double(end - begin) / CLOCKS_PER_SEC;
@@ -1014,7 +1065,12 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
         
 
-        idft(C, C); // gives us the nice peak shift location...
+        if (useOCL){
+          idft_special(C, C); // gives us the nice peak shift location...
+        }
+        else {
+          idft(C, C); // gives us the nice peak shift location...
+        }
 
         end         = std::clock();
         elapsedTime6 += double(end - begin) / CLOCKS_PER_SEC;
@@ -1097,8 +1153,8 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     usrc2.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     window1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFT1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFT2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
   first = true;
 }
