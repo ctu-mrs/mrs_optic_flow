@@ -886,12 +886,19 @@ inline float2 cmulf(float2 a, float2 b)
     return (float2)(mad(a.x, b.x, - a.y * b.y), mad(a.x, b.y, a.y * b.x));
 }
 
+inline float2 cmulnormf(float2 a, float2 b)
+{
+   float2 mul = (float2)(mad(a.x, b.x, - a.y * b.y), mad(a.x, b.y, a.y * b.x));
+   float denom = rsqrt(mad(mul.x,mul.x,mul.y*mul.y));
+   return (float2)(mul*denom);
+}
+
 inline float2 conjf(float2 a)
 {
     return (float2)(a.x, - a.y);
 }
 
-__kernel void mulAndScaleSpectrums(__global const uchar * src1ptr, int src1_step, int src1_offset,
+__kernel void mulAndNormalizeSpectrums(__global const uchar * src1ptr, int src1_step, int src1_offset,
                                    __global const uchar * src2ptr, int src2_step, int src2_offset,
                                    __global uchar * dstptr, int dst_step, int dst_offset,
                                    int dst_rows, int dst_cols, int rowsPerWI)
@@ -913,11 +920,38 @@ __kernel void mulAndScaleSpectrums(__global const uchar * src1ptr, int src1_step
             __global float2 * dst = (__global float2 *)(dstptr + dst_index);
 
 #ifdef CONJ
-            float2 v = cmulf(src0, conjf(src1));
+            float2 v = cmulnormf(src0, conjf(src1));
 #else
-            float2 v = cmulf(src0, src1);
+            float2 v = cmulnormf(src0, src1);
 #endif
             dst[0] = v;
         }
     }
 }
+
+
+
+__kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step, int src1_offset, int src1_rows, int src1_cols,
+                                  __global const uchar* src2_ptr, int src2_step, int src2_offset, int src2_rows, int src2_cols,
+                                   uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                   CT* twiddles_ptr, int twiddles_step, int twiddles_offset,
+                                   const int t,, int rowsPerWI, int Xfields, int Yfields){
+
+__global float2 fft1[src1_step*src1_rows];
+__global float2 fft2[src1_step*src1_rows];
+
+fft_multi_radix_rows(src1_ptr, src1_step, src1_offset, src1_rows, src1_cols
+    ((uchar*)fft1, src1_cols, 0, src1_rows, src1_cols,
+     twiddles_ptr, twiddles_step, twiddles_offset, t, src1_rows
+    );
+fft_multi_radix_cols(src2_ptr, src2_step, src2_offset, src2_rows, src2_cols
+    ((uchar*)fft2, src1_cols, 0, src1_rows, src1_cols,
+     twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols
+    );
+
+mulAndNormalizeSpectrums(fft1, src1_step, src1_offset,fft2, src2_step, src2_offset,
+                    dstptr, dst_step, dst_offset, dst_rows, dst_cols, rowsPerWI);
+
+
+}
+  

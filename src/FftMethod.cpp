@@ -461,7 +461,7 @@ static bool ocl_mulSpectrums( cv::InputArray _srcA, cv::InputArray _srcB,
     _dst.create(A.size(), atype);
     cv::UMat dst = _dst.getUMat();
 
-    cv::ocl::Kernel k("mulAndScaleSpectrums",
+    cv::ocl::Kernel k("mulAndNormalizeSpectrums",
                   prep_ocl_kernel("FftMethod.cl"),
                   buildOptions+" -D CONJ ");
     if (k.empty())
@@ -1050,7 +1050,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
 
         if (useOCL){
-          mulSpectrums_special(FFT1, FFT2, P, 0, true);
+          mulSpectrums_special(FFT1, FFT2, C, 0, true);
           }
         else{
           mulSpectrums(FFT1, FFT2, P, 0, true);
@@ -1066,13 +1066,13 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         elapsedTime3 += double(end - begin) / CLOCKS_PER_SEC;
         begin = std::clock();
 
-        magSpectrums(P, Pm);
+        /* magSpectrums(P, Pm); */
 
         end         = std::clock();
         elapsedTime4 += double(end - begin) / CLOCKS_PER_SEC;
         begin = std::clock();
         
-        divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
+        /* divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...) */
 
         end         = std::clock();
         elapsedTime5 += double(end - begin) / CLOCKS_PER_SEC;
@@ -1169,6 +1169,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFT1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFT2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
   first = true;
 }
