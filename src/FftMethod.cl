@@ -612,8 +612,8 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
                                    __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                    __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz)
 {
-    const int x = get_group_id(0);
-    const int y = get_global_id(1);
+    const int x = get_group_id(1);
+    const int y = get_global_id(0);
 
     if (x < nz)
     {
@@ -779,8 +779,8 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
                               __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                               __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz)
 {
-    const int x = get_group_id(0);
-    const int y = get_global_id(1);
+    const int x = get_group_id(1);
+    const int y = get_global_id(0);
 
 #ifdef COMPLEX_INPUT
     if (x < nz)
@@ -930,15 +930,15 @@ __kernel void mulAndNormalizeSpectrums(__global const uchar * src1ptr, int src1_
 }
 
 
+__global float2 fft1[LOCAL_SIZE*LOCAL_SIZE];
+__global float2 fft2[LOCAL_SIZE*LOCAL_SIZE];
 
 __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step, int src1_offset, int src1_rows, int src1_cols,
                                   __global const uchar* src2_ptr, int src2_step, int src2_offset, int src2_rows, int src2_cols,
-                                   uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                                   CT* twiddles_ptr, int twiddles_step, int twiddles_offset,
-                                   const int t,, int rowsPerWI, int Xfields, int Yfields){
+                                  __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                  __global CT * twiddles_ptr, int twiddles_step, int twiddles_offset,
+                                   const int t, int rowsPerWI, int Xfields, int Yfields){
 
-__global float2 fft1[src1_step*src1_rows];
-__global float2 fft2[src1_step*src1_rows];
 
 fft_multi_radix_rows(src1_ptr, src1_step, src1_offset, src1_rows, src1_cols
     ((uchar*)fft1, src1_cols, 0, src1_rows, src1_cols,

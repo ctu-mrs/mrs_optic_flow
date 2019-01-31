@@ -133,10 +133,10 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth) : dft_size(_size), dft_depth(_de
         }
         else
         {
-            globalsize[0] = num_dfts;
-            globalsize[1] = thread_count;
-            localsize[0] = 1;
-            localsize[1] = thread_count;
+            globalsize[1] = num_dfts;
+            globalsize[0] = thread_count;
+            localsize[1] = 1;
+            localsize[0] = thread_count;
             kernel_name = !inv ? "fft_multi_radix_cols" : "ifft_multi_radix_cols";
             if (flags & cv::DFT_SCALE)
                 options += " -D DFT_SCALE";
