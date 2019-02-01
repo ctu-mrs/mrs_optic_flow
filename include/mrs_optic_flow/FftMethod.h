@@ -25,10 +25,13 @@ private:
     int dft_depth;
     bool status;
     cv::ocl::Kernel k_fft,k_fft_forw_row, k_fft_inv_row, k_fft_forw_col, k_fft_inv_col;
+    cv::ocl::Kernel k_phase_corr;
+    std::string cl_file_name;
 
 public:
-    OCL_FftPlan(int _size, int _depth);
+    OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name);
     bool enqueueTransform(cv::InputArray _src, cv::OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true);
+    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputArray _fft1, cv::InputArray _fft2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int num_dfts);
 private:
     static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix);
     template <typename T>
@@ -48,7 +51,7 @@ class OCL_FftPlanCache
   /*     return *instance; */
   /*   } */
 
-    cv::Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth)
+    cv::Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth, std::string i_cl_file_name)
     {
         int key = (dft_size << 16) | (depth & 0xFFFF);
         std::map<int, cv::Ptr<OCL_FftPlan> >::iterator f = planStorage.find(key);
@@ -58,7 +61,7 @@ class OCL_FftPlanCache
         }
         else
         {
-          cv::Ptr<OCL_FftPlan> newPlan = cv::Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size, depth));
+          cv::Ptr<OCL_FftPlan> newPlan = cv::Ptr<OCL_FftPlan>(new OCL_FftPlan(dft_size, depth, i_cl_file_name));
             planStorage[key] = newPlan;
             return newPlan;
         }
@@ -79,11 +82,14 @@ class FftMethod : public OpticFlowCalc {
 private:
 
   bool useOCL;
+  bool useNewKernel;
   OCL_FftPlanCache cache;
+  std::string cl_file_name;
 
   cv::UMat usrc1, usrc2;
   cv::UMat window1, window2;
-  cv::UMat FFT1, FFT2, P, Pm, C;
+  cv::UMat FFT1, FFT2, MUL, PCR, P, Pm, C;
+  cv::UMat twiddles;
 
   int frameSize;
   int samplePointSize;
@@ -108,10 +114,17 @@ private:
 
   cv::VideoWriter outputVideo;
 
+  void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix);
+
+    template <typename T>
+  static void fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixes);
+
   bool ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonzero_rows, int flags, int fftType);
   bool ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonzero_cols, int flags, int fftType);
 
   bool ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, int nonzero_rows);
+
+  bool phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, cv::OutputArray _dst);
 
   std::vector<cv::Point2d> phaseCorrelateField(cv::Mat &_src1, cv::Mat &_src2, unsigned int X,unsigned int Y,
                                      CV_OUT double* response = 0);
@@ -119,10 +132,15 @@ private:
   void dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags);
   void idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags=0);
 
+  void mulSpectrums_special( cv::InputArray _srcA, cv::InputArray _srcB,
+                       cv::OutputArray _dst, int flags, bool conjB );
+
+  bool ocl_mulSpectrums( cv::InputArray _srcA, cv::InputArray _srcB,
+                              cv::OutputArray _dst, int flags, bool conjB );
 public:
 
   FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
-            bool i_tilt_corr_enable, std::string *videoPath, int videoFPS);
+            bool i_tilt_corr_enable, std::string *videoPath, int videoFPS, std::string cl_file_name);
 
   std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center, cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy);
 };

@@ -239,6 +239,8 @@ namespace mrs_optic_flow
       
       std::string camera_frame_, uav_frame_,uav_untilted_frame_;
 
+      std::string fft_cl_file_;
+
       std::string filter_method_;
 
       bool                    rotation_correction_, tilt_correction_, raw_enabled_;
@@ -508,44 +510,46 @@ namespace mrs_optic_flow
     int videoFPS = param_loader.load_param2<int>("video_fps");
 
     // | -------------------- optic flow params ------------------- |
-  param_loader.load_param("optic_flow/scale_factor", scale_factor_);
+    param_loader.load_param("FftCLFile", fft_cl_file_);
 
-    param_loader.load_param("optic_flow/max_processing_rate", max_processing_rate_);
-    param_loader.load_param("optic_flow/method", method_);
-    param_loader.load_param("optic_flow/scan_radius", scan_radius_);
-    param_loader.load_param("optic_flow/step_size", step_size_);
-    param_loader.load_param("optic_flow/frame_size", frame_size_);
+    param_loader.load_param("mrs_optic_flow/scale_factor", scale_factor_);
+
+    param_loader.load_param("mrs_optic_flow/max_processing_rate", max_processing_rate_);
+    param_loader.load_param("mrs_optic_flow/method", method_);
+    param_loader.load_param("mrs_optic_flow/scan_radius", scan_radius_);
+    param_loader.load_param("mrs_optic_flow/step_size", step_size_);
+    param_loader.load_param("mrs_optic_flow/frame_size", frame_size_);
 
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     frame_size_=frame_size_/scale_factor_;
   }
 
-    param_loader.load_param("optic_flow/sample_point_size", sample_point_size_);
+    param_loader.load_param("mrs_optic_flow/sample_point_size", sample_point_size_);
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     sample_point_size_=sample_point_size_/scale_factor_;
   }
     sample_point_count_sqrt_ = frame_size_/sample_point_size_;
     sample_point_count_ = sample_point_count_sqrt_*sample_point_count_sqrt_;
-    param_loader.load_param("optic_flow/filter_method", filter_method_);
-    param_loader.load_param("optic_flow/apply_abs_bouding", apply_abs_bounding_);
-    param_loader.load_param("optic_flow/apply_rel_bouding", apply_rel_bouding_);
+    param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
+    param_loader.load_param("mrs_optic_flow/apply_abs_bouding", apply_abs_bounding_);
+    param_loader.load_param("mrs_optic_flow/apply_rel_bouding", apply_rel_bouding_);
 
     {
       double calibration_coeff_both; // use this as a backup value in case calibrations for separate axes are not available
-      param_loader.load_param("optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
-      param_loader.load_param("optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
-      param_loader.load_param("optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
+      param_loader.load_param("mrs_optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
     }
 
 
-    param_loader.load_param("optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
-    param_loader.load_param("optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
-    RansacThresholdRadSq = pow(param_loader.load_param2<double>("optic_flow/ransac/threshold_rad"), 2);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
+    RansacThresholdRadSq = pow(param_loader.load_param2<double>("mrs_optic_flow/ransac/threshold_rad"), 2);
 
-    param_loader.load_param("optic_flow/rotation_correction", rotation_correction_);
-    param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
-    param_loader.load_param("optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
-    param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
+    param_loader.load_param("mrs_optic_flow/rotation_correction", rotation_correction_);
+    param_loader.load_param("mrs_optic_flow/tilt_correction", tilt_correction_);
+    param_loader.load_param("mrs_optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
+    param_loader.load_param("mrs_optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
   if (method_ < 3 || method_ > 5) {
     ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
@@ -584,7 +588,7 @@ namespace mrs_optic_flow
 
 
     if (gui_) {
-      cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
+      cv::namedWindow("mrs_optic_flow", cv::WINDOW_FREERATIO);
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
@@ -654,7 +658,7 @@ namespace mrs_optic_flow
 
               cv::ocl::setUseOpenCL(true);
 
-                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS);
+                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS, fft_cl_file_);
                 break;
               }
 

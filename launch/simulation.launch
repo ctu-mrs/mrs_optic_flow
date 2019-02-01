@@ -41,6 +41,8 @@
       <param name="uav_frame" value="$(arg uav_frame)" />
       <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
+      <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+
       <!-- Subscribers -->
       <!--remap from="~odometry_in" to="ground_truth" /-->
       <remap from="~odometry_in" to="/uav1/mavros/local_position/odom" />
