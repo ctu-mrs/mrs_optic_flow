@@ -293,6 +293,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
       maxLoc = new int[2];
 
+      size_t index = 0;
       for (int j=0;j<Yfields;j++){
         for (int i=0;i<Xfields;i++){
 
@@ -300,7 +301,6 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
           float maxval = std::numeric_limits<float>::min() > 0 ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::min(), maxval2 = maxval;
           uint maxloc = index_max;
 
-          size_t index = 0;
           const float * minptr = NULL, * maxptr = NULL, * maxptr2 = NULL;
           const uint * maxlocptr = NULL;
           if (maxVal || maxLoc)
@@ -1230,11 +1230,15 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   std::vector<cv::Point2d> output;
 
 
-  /* _src1.copyTo(usrc1,cv::ACCESS_READ); */
-  /* _src2.copyTo(usrc2,cv::ACCESS_READ); */
+  _src1.copyTo(usrc1);
+  _src2.copyTo(usrc2);
 
-  usrc1 = _src1.getUMat(cv::ACCESS_READ);
-  usrc2 = _src2.getUMat(cv::ACCESS_READ);
+
+  /* usrc1 = _src1.getUMat(cv::ACCESS_READ); */
+  /* usrc2 = _src2.getUMat(cv::ACCESS_READ); */
+
+  /* usrc1. */
+  /* usrc2.setTo(_src2); */
 
 
 

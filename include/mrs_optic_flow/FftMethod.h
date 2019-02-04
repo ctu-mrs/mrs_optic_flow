@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
+#include <mutex>
 #include "mrs_optic_flow/utilityFunctions.h"
 
 cv::String buildOptions;
@@ -80,6 +81,8 @@ protected:
 };
 class FftMethod : public OpticFlowCalc {
 private:
+
+  std::mutex process_mutex;
 
   bool useOCL;
   bool useNewKernel;
