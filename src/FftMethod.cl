@@ -543,7 +543,7 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         for (int i=0; i<kercn; i++)
             smem[x+i*block_size] = src[i*block_size];
 #else
-        __global const FT* src = (__global const FT*)(src_ptr + mad24(mad24(Yvec,dst_rows,y), src_step, mad24(x, (int)sizeof(FT), mad24(x,dst_cols,src_offset))));
+        __global const FT* src = (__global const FT*)(src_ptr + mad24(mad24(Yvec,dst_rows,y), src_step, mad24(x, (int)sizeof(FT), mad24(Xvec,dst_cols,src_offset))));
         #pragma unroll
         for (int i=0; i<kercn; i++)
             smem[x+i*block_size] = (CT)(src[i*block_size], 0.f);
@@ -559,10 +559,6 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         #pragma unroll
         for (int i=x; i<cols; i+=block_size)
             dst[i] = SCALE_VAL(smem[i], scale);
-#ifdef ROW_F_REAL_INPUT
-#ifdef ROW_F_COMPLEX_OUTPUT
-#endif
-#endif
 #else
         // pack row to CCS
         __local FT* smem_1cn = (__local FT*) smem;
@@ -752,7 +748,7 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
 
 __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz)
+                              __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,Xvec,Yvec)
 {
     const int x = get_group_id(1);
     const int y = get_global_id(0);
@@ -762,7 +758,7 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
     {
         __local CT smem[LOCAL_SIZE];
         __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
-        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
+        __global uchar* dst = dst_ptr + mad24(mad24(Yvec,dst_rows,y), dst_step, mad24(x, (int)(sizeof(CT)), mad24(Xvec,dst_cols,src_offset)));
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
@@ -965,7 +961,7 @@ static inline int align(int pos)
     CALC_MAX2(p)
 
 __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int cols,
-                        int total, int groupnum, __global uchar * dstptr, int index)
+                        int total, int searchRows,int searchCols, int groupnum, __global uchar * dstptr, index,Xvec,Yvec)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
@@ -992,7 +988,7 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
         ; id < total; id += grain)
     {
         {
-          src_index = mad24(id / cols, src_step, mul24(id % cols, srcTSIZE));
+          src_index = mad24(mad24(Yvec,searchRows,id / cols), src_step,mad24(Xvec,searchCols, mul24(id % cols, srcTSIZE)));
           temp = (loadpix(srcptr + src_index));
 
 
@@ -1125,22 +1121,22 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
 
 
       fft_multi_radix_rows(src1_ptr, src1_step, src1_offset, src1_rows, src1_cols,
-          fft1_ptr, src1_cols, 0, src1_rows, src1_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, src1_rows,
+          fft1_ptr, fft1_cols, 0, fft1_rows, fft1_cols,
+          twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_rows,
           i,j
           );
-      fft_multi_radix_cols(fft1_ptr, src2_step, src2_offset, src2_rows, src2_cols,
-          fft1_ptr, src1_cols, 0, src1_rows, src1_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols
-          );
+      /* fft_multi_radix_cols(fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols, */
+      /*     fft1_ptr, fft1_cols, 0, fft1_rows, fft1_cols, */
+      /*     twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols */
+      /*     ); */
 
-      fft_multi_radix_rows(src1_ptr, src1_step, src1_offset, src1_rows, src1_cols,
-          fft2_ptr, src1_cols, 0, src1_rows, src1_cols,
+      fft_multi_radix_rows(src2_ptr, src1_step, src1_offset, src1_rows, src1_cols,
+          fft2_ptr, fft2_cols, 0, fft2_rows, fft2_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, src1_rows,
           i,j
           );
-      fft_multi_radix_cols(fft2_ptr, src2_step, src2_offset, src2_rows, src2_cols,
-          fft2_ptr, src1_cols, 0, src1_rows, src1_cols,
+      fft_multi_radix_cols(fft2_ptr, fft2_step, fft2_offset, fft2_rows, fft2_cols,
+          fft2_ptr, fft2_cols, 0, fft2_rows, fft2_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols
           );
 
@@ -1153,10 +1149,10 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           );
       ifft_multi_radix_cols(fft1_ptr, src2_step, src2_offset, src2_rows, src2_cols,
           pcr_ptr, src1_cols, 0, src1_rows, src1_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols
+          twiddles_ptr, twiddles_step, twiddles_offset, t, src1_cols,i,j
           );
 
-      minmaxloc(pcr_ptr, pcr_step, pcr_step, pcr_cols, pcr_cols*pcr_cols, get_num_groups(0)*get_num_groups(1), dstptr,index);
+      minmaxloc(pcr_ptr, pcr_step, pcr_step, pcr_cols, pcr_cols*pcr_cols, fft1_rows, fft1_cols, get_num_groups(0)*get_num_groups(1), dstptr,index,i,j);
     } }
 
 

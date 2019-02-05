@@ -589,6 +589,7 @@ namespace mrs_optic_flow
 
     if (gui_) {
       cv::namedWindow("mrs_optic_flow", cv::WINDOW_FREERATIO);
+      cv::namedWindow("debugshit", cv::WINDOW_FREERATIO);
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
@@ -1199,8 +1200,9 @@ namespace mrs_optic_flow
       /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
       detilt.setRPY(imu_roll,imu_pitch,odometry_yaw);
+      /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
-      /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << std::endl; */
+      /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << " " << imu_yaw << std::endl; */
     }
 
     /* detilt = detilt.inverse(); */
@@ -1211,6 +1213,11 @@ namespace mrs_optic_flow
 
       tran = tf2::Transform(detilt)*(tf2::Transform(tempTfC2B.getRotation())*tran);
       std::cout << "Detilted: " << tran.x() << " " << tran.y() << " "<< tran.z() << " "<< std::endl;
+
+      /* double troll, tpitch, tyaw; */
+      /* tf2::Matrix3x3(tempTfC2B.getRotation()).getRPY(troll,tpitch,tyaw); */
+      /* std::cout << "C2B: " << troll << " " << tpitch << " "<< tyaw << " "<< std::endl; */
+
       /* rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle()); */
       rot = tf2::Quaternion(tempTfC2B*(rot.getAxis()), rot.getAngle());
 
