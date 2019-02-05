@@ -1211,7 +1211,8 @@ namespace mrs_optic_flow
 
       tran = tf2::Transform(detilt)*(tf2::Transform(tempTfC2B.getRotation())*tran);
       std::cout << "Detilted: " << tran.x() << " " << tran.y() << " "<< tran.z() << " "<< std::endl;
-      rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle());
+      /* rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle()); */
+      rot = tf2::Quaternion(tempTfC2B*(rot.getAxis()), rot.getAngle());
 
       velocity.header.frame_id = uav_untilted_frame_;
       velocity.header.stamp    = ros::Time::now();
@@ -1226,7 +1227,7 @@ namespace mrs_optic_flow
       velocity.twist.covariance[7] = velocity.twist.covariance[0];
       velocity.twist.covariance[14] = velocity.twist.covariance[0]*2;
 
-      velocity.twist.covariance[21] = atan(2/fx); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[21] = atan(0.25); //I expect error of 0.5 rad/s.
       velocity.twist.covariance[27] = velocity.twist.covariance[21];
       velocity.twist.covariance[36] = velocity.twist.covariance[21];
       publisher_velocity.publish(velocity);
