@@ -21,7 +21,6 @@ struct OCL_FftPlan
 {
 private:
   cv::UMat twiddles;
-    int thread_count;
     int dft_size;
     int dft_depth;
     bool status;
@@ -31,8 +30,8 @@ private:
 
 public:
     OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name);
-    bool enqueueTransform(cv::InputArray _src, cv::OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true);
-    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int num_dfts,int Xfields,int Yfields, std::vector<cv::Point> &output);
+    /* bool enqueueTransform(cv::InputArray _src, cv::OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true); */
+    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int num_dfts,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count);
 private:
     static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix);
     template <typename T>
@@ -122,18 +121,18 @@ private:
     template <typename T>
   static void fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixes);
 
-  bool ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonzero_rows, int flags, int fftType);
-  bool ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonzero_cols, int flags, int fftType);
+  /* bool ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonzero_rows, int flags, int fftType); */
+  /* bool ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonzero_cols, int flags, int fftType); */
 
-  bool ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, int nonzero_rows);
+  /* bool ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, int nonzero_rows); */
 
   bool phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, std::vector<cv::Point2i> &out, int vec_rows, int vec_cols);
 
   std::vector<cv::Point2d> phaseCorrelateField(cv::Mat &_src1, cv::Mat &_src2, unsigned int X,unsigned int Y,
                                      CV_OUT double* response = 0);
 
-  void dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags);
-  void idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags=0);
+  /* void dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags); */
+  /* void idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags=0); */
 
   void mulSpectrums_special( cv::InputArray _srcA, cv::InputArray _srcB,
                        cv::OutputArray _dst, int flags, bool conjB );
