@@ -104,7 +104,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
             fillRadixTable<double>(twiddles, radixes);
 
 
-        std::string buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
+        std::string buildOptions_deprecated = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
                               dft_size, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
                               dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str());
 
@@ -288,10 +288,12 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true);
 
-      cv::Mat fft1_host = fft1.getMat(cv::ACCESS_READ);
+      cv::Mat fft_host = fft2.getMat(cv::ACCESS_READ);
+      /* cv::Mat mul_host = mul.getMat(cv::ACCESS_READ); */
     std::vector<cv::Mat> mulmats;
     cv::Mat catmat;
-    cv::split(fft1_host, mulmats);
+    /* cv::split(mul_host, mulmats); */
+    cv::split(fft_host, mulmats);
     hconcat(mulmats,catmat);
 
     double min;
@@ -668,7 +670,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   int flags = 0;
   flags |= cv::DFT_REAL_OUTPUT;
 
-  int nonzero_rows = _src1.cols();
+  int nonzero_rows = samplePointSize;
 
   int dft_size = samplePointSize;
   int type = _src1.type();
@@ -1422,8 +1424,8 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 
     usrc1.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     usrc2.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    window1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    /* window1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    /* window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     FFT1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFT2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     MUL.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
