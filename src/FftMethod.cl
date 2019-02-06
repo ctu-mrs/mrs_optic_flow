@@ -614,9 +614,12 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
         FT scale = 1.f/(dst_rows*dst_cols);
 
         /* __global uchar* dst_tmp = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset)); */
+        /* #pragma unroll */
         /* for (int i=0; i<kercn; i++) */
-        /*     *((__global CT*)(dst_tmp + i*block_size*dst_step)) = *((__global const CT*)(src + i*block_size*src_step)); */
-        /* return; */
+        /*     /1* smem[y+i*block_size] = *((__global const CT*)(src + i*block_size*src_step)); *1/ */
+        /*     *((__global CT*)(dst_tmp+i*block_size*dst_step)) = *((__global const CT*)(src + i*block_size*src_step)); */
+
+        /*         return; */
 
         #pragma unroll
         for (int i=0; i<kercn; i++)
@@ -678,15 +681,15 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = x;
 
-#if defined(ROW_I_COMPLEX_INPUT) && !defined(NO_CONJUGATE)
-        __global const CT* src = (__global const CT*)(src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset)));
-        #pragma unroll
-        for (int i=0; i<kercn; i++)
-        {
-            smem[x+i*block_size].x =  src[i*block_size].x;
-            smem[x+i*block_size].y = -src[i*block_size].y;
-        }
-#else
+/* #if defined(ROW_I_COMPLEX_INPUT) && !defined(NO_CONJUGATE) */
+/*         __global const CT* src = (__global const CT*)(src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset))); */
+/*         #pragma unroll */
+/*         for (int i=0; i<kercn; i++) */
+/*         { */
+/*             smem[x+i*block_size].x =  src[i*block_size].x; */
+/*             smem[x+i*block_size].y = -src[i*block_size].y; */
+/*         } */
+/* #else */
 
     #if !defined(ROW_I_REAL_INPUT) && defined(NO_CONJUGATE)
         __global const CT* src = (__global const CT*)(src_ptr + mad24(y, src_step, mad24(2, (int)sizeof(FT), src_offset)));
@@ -727,7 +730,7 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
                 smem[LOCAL_SIZE/2].y = 0.f;
             }
         }
-#endif
+/* #endif */
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -767,7 +770,8 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
 
 __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,int Xvec,int Yvec)
+                              /* __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,int Xvec,int Yvec) */
+                              __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz)
 {
     const int x = get_group_id(1);
     const int y = get_global_id(0);
@@ -777,7 +781,8 @@ __kernel void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step,
     {
         __local CT smem[LOCAL_SIZE];
         __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
-        __global uchar* dst = dst_ptr + mad24(mad24(Yvec,dst_rows,y), dst_step, mad24(x, (int)(sizeof(CT)), mad24(Xvec,dst_cols,src_offset)));
+        __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
+        /* __global uchar* dst = dst_ptr + mad24(mad24(Yvec,dst_rows,y), dst_step, mad24(x, (int)(sizeof(CT)), mad24(Xvec,dst_cols,src_offset))); */
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
@@ -881,6 +886,7 @@ inline float2 cmulnormf(float2 a, float2 b)
    float2 mul = (float2)(mad(a.x, b.x, - a.y * b.y), mad(a.x, b.y, a.y * b.x));
    float denom = rsqrt(mad(mul.x,mul.x,mul.y*mul.y));
    return (float2)(mul*denom);
+   /* return mul; */
 }
 
 inline float2 conjf(float2 a)
@@ -888,33 +894,41 @@ inline float2 conjf(float2 a)
     return (float2)(a.x, - a.y);
 }
 
-__kernel void mulAndNormalizeSpectrums(__global const uchar * src1ptr, int src1_step, int src1_offset,
-                                   __global const uchar * src2ptr, int src2_step, int src2_offset,
-                                   __global uchar * dstptr, int dst_step, int dst_offset,
-                                   int dst_rows, int dst_cols, int rowsPerWI)
+__kernel void mulAndNormalizeSpectrums(
+                                   __global const uchar * src1_ptr, int src1_step, int src1_offset,
+                                   __global const uchar * src2_ptr, int src2_step, int src2_offset,
+                                   __global uchar * dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
-    int x = get_global_id(0);
-    int y0 = get_global_id(1) * rowsPerWI;
+    const int x = get_global_id(0);
+    const int y = get_group_id(1);
+    const int block_size = LOCAL_SIZE/kercn;
 
-    if (x < dst_cols)
+    /* int x = get_group_id(0); */
+    /* int y0 = get_global_id(0) * rowsPerWI; */
+
+      /* printf("dst_cols: %d", dst_cols); */
+    /* int threads = get_global_size(0); */
+    /* int reps = (dst_cols-1/threads)+1; */
+    if (y < dst_rows)
     {
-        int src1_index = mad24(y0, src1_step, mad24(x, (int)sizeof(float2), src1_offset));
-        int src2_index = mad24(y0, src2_step, mad24(x, (int)sizeof(float2), src2_offset));
-        int dst_index = mad24(y0, dst_step, mad24(x, (int)sizeof(float2), dst_offset));
+        __global const CT* src1 = (__global const CT*)(src1_ptr + mad24(y, src1_step, mad24(x, (int)(sizeof(CT)), src1_offset)));
+        __global const CT* src2 = (__global const CT*)(src2_ptr + mad24(y, src2_step, mad24(x, (int)(sizeof(CT)), src2_offset)));
+        __global CT* dst = (__global const CT*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset)));
+        /* int src1_index = mad24(y0, src1_step, mad24(x, (int)sizeof(float2), src1_offset)); */
+        /* int src2_index = mad24(y0, src2_step, mad24(x, (int)sizeof(float2), src2_offset)); */
+        /* int dst_index = mad24(y0, dst_step, mad24(x, (int)sizeof(float2), dst_offset)); */
 
-        for (int y = y0, y1 = min(dst_rows, y0 + rowsPerWI); y < y1; ++y,
-            src1_index += src1_step, src2_index += src2_step, dst_index += dst_step)
-        {
-            float2 src0 = *(__global const float2 *)(src1ptr + src1_index);
-            float2 src1 = *(__global const float2 *)(src2ptr + src2_index);
-            __global float2 * dst = (__global float2 *)(dstptr + dst_index);
-
+        #pragma unroll
+        for (int i=0; i<kercn; i++){
+        float2  temp1 = src1[i*block_size];
+        float2  temp2 = src2[i*block_size];
 #ifdef CONJ
-            float2 v = cmulnormf(src0, conjf(src1));
+          float2 v = cmulnormf(temp1, conjf(temp2));
 #else
-            float2 v = cmulnormf(src0, src1);
+          float2 v = cmulnormf(temp1, temp2);
 #endif
-            dst[0] = v;
+          dst[i*block_size] = v;
+
         }
     }
 }
@@ -1125,6 +1139,8 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
 __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step, int src1_offset, int src1_rows, int src1_cols,
                                   __global const uchar* src2_ptr, int src2_step, int src2_offset, int src2_rows, int src2_cols,
+                                  __global uchar* fftr1_ptr, int fftr1_step, int fftr1_offset, int fftr1_rows, int fftr1_cols,
+                                  __global uchar* fftr2_ptr, int fftr2_step, int fftr2_offset, int fftr2_rows, int fftr2_cols,
                                   __global uchar* fft1_ptr, int fft1_step, int fft1_offset, int fft1_rows, int fft1_cols,
                                   __global uchar* fft2_ptr, int fft2_step, int fft2_offset, int fft2_rows, int fft2_cols,
                                   __global uchar* mul_ptr, int mul_step, int mul_offset, int mul_rows, int mul_cols,
@@ -1145,37 +1161,53 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       int index = i+Xfields*j;
 
 
-      fft_multi_radix_rows(src1_ptr, src1_step, src1_offset, src1_rows, src1_cols,
-          fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
+      fft_multi_radix_rows(
+          src1_ptr, src1_step, src1_offset, src1_rows, src1_cols,
+          fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_rows,
           i,j
           );
-      fft_multi_radix_cols(fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
+    barrier(CLK_GLOBAL_MEM_FENCE);
+      fft_multi_radix_cols(
+          fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols,
           fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_cols
           );
 
-      fft_multi_radix_rows(src2_ptr, src1_step, src1_offset, src1_rows, src1_cols,
-          fft2_ptr, fft2_step, fft1_offset, fft2_rows, fft2_cols,
+      fft_multi_radix_rows(
+          src2_ptr, src2_step, src2_offset, src2_rows, src2_cols,
+          fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fft2_rows,
           i,j
           );
-      fft_multi_radix_cols(fft2_ptr, fft2_step, fft2_offset, fft2_rows, fft2_cols,
-          fft2_ptr, fft2_step, fft1_offset, fft2_rows, fft2_cols,
+    barrier(CLK_GLOBAL_MEM_FENCE);
+      fft_multi_radix_cols(
+          fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
+          fft2_ptr, fft2_step, fft2_offset, fft2_rows, fft2_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fft2_cols
           );
 
-      mulAndNormalizeSpectrums(fft1_ptr, src1_step, src1_offset,fft2_ptr, src2_step, src2_offset,
-          mul_ptr, mul_step, mul_offset, mul_rows, mul_cols, rowsPerWI);
+    barrier(CLK_GLOBAL_MEM_FENCE);
 
-      /* ifft_multi_radix_rows(mul_ptr, mul_step, mul_offset, mul_rows, mul_cols, */
-      /*     fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols, */
-      /*     twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_rows */
-      /*     ); */
-      /* ifft_multi_radix_cols(fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols, */
-      /*     pcr_ptr, pcr_step, pcr_offset, pcr_rows, pcr_cols, */
-      /*     twiddles_ptr, twiddles_step, twiddles_offset, t, pcr_cols,i,j */
-      /*     ); */
+
+      mulAndNormalizeSpectrums(
+          fft1_ptr, fft1_step, fft1_offset,fft2_ptr, fft2_step, fft2_offset,
+          mul_ptr, mul_step, mul_offset, mul_rows, mul_cols);
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+      ifft_multi_radix_cols(
+          mul_ptr, mul_step, mul_offset, mul_rows, mul_cols,
+          fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
+          /* pcr_ptr, pcr_step, pcr_offset, pcr_rows, pcr_cols, */
+          twiddles_ptr, twiddles_step, twiddles_offset, t, mul_cols/2+1
+          );
+    barrier(CLK_GLOBAL_MEM_FENCE);
+      ifft_multi_radix_rows(
+          fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
+          pcr_ptr, pcr_step, pcr_offset, pcr_rows, pcr_cols,
+          twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_rows
+          );
 
       minmaxloc(pcr_ptr, pcr_step, pcr_step, pcr_cols, pcr_cols*pcr_cols, fft1_rows, fft1_cols, get_num_groups(0)*get_num_groups(1), dstptr,index,i,j);
     } }

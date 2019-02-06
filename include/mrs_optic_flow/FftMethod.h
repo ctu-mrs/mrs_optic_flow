@@ -31,7 +31,7 @@ private:
 public:
     OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name);
     /* bool enqueueTransform(cv::InputArray _src, cv::OutputArray _dst, int num_dfts, int flags, int fftType, bool rows = true); */
-    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int num_dfts,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count);
+    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputOutputArray _fftr1, cv::InputArray _fftr2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count);
 private:
     static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix);
     template <typename T>
@@ -90,7 +90,7 @@ private:
 
   cv::UMat usrc1, usrc2;
   cv::UMat window1, window2;
-  cv::UMat FFT1, FFT2, MUL, PCR, P, Pm, C, ML;
+  cv::UMat FFT1, FFT2, FFTR1, FFTR2, MUL, PCR, P, Pm, C, ML;
   cv::UMat twiddles;
 
   int frameSize;

@@ -20,6 +20,121 @@ enum FftType
     R2C = 2, // real to complex in case forward transform
     C2C = 3  // complex to complex
 };
+static void magSpectrums( cv::InputArray _src, cv::OutputArray _dst)
+{
+  cv::Mat src = _src.getMat();
+    int depth = src.depth(), cn = src.channels(), type = src.type();
+    int rows = src.rows, cols = src.cols;
+    int j, k;
+
+    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    if(src.depth() == CV_32F)
+        _dst.create( src.rows, src.cols, CV_32FC1 );
+    else
+        _dst.create( src.rows, src.cols, CV_64FC1 );
+
+    cv::Mat dst = _dst.getMat();
+    dst.setTo(0);//Mat elements are not equal to zero by default!
+
+    bool is_1d = (rows == 1 || (cols == 1 && src.isContinuous() && dst.isContinuous()));
+
+    if( is_1d )
+        cols = cols + rows - 1, rows = 1;
+
+    int ncols = cols*cn;
+    int j0 = cn == 1;
+    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+
+    if( depth == CV_32F )
+    {
+        const float* dataSrc = src.ptr<float>();
+        float* dataDst = dst.ptr<float>();
+
+        size_t stepSrc = src.step/sizeof(dataSrc[0]);
+        size_t stepDst = dst.step/sizeof(dataDst[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataSrc += cols - 1, dataDst += cols - 1;
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( rows % 2 == 0 )
+                    dataDst[(rows-1)*stepDst] = dataSrc[(rows-1)*stepSrc]*dataSrc[(rows-1)*stepSrc];
+
+                for( j = 1; j <= rows - 2; j += 2 )
+                {
+                    dataDst[j*stepDst] = (float)std::sqrt((double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                                          (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
+                }
+
+                if( k == 1 )
+                    dataSrc -= cols - 1, dataDst -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataSrc += stepSrc, dataDst += stepDst )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( cols % 2 == 0 )
+                    dataDst[j1] = dataSrc[j1]*dataSrc[j1];
+            }
+
+            for( j = j0; j < j1; j += 2 )
+            {
+                dataDst[j] = (float)std::sqrt((double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1]);
+            }
+        }
+    }
+    else
+    {
+        const double* dataSrc = src.ptr<double>();
+        double* dataDst = dst.ptr<double>();
+
+        size_t stepSrc = src.step/sizeof(dataSrc[0]);
+        size_t stepDst = dst.step/sizeof(dataDst[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataSrc += cols - 1, dataDst += cols - 1;
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( rows % 2 == 0 )
+                    dataDst[(rows-1)*stepDst] = dataSrc[(rows-1)*stepSrc]*dataSrc[(rows-1)*stepSrc];
+
+                for( j = 1; j <= rows - 2; j += 2 )
+                {
+                    dataDst[j*stepDst] = std::sqrt(dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                                   dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
+                }
+
+                if( k == 1 )
+                    dataSrc -= cols - 1, dataDst -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataSrc += stepSrc, dataDst += stepDst )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( cols % 2 == 0 )
+                    dataDst[j1] = dataSrc[j1]*dataSrc[j1];
+            }
+
+            for( j = j0; j < j1; j += 2 )
+            {
+                dataDst[j] = std::sqrt(dataSrc[j]*dataSrc[j] + dataSrc[j+1]*dataSrc[j+1]);
+            }
+        }
+    }
+}
 
 static int
 DFTFactorize( int n, int* factors )
@@ -212,7 +327,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
     /* } */
 
-    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int num_dfts,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count)
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputOutputArray _fftr1, cv::InputArray _fftr2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count)
     {
       if (!status)
         return false;
@@ -221,6 +336,8 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
       cv::UMat src1 = _src1.getUMat();
       cv::UMat src2 = _src2.getUMat();
+      cv::UMat fftr1 = _fftr1.getUMat();
+      cv::UMat fftr2 = _fftr2.getUMat();
       cv::UMat fft1 = _fft1.getUMat();
       cv::UMat fft2 = _fft2.getUMat();
       cv::UMat mul = _mul.getUMat();
@@ -244,10 +361,11 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
       options += " -D COL_F_COMPLEX_INPUT";
       options += " -D ROW_F_COMPLEX_OUTPUT";
       options += " -D COL_F_COMPLEX_OUTPUT";
-      options += " -D ROW_I_COMPLEX_INPUT";
       options += " -D COL_I_COMPLEX_INPUT";
-      options += " -D ROW_I_COMPLEX_OUTPUT";
-      options += " -D COL_I_REAL_OUTPUT";
+      options += " -D ROW_I_COMPLEX_INPUT";
+      /* options += " -D ROW_I_COMPLEX_OUTPUT"; */
+      options += " -D ROW_I_REAL_OUTPUT";
+      options += " -D COL_I_COMPLEX_OUTPUT";
       /* options += " -D NO_CONJUGATE"; */
 
       if (dst.cols % 2 == 0)
@@ -274,6 +392,8 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
       k_phase_corr.args(
           cv::ocl::KernelArg::ReadOnly(src1),
           cv::ocl::KernelArg::ReadOnly(src2),
+          cv::ocl::KernelArg::ReadWrite(fftr1),
+          cv::ocl::KernelArg::ReadWrite(fftr2),
           cv::ocl::KernelArg::ReadWrite(fft1),
           cv::ocl::KernelArg::ReadWrite(fft2),
           cv::ocl::KernelArg::ReadWrite(mul),
@@ -281,26 +401,28 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
           cv::ocl::KernelArg::PtrWriteOnly(dst),
           cv::ocl::KernelArg::ReadOnlyNoSize(twiddles),
           thread_count,
-          num_dfts,
+          rowsPerWI,
           Xfields,
           Yfields
           );
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true);
 
-      cv::Mat fft_host = fft2.getMat(cv::ACCESS_READ);
-      /* cv::Mat mul_host = mul.getMat(cv::ACCESS_READ); */
+      /* cv::Mat mat_host = mul.getMat(cv::ACCESS_READ); */
+      cv::Mat mat_host = pcr.getMat(cv::ACCESS_READ);
     std::vector<cv::Mat> mulmats;
     cv::Mat catmat;
     /* cv::split(mul_host, mulmats); */
-    cv::split(fft_host, mulmats);
-    hconcat(mulmats,catmat);
+    /* cv::split(mat_host, mulmats); */
+    /* hconcat(mulmats,catmat); */
+
+      catmat = mat_host;
 
     double min;
     double max;
     cv::minMaxIdx(catmat, &min, &max);
     std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
-    cv::convertScaleAbs(catmat, catmat, 255 / max);
+    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -802,9 +924,10 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   /*       return false; */
   /*   } */
   /* } */
+  int rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
 
   cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(samplePointSize, depth, cl_file_name);
-  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, MUL, PCR,  ML, nonzero_rows, vec_cols, vec_rows, out, thread_count,samplePointSize);
+  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, PCR,  ML, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
 
 
   return true;
@@ -1207,7 +1330,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   CV_Assert( _src1.type() == CV_32FC1 || _src1.type() == CV_64FC1 );
   CV_Assert( _src1.size() == _src2.size());
 
-  useOCL = true;
+  useOCL = false;
   useNewKernel = true;
 
 
@@ -1319,25 +1442,43 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           /* elapsedTime3 += double(end - begin) / CLOCKS_PER_SEC; */
           /* begin = std::clock(); */
 
-          /* magSpectrums(P, Pm); */
+          magSpectrums(P, Pm);
 
           /* end         = std::clock(); */
           /* elapsedTime4 += double(end - begin) / CLOCKS_PER_SEC; */
           /* begin = std::clock(); */
 
-          /* /1* divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...) *1/ */
+          divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
 
           /* end         = std::clock(); */
           /* elapsedTime5 += double(end - begin) / CLOCKS_PER_SEC; */
           /* begin = std::clock(); */
 
 
+      cv::Mat mat_host;
           if (useOCL){
             /* idft_special(C, C); // gives us the nice peak shift location... */
           }
           else {
             idft(C, C); // gives us the nice peak shift location...
           }
+      C.copyTo(mat_host);
+    std::vector<cv::Mat> mulmats;
+    cv::Mat catmat;
+    cv::split(mat_host, mulmats);
+    hconcat(mulmats,catmat);
+
+      catmat = mat_host;
+
+    double min;
+    double max;
+    cv::minMaxIdx(catmat, &min, &max);
+    std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
+    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
+    /* cv::minMaxIdx(usrc2, &min, &max); */
+    /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
+    /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
+    imshow("debugshit",catmat);
 
           end         = std::clock();
           elapsedTime6 += double(end - begin) / CLOCKS_PER_SEC;
@@ -1352,7 +1493,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         }
         // get the phase shift with sub-pixel accuracy, 5x5 window seems about right here...
         cv::Point2d t;
-        t = weightedCentroid(C,i,j, samplePointSize, peakLocs[i+j*sqNum], cv::Size(5, 5), response);
+        /* t = weightedCentroid(C,i,j, samplePointSize, peakLocs[i+j*sqNum], cv::Size(5, 5), response); */
+        t = peakLocs[i+j*sqNum];
 
         // max response is M*N (not exactly, might be slightly larger due to rounding errors)
         if(response)
@@ -1428,8 +1570,11 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     /* window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     FFT1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFT2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFTR1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFTR2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     MUL.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     ML.create(1, dev.getDefault().maxWorkGroupSize()*sqNum*sqNum*(sizeof(uint)+sizeof(float)), CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
