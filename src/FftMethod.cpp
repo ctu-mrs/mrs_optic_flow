@@ -1,5 +1,37 @@
 #include "../include/mrs_optic_flow/FftMethod.h"
 
+void showFMat(cv::InputOutputArray &M){
+    cv::Mat mat_host;
+  if (M.isUMat()){
+    cv::UMat UM = M.getUMat();
+    mat_host = UM.getMat(cv::ACCESS_READ);
+      }
+  else{
+    mat_host = M.getMat();
+  }
+
+    cv::Mat catmat;
+      if (mat_host.channels()>1){
+        std::vector<cv::Mat> mulmats;
+        cv::split(mat_host, mulmats);
+        hconcat(mulmats,catmat);
+      }else{
+        catmat = mat_host;
+      }
+
+    double min;
+    double max;
+    cv::minMaxIdx(catmat, &min, &max);
+    std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
+    std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl;
+
+    max = 12000^2;
+    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
+    /* cv::minMaxIdx(usrc2, &min, &max); */
+    /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
+    /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
+    imshow("debugshit",catmat);
+}
 
 cv::ocl::ProgramSource prep_ocl_kernel(const char* filename){
   std::cout << "Loading OpenCL kernel file \" " << filename << std::endl;
@@ -327,7 +359,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
     /* } */
 
-    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputOutputArray _fftr1, cv::InputArray _fftr2, cv::InputArray _mul, cv::InputArray _pcr, cv::OutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count)
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputArray _fft2, cv::InputOutputArray _fftr1, cv::InputArray _fftr2, cv::InputArray _mul, cv::InputArray _ifftc, cv::InputArray _pcr, cv::OutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count)
     {
       if (!status)
         return false;
@@ -341,6 +373,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
       cv::UMat fft1 = _fft1.getUMat();
       cv::UMat fft2 = _fft2.getUMat();
       cv::UMat mul = _mul.getUMat();
+      cv::UMat ifftc = _ifftc.getUMat();
       cv::UMat pcr = _pcr.getUMat();
       cv::UMat dst = _dst.getUMat();
 
@@ -360,13 +393,14 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
       options += " -D ROW_F_REAL_INPUT";
       options += " -D COL_F_COMPLEX_INPUT";
       options += " -D ROW_F_COMPLEX_OUTPUT";
-      options += " -D COL_F_COMPLEX_OUTPUT";
-      options += " -D COL_I_COMPLEX_INPUT";
-      options += " -D ROW_I_COMPLEX_INPUT";
-      /* options += " -D ROW_I_COMPLEX_OUTPUT"; */
-      options += " -D ROW_I_REAL_OUTPUT";
+      options += " -D COL_F_REAL_OUTPUT";
+      options += " -D COL_I_REAL_INPUT";
       options += " -D COL_I_COMPLEX_OUTPUT";
-      /* options += " -D NO_CONJUGATE"; */
+      options += " -D ROW_I_COMPLEX_INPUT";
+      options += " -D ROW_I_REAL_OUTPUT";
+      /* options += " -D ROW_I_COMPLEX_OUTPUT"; */
+      options += " -D NO_CONJUGATE";
+      options += " -D MUL_CONJ";
 
       if (dst.cols % 2 == 0)
         options += " -D EVEN";
@@ -397,6 +431,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
           cv::ocl::KernelArg::ReadWrite(fft1),
           cv::ocl::KernelArg::ReadWrite(fft2),
           cv::ocl::KernelArg::ReadWrite(mul),
+          cv::ocl::KernelArg::ReadWrite(ifftc),
           cv::ocl::KernelArg::ReadWrite(pcr),
           cv::ocl::KernelArg::PtrWriteOnly(dst),
           cv::ocl::KernelArg::ReadOnlyNoSize(twiddles),
@@ -408,25 +443,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true);
 
-      /* cv::Mat mat_host = mul.getMat(cv::ACCESS_READ); */
-      cv::Mat mat_host = pcr.getMat(cv::ACCESS_READ);
-    std::vector<cv::Mat> mulmats;
-    cv::Mat catmat;
-    /* cv::split(mul_host, mulmats); */
-    /* cv::split(mat_host, mulmats); */
-    /* hconcat(mulmats,catmat); */
-
-      catmat = mat_host;
-
-    double min;
-    double max;
-    cv::minMaxIdx(catmat, &min, &max);
-    std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
-    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
-    /* cv::minMaxIdx(usrc2, &min, &max); */
-    /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
-    /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
-    imshow("debugshit",catmat);
+      showFMat(mul);
 
       cv::Mat dst_host = dst.getMat(cv::ACCESS_READ);
 
@@ -927,7 +944,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   int rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
 
   cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(samplePointSize, depth, cl_file_name);
-  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, PCR,  ML, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
+  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR,  ML, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
 
 
   return true;
@@ -1454,31 +1471,16 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           /* elapsedTime5 += double(end - begin) / CLOCKS_PER_SEC; */
           /* begin = std::clock(); */
 
+          if ((i==0) && (j==0))
+            showFMat(P);
 
-      cv::Mat mat_host;
+
           if (useOCL){
             /* idft_special(C, C); // gives us the nice peak shift location... */
           }
           else {
             idft(C, C); // gives us the nice peak shift location...
           }
-      C.copyTo(mat_host);
-    std::vector<cv::Mat> mulmats;
-    cv::Mat catmat;
-    cv::split(mat_host, mulmats);
-    hconcat(mulmats,catmat);
-
-      catmat = mat_host;
-
-    double min;
-    double max;
-    cv::minMaxIdx(catmat, &min, &max);
-    std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
-    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
-    /* cv::minMaxIdx(usrc2, &min, &max); */
-    /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
-    /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
-    imshow("debugshit",catmat);
 
           end         = std::clock();
           elapsedTime6 += double(end - begin) / CLOCKS_PER_SEC;
@@ -1568,11 +1570,12 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     usrc2.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* window1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     /* window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
-    FFT1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFT2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFTR1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     FFTR2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    MUL.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    MUL.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    IFFTC.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
