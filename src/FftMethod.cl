@@ -633,6 +633,7 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
         RADIX_PROCESS;
 
 #ifdef COL_F_COMPLEX_OUTPUT
+        __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
         __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
         #pragma unroll
         for (int i=0; i<kercn; i++)
@@ -907,6 +908,7 @@ __kernel void mulAndNormalizeSpectrums(
     const int y = get_global_id(0);
     const int x = get_group_id(1);
     const int block_size = LOCAL_SIZE/kercn;
+    const int fstep = (int)sizeof(FT);
 
     /* int x = get_group_id(0); */
     /* int y0 = get_global_id(0) * rowsPerWI; */
@@ -924,37 +926,32 @@ __kernel void mulAndNormalizeSpectrums(
 
 #ifdef COL_F_REAL_OUTPUT
 
+      __global const uchar* src1 = (__global const uchar*)(src1_ptr + mad24(y, src1_step, mad24(x, (int)(sizeof(FT)), src1_offset)));
+      __global const uchar* src2 = (__global const uchar*)(src2_ptr + mad24(y, src2_step, mad24(x, (int)(sizeof(FT)), src2_offset)));
+      __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset));
+
+ 
         if (x == 0)
         {
-          return;
-          if (y == 0){
-            __global const FT* src1 = (__global const FT*)(src1_ptr + mad24(y, src1_step, mad24(x, (int)(sizeof(FT)), src1_offset)));
-            __global const FT* src2 = (__global const FT*)(src2_ptr + mad24(y, src2_step, mad24(x, (int)(sizeof(FT)), src2_offset)));
-            __global FT* dst = (__global FT*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset)));
+         if (y == 0){
             dst[0] = 1/(src1[0]*src2[0]);
-
           }
-          return;
-
-          __global const FT* src1 = (__global const FT*)(src1_ptr + mad24(y, src1_step, mad24(x, (int)(sizeof(FT)), src1_offset)));
-          __global const FT* src2 = (__global const FT*)(src2_ptr + mad24(y, src2_step, mad24(x, (int)(sizeof(FT)), src2_offset)));
-          __global FT* dst = (__global FT*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset)));
 
           for (int i=0; i<kercn; i++){
             if (((y+i*block_size)%2) ==0)
               return;
-            if (!((y+i*block_size) >= (dst_rows-1))){
+            if ((y+i*block_size) < (dst_rows-2)){
 
-              float2  temp1 = (float2)(src1[(i*block_size)*src1_step], src1[(1+i*block_size)*src1_step]);
-              float2  temp2 = (float2)(src2[(i*block_size)*src2_step], src2[(1+i*block_size)*src2_step]);
+              float2  temp1 = (float2)(*(__global const FT*)(src1 + (i*block_size)*src1_step), *(__global FT*)(src1 + (1+i*block_size)*src1_step));
+              float2  temp2 = (float2)(*(__global const FT*)(src2 + (i*block_size)*src2_step), *(__global FT*)(src2 + (1+i*block_size)*src2_step));
 
 #ifdef MUL_CONJ
               float2 v = cmulnormf(temp1, conjf(temp2));
 #else
               float2 v = cmulnormf(temp1, temp2);
 #endif
-              dst[(i*block_size)*dst_step] = v.x;
-              dst[(1+i*block_size)*dst_step] = v.y;
+              *(__global FT*)(dst + (i*block_size)*dst_step) = v.x;
+              *(__global FT*)(dst + (1+i*block_size)*dst_step) = v.y;
             }
 
           }
@@ -973,28 +970,24 @@ __kernel void mulAndNormalizeSpectrums(
         {
           if ((x%2) ==0)
             return;
+          if (x>dst_cols-4){
+            return;
+          }
 
-          __global const FT* src1 = (__global const FT*)(src1_ptr + mad24(y, src1_step, mad24(x, (int)(sizeof(FT)), src1_offset)));
-          __global const FT* src2 = (__global const FT*)(src2_ptr + mad24(y, src2_step, mad24(x, (int)(sizeof(FT)), src2_offset)));
-          __global FT* dst = (__global FT*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset)));
 
           for (int i=0; i<kercn; i++){
-            if (x>dst_cols-4){
-              return;
-            }
-            if (((y+i*block_size) < (dst_rows-4))){
-              fuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuck
+            if (((y+i*block_size) < (dst_rows-2))){
 
-              float2  temp1 = (float2)(src1[i*block_size*src1_step], src1[1+i*block_size*src1_step]);
-              float2  temp2 = (float2)(src2[i*block_size*src2_step], src2[1+i*block_size*src2_step]);
+              float2  temp1 = (float2)(*(__global const FT*)(src1 + (i*block_size)*src1_step), *(__global FT*)(src1 + fstep + (i*block_size)*src1_step));
+              float2  temp2 = (float2)(*(__global const FT*)(src2 + (i*block_size)*src2_step), *(__global FT*)(src2 + fstep + (i*block_size)*src2_step));
 
 #ifdef MUL_CONJ
               float2 v = cmulnormf(temp1, conjf(temp2));
 #else
               float2 v = cmulnormf(temp1, temp2);
 #endif
-              dst[i*block_size*dst_step] = v.x;
-              dst[1+i*block_size*dst_step] = v.y;
+              *(__global FT*)(dst + (i*block_size)*dst_step) = v.x;
+              *(__global FT*)(dst + fstep + (i*block_size)*dst_step) = v.y;
             }
 
           }
