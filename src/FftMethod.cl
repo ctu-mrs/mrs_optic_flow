@@ -529,8 +529,6 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
 {
     const int x = get_global_id(0);
     const int y = get_group_id(1);
-        /* if (x == 0) */
-        /*   printf("Y=%d", y); */
     const int block_size = LOCAL_SIZE/kercn;
     if (y < nz)
     {
@@ -545,16 +543,9 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         for (int i=0; i<kercn; i++)
             smem[x+i*block_size] = src[i*block_size];
 #else
-        __global const FT* src = (__global const FT*)(src_ptr + mad24(y, src_step, mad24(x, (int)sizeof(FT), src_offset)));
-        /* __global const FT* src = (__global const FT*)(src_ptr + mad24(mad24(Yvec,dst_rows,y), src_step, mad24(mad24(Xvec,dst_cols,x), (int)sizeof(FT), src_offset))); */
+        /* __global const FT* src = (__global const FT*)(src_ptr + mad24(y, src_step, mad24(x, (int)sizeof(FT), src_offset))); */
+        __global const FT* src = (__global const FT*)(src_ptr + mad24(mad24(Yvec,dst_rows,y), src_step, mad24(mad24(Xvec,dst_cols,x), (int)sizeof(FT), src_offset)));
         #pragma unroll
-
-        /* __global CT* dst_tmp = (__global CT*)(dst_ptr + mad24(y, dst_step, dst_offset)); */
-        /* for (int i=0; i<kercn; i++) */
-        /*     dst_tmp[x+i*block_size] = (CT)(src[i*block_size], 0.f); */
-
-        /* return; */
-
         for (int i=0; i<kercn; i++)
             smem[x+i*block_size] = (CT)(src[i*block_size], 0.f);
 #endif
@@ -567,9 +558,9 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
 
 #ifdef ROW_F_COMPLEX_OUTPUT
 #ifdef NO_CONJUGATE
-        const int cols = dst_cols;
-#elif
         const int cols = dst_cols/2 + 1;
+#else
+        const int cols = dst_cols;
 #endif
 
         __global CT* dst = (__global CT*)(dst_ptr + mad24(y, dst_step, dst_offset));
@@ -608,6 +599,25 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
     const int x = get_group_id(1);
     const int y = get_global_id(0);
 
+    if ((x==0) && (y==0)){
+      printf("CUST: nz: %d\n",nz);
+      printf("CUST: src_step: %d\n",src_step);
+      printf("CUST: dst_step: %d\n",dst_step);
+      printf("CUST: src_cols: %d\n",src_cols);
+      printf("CUST: dst_cols: %d\n",dst_cols);
+      printf("CUST: src_rows: %d\n",src_rows);
+      printf("CUST: dst_rows: %d\n",dst_rows);
+      printf("CUST: LOCAL_SIZE: %d\n",LOCAL_SIZE);
+      printf("CUST: kercn: %d\n",kercn);
+      printf("CUST: t: %d\n",t);
+      printf("CUST: lx: %d ly: %d gx: %d gy: %d\n",(int)(get_local_size(0)),(int)(get_local_size(1)),(int)(get_global_size(0)), (int)(get_global_size(1)));
+      printf("CUST: twiddles_step: %d\n",twiddles_step);
+      printf("CUST: twiddles_offset: %d\n",twiddles_offset);
+#ifdef COL_F_COMPLEX_OUTPUT
+      printf("CUST: COMPLEX_OUTPUT\n");
+#endif
+    }
+
     if (x < nz)
     {
         __local CT smem[LOCAL_SIZE];
@@ -617,23 +627,19 @@ __kernel void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, 
         const int block_size = LOCAL_SIZE/kercn;
         FT scale = 1.f/(dst_rows*dst_cols);
 
-        /* __global uchar* dst_tmp = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset)); */ /* #pragma unroll */
-        /* for (int i=0; i<kercn; i++) */
-        /*     /1* smem[y+i*block_size] = *((__global const CT*)(src + i*block_size*src_step)); *1/ */
-        /*     *((__global CT*)(dst_tmp+i*block_size*dst_step)) = *((__global const CT*)(src + i*block_size*src_step)); */
-
-        /*         return; */
-
         #pragma unroll
         for (int i=0; i<kercn; i++)
             smem[y+i*block_size] = *((__global const CT*)(src + i*block_size*src_step));
 
         barrier(CLK_LOCAL_MEM_FENCE);
+    if ((x==30) && (y==12)){
+      printf("CUST: smem: %f\n",smem[y]);
+    }
 
         RADIX_PROCESS;
 
+
 #ifdef COL_F_COMPLEX_OUTPUT
-        __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
         __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
         #pragma unroll
         for (int i=0; i<kercn; i++)
@@ -916,7 +922,7 @@ __kernel void mulAndNormalizeSpectrums(
       /* printf("dst_cols: %d", dst_cols); */
     /* int threads = get_global_size(0); */
     /* int reps = (dst_cols-1/threads)+1; */
-    if (x < dst_cols-1)
+    if (x < dst_cols)
     {
       /* int src1_index = mad24(y0, src1_step, mad24(x, (int)sizeof(float2), src1_offset)); */
       /* int src2_index = mad24(y0, src2_step, mad24(x, (int)sizeof(float2), src2_offset)); */
@@ -931,15 +937,19 @@ __kernel void mulAndNormalizeSpectrums(
       __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset));
 
  
-        if (x == 0)
+        if ( (x == 0) || (x == dst_cols-1) )
         {
-         if (y == 0){
-            dst[0] = 1/(src1[0]*src2[0]);
-          }
-
+          /* for (int i=0; i<kercn; i++){ */
           for (int i=0; i<kercn; i++){
+            if (((y+i*block_size) == 0) || ((y+i*block_size) == dst_rows-1)){
+              /* printf("Y: %d\n",y+i*block_size); */
+              /* printf("x: %d y: %d i: %d\n",x,y,i); */
+              FT  temp1 = *(__global const FT*)(src1 + (i*block_size)*src1_step);
+              FT  temp2 = *(__global const FT*)(src2 + (i*block_size)*src2_step);
+              *(__global FT*)(dst + (i*block_size)*dst_step) = 1;
+            }
             if (((y+i*block_size)%2) ==0)
-              return;
+              continue;
             if ((y+i*block_size) < (dst_rows-2)){
 
               float2  temp1 = (float2)(*(__global const FT*)(src1 + (i*block_size)*src1_step), *(__global FT*)(src1 + (1+i*block_size)*src1_step));
@@ -952,7 +962,10 @@ __kernel void mulAndNormalizeSpectrums(
 #endif
               *(__global FT*)(dst + (i*block_size)*dst_step) = v.x;
               *(__global FT*)(dst + (1+i*block_size)*dst_step) = v.y;
+              /* printf("!: %d, y: %d i: %d kercn: %d \n", y+i*block_size, y, i, kercn); */
             }
+            /* else */
+              /* printf("?: %d", y+i*block_size); */
 
           }
         }
@@ -970,13 +983,13 @@ __kernel void mulAndNormalizeSpectrums(
         {
           if ((x%2) ==0)
             return;
-          if (x>dst_cols-4){
+          if (x>dst_cols-3){
             return;
           }
 
 
           for (int i=0; i<kercn; i++){
-            if (((y+i*block_size) < (dst_rows-2))){
+            if (((y+i*block_size) < (2*(dst_rows/2)))){
 
               float2  temp1 = (float2)(*(__global const FT*)(src1 + (i*block_size)*src1_step), *(__global FT*)(src1 + fstep + (i*block_size)*src1_step));
               float2  temp2 = (float2)(*(__global const FT*)(src2 + (i*block_size)*src2_step), *(__global FT*)(src2 + fstep + (i*block_size)*src2_step));
@@ -988,6 +1001,8 @@ __kernel void mulAndNormalizeSpectrums(
 #endif
               *(__global FT*)(dst + (i*block_size)*dst_step) = v.x;
               *(__global FT*)(dst + fstep + (i*block_size)*dst_step) = v.y;
+              /* if ((i==0) && (y==3)) */
+                /* printf("vx: %f, vy: %f\n",v.x,v.y); */
             }
 
           }
@@ -1241,8 +1256,10 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       /* if (y == 0) */
       /* printf("COL: %d, ROW: %d",fft1_cols, fft1_rows); */
 
-  for (int j=0; j<Yfields; j++){
-    for (int i=0; i<Xfields; i++){
+  for (int i=0; i<1; i++){
+    for (int j=0; j<1; j++){
+  /* for (int i=0; i<Xfields; i++){ */
+  /*   for (int j=0; j<Yfields; j++){ */
 
       int index = i+Xfields*j;
 
@@ -1253,6 +1270,7 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_rows,
           i,j
           );
+    barrier(CLK_GLOBAL_MEM_FENCE);
       fft_multi_radix_rows(
           src2_ptr, src2_step, src2_offset, src2_rows, src2_cols,
           fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
@@ -1263,13 +1281,13 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       fft_multi_radix_cols(
           fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols,
           fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, fft1_cols/2+1
+          twiddles_ptr, twiddles_step, twiddles_offset, t, fftr1_cols/2+1
           );
-
+    barrier(CLK_GLOBAL_MEM_FENCE);
       fft_multi_radix_cols(
           fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
           fft2_ptr, fft2_step, fft2_offset, fft2_rows, fft2_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, fft2_cols/2+1
+          twiddles_ptr, twiddles_step, twiddles_offset, t, fftr2_cols/2+1
           );
 
     barrier(CLK_GLOBAL_MEM_FENCE);
