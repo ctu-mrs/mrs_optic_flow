@@ -590,6 +590,8 @@ namespace mrs_optic_flow
     if (gui_) {
       cv::namedWindow("mrs_optic_flow", cv::WINDOW_FREERATIO);
       cv::namedWindow("debugshit", cv::WINDOW_FREERATIO);
+      /* cv::namedWindow("OLD", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("NEW", cv::WINDOW_FREERATIO); */
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
