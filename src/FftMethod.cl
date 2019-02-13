@@ -781,7 +781,7 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
         for (int i=0; i<kercn; i++)
         {
         int shift = mad24(i,block_size,x);
-            dst[shift<dst_cols?shift+dst_cols/2:shift-dst_cols/2] = SCALE_VAL(smem[x + i*block_size].x, scale);
+            dst[shift<dst_cols/2?shift+dst_cols/2:shift-dst_cols/2] = SCALE_VAL(smem[x + i*block_size].x, scale);
         }
 #endif
     }
@@ -1216,17 +1216,79 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
     /* if (gid == 60) */
     /*     printf("GID: %d: lid: %d maxloc: %d, maxval: %f\n", gid,lid,localmem_maxloc[lid],localmem_max[lid]); */
+    int valstep = align((int)(sizeof(float))*groupnum);
+    int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
     if (lid == 0)
     {
-      int valstep = align((int)(sizeof(float))*groupnum);
-      int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
-        int lposv = mad24(index, fullstep, mul24((int)(sizeof(int)),gid));
-        int lposl = mad24(index, fullstep, valstep+mul24((int)(sizeof(float)),gid));
+      int lposv = mad24(index, fullstep, mul24((int)(sizeof(int)),gid));
+      int lposl = mad24(index, fullstep, mad24((int)(sizeof(float)),gid,valstep));
         *(__global float *)(dstptr +lposv) = localmem_max[0];
         *(__global uint *)(dstptr + lposl) = localmem_maxloc[0];
     /* if (gid == 60) */
     /*     printf("maxval_GPU: %f\n", localmem_max[0]); */
     }
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    if ((lid == 0) && (gid == 0))
+    {
+        int lposvZ = mad24(index, fullstep, mul24((int)(sizeof(float)),0));
+        int lposlZ = mad24(index, fullstep, mad24((int)(sizeof(uint)),0,valstep));
+      for (int i=1; i<groupnum; i++){
+        int lposv = mad24(index, fullstep, mul24((int)(sizeof(float)),i));
+        int lposl = mad24(index, fullstep, mad24((int)(sizeof(uint)),i,valstep));
+
+        if (*(__global float *)(dstptr + lposv) > *(__global float *)(dstptr + lposvZ)){
+          *(__global float *)(dstptr + lposvZ) = *(__global float *)(dstptr + lposv);
+          *(__global uint *)(dstptr + lposlZ) = *(__global uint *)(dstptr + lposl);
+        }
+      }
+    }
+}
+
+void refine(__global const uchar * srcptr, int src_step, int src_offset, int cols, int rows,
+    int groupnum, __global uchar * dstptr,int index, int Xvec,int Yvec, int radius)
+{
+    int lid = get_local_id(0);
+    int gid = get_group_id(1);
+  if ((gid == 0) && (lid == 0)) {
+    int valstep = align((int)(sizeof(float))*groupnum);
+    int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
+    int lposlZ = mad24(index, fullstep, mad24((int)(sizeof(uint)),0,valstep));
+    int indexMax = *(__global int *)(dstptr + lposlZ);
+    int xc = indexMax % cols;
+    int yc = indexMax / cols;
+    int xmin = (((xc-radius)>=0)?xc-radius:0)+src_offset;
+    int xmax = (((xc+radius)<cols)?xc+radius:cols-1)+src_offset;
+    int ymin = (((yc-radius)>=0)?yc-radius:0);
+    int ymax = (((yc+radius)<rows)?yc+radius:rows-1);
+
+    float centroidX = 0.0f;
+    float centroidY = 0.0f;
+    float sumIntensity = FLT_EPSILON;
+
+    __global const float* dataIn = (__global const float*)(srcptr + mad24(ymin,src_step,src_offset));
+    for(int y = ymin; y <= ymax; y++) {
+      for(int x = xmin; x <= xmax; x++) {
+        centroidX   += x*dataIn[x];
+        centroidY   += y*dataIn[x];
+        sumIntensity += dataIn[x];
+      }
+      dataIn += src_step/sizeof(float);
+    }
+
+
+    centroidX /= sumIntensity;
+    centroidY /= sumIntensity;
+
+    /* printf("X: %f, Y: %f\n", centroidX, centroidY); */
+
+    int lposXZ = mad24(index, fullstep, mul24((int)(sizeof(float)),1));
+    int lposYZ = mad24(index, fullstep, mul24((int)(sizeof(float)),2));
+
+    *(__global float *)(dstptr + lposXZ) = centroidX-(float)(cols>>1);
+    *(__global float *)(dstptr + lposYZ) = centroidY-(float)(rows>>1);
+
+
+  }
 }
 
 __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step, int src1_offset, int src1_rows, int src1_cols,
@@ -1250,13 +1312,13 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
 
   /* for (int i=0; i<1; i++){ */
   /*   for (int j=0; j<1; j++){ */
-  /* for (int j=0; j<Yfields; j++){ */
-  /*   for (int i=0; i<Xfields; i++){ */
+  for (int j=0; j<Yfields; j++){
+    for (int i=0; i<Xfields; i++){
 
-  int i = 3;
-    int j = 2;
-    {
-    {
+  /* int i = 2; */
+  /*   int j = 3; */
+  /*   { */
+  /*   { */
 
       int index = i+Xfields*j;
 
@@ -1311,6 +1373,9 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       barrier(CLK_GLOBAL_MEM_FENCE);
 
       minmaxloc(pcr_ptr, pcr_step, pcr_offset, pcr_cols, pcr_cols*pcr_rows, fft1_rows, fft1_cols, get_num_groups(0)*get_num_groups(1), dstptr,index,i,j);
+
+      barrier(CLK_GLOBAL_MEM_FENCE);
+      refine(pcr_ptr, pcr_step, pcr_offset, pcr_cols, pcr_rows, get_num_groups(0)*get_num_groups(1), dstptr,index, i, j, 2);
     } }
 
 

@@ -28,8 +28,8 @@ void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl;
 
     max = std::min(max,20000.0);
-    cv::convertScaleAbs(catmat, catmat, 255 / (max-min));
-    /* cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min)); */
+    /* cv::convertScaleAbs(catmat, catmat, 255 / (max-min)); */
+    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -267,7 +267,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
 }
 
 
-    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::OutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point> &output,int thread_count,int block_count)
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count)
     {
       if (!status)
         return false;
@@ -343,7 +343,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
           cv::ocl::KernelArg::ReadWrite(mul),
           cv::ocl::KernelArg::ReadWrite(ifftc),
           cv::ocl::KernelArg::ReadWrite(pcr),
-          cv::ocl::KernelArg::PtrWriteOnly(dst),
+          cv::ocl::KernelArg::PtrReadWrite(dst),
           cv::ocl::KernelArg::ReadOnlyNoSize(twiddles),
           thread_count,
           rowsPerWI,
@@ -359,6 +359,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
 
       float  maxVal = -1;
       int  maxLoc[2];
+      float maxLocF[2];
 
       size_t index = 0;
       for (int j=0;j<Yfields;j++){
@@ -377,12 +378,15 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
           index += sizeof(uint) * pcr.rows;
           index = cv::alignSize(index, 8);
 
-          for (int k = 0; k < pcr.rows; k++)
+          /* for (int k = 0; k < pcr.rows; k++) */
+          int k = 0;
           {
             /* std::cout << "maxptr[" << k << "] = " << maxptr[k] <<std::endl; */
             /* std::cout << "maxlocptr[" << k << "] = " << maxlocptr[k] <<std::endl; */
             if (maxptr && maxptr[k] >= maxval)
             {
+              maxLocF[0] = maxptr[1];
+              maxLocF[1] = maxptr[2];
               if (maxptr[k] == maxval)
               {
                 if (maxlocptr)
@@ -400,16 +404,15 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
           }
 
           maxVal = (double)maxval;
-      std::cout << "MAXVAL: " << maxVal <<std::endl;
-      std::cout << "MAXLOC: " << maxloc <<std::endl;
+      /* std::cout << "MAXVAL: " << maxVal <<std::endl; */
+      /* std::cout << "MAXLOC: " << maxloc <<std::endl; */
 
           maxLoc[0] = (maxloc % pcr.cols)-pcr.cols/2;
           maxLoc[1] = (maxloc / pcr.cols)-pcr.rows/2;
-          /* maxLoc[0] = (maxloc % pcr.cols); */
-          /* maxLoc[1] = (maxloc / pcr.cols); */
 
 
-          output[j+i*Yfields]  = cv::Point2i(maxLoc[0],maxLoc[1]);
+          /* output[i+j*Xfields]  = cv::Point2i(maxLoc[0],maxLoc[1]); */
+          output[i+j*Xfields]  = cv::Point2f(maxLocF[0],maxLocF[1]);
       /* std::cout << "OUT: " << output[i+j*Xfields] <<std::endl; */
     }}
       /* std::cout << "OUT: " << output <<std::endl; */
@@ -719,7 +722,7 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
 }
 
 
-bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, std::vector<cv::Point2i> &out, int vec_rows, int vec_cols)
+bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, std::vector<cv::Point2f> &out, int vec_rows, int vec_cols)
 {
 
   int flags = 0;
@@ -1310,7 +1313,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
     cv::Mat showhost;
-    std::vector<cv::Point2i> peakLocs;
+    std::vector<cv::Point2f> peakLocs;
     peakLocs.resize(sqNum*sqNum);
     if (useNewKernel){
       phaseCorrelate_ocl(usrc1,usrc2, peakLocs, Y,X);
@@ -1320,8 +1323,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
       }
 
     }
-    for (int i = 0; i < X; i++) {
-      for (int j = 0; j < Y; j++) {
+    for (int j = 0; j < Y; j++) {
+      for (int i = 0; i < X; i++) {
         begin = std::clock();
 
 
@@ -1439,7 +1442,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         // get the phase shift with sub-pixel accuracy, 5x5 window seems about right here...
         cv::Point2d t;
         /* t = weightedCentroid(C,i,j, samplePointSize, peakLocs[i+j*sqNum], cv::Size(5, 5), response); */
-        t = peakLocs[j+i*sqNum];
+        t = cv::Point2d(peakLocs[i+j*sqNum]);
 
         // max response is M*N (not exactly, might be slightly larger due to rounding errors)
         if(response)
@@ -1567,18 +1570,21 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   // calculate correlation for each window and store it if it doesn't exceed the limit
   speeds = phaseCorrelateField(imCurrF, imPrevF,sqNum,sqNum);
 
-  for (int i = 0; i < sqNum; i++) {
-    for (int j = 0; j < sqNum; j++) {
+  for (int j = 0; j < sqNum; j++) {
+    for (int i = 0; i < sqNum; i++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
       /* shift = cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize))); */
-      shift = speeds[j+sqNum*i];
+      shift = speeds[i+sqNum*j];
       shift_raw = shift;
 
       bool valid=true;
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
         ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
+        valid=false;
+      }
+      if ((isnan(shift.x))||(isnan(shift.y))) {
         valid=false;
       }
 
@@ -1627,13 +1633,14 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
 
       if (!valid) {
         ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
-        speeds[j+i*sqNum]=cv::Point2d(nan(""), nan(""));
+        speeds[i+j*sqNum]=cv::Point2d(nan(""), nan(""));
       } else {
-        speeds[j+i*sqNum]=cv::Point2d(shift.x, shift.y);
+        speeds[i+j*sqNum]=cv::Point2d(shift.x, shift.y);
       }
 
       // draw nice lines if gui is enabled
       if (gui || storeVideo) {
+        if (valid)
         cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2),
                  cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255),valid?5:1);
         /* cv::line(imView, cv::Point2i(xi + samplePointSize / 2, yi + samplePointSize / 2), */
@@ -1666,6 +1673,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     /* imshow("debugshit",catmat); */
     /* imshow("debugshit",usrc1); */
     cv::imshow("cv_optic_flow", imView);
+    /* cv::imshow("cv_optic_flow", imView(cv::Rect(samplePointSize*3,samplePointSize*2,samplePointSize,samplePointSize))); */
     cv::waitKey(1);
   }
 
