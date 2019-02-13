@@ -776,11 +776,12 @@ __kernel void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step,
             dst[i*block_size].y = SCALE_VAL(-smem[x + i*block_size].y, scale);
         }
 #else
-        __global FT* dst = (__global FT*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(FT)), dst_offset)));
+        __global FT* dst = (__global FT*)(dst_ptr + mad24((y<dst_rows/2)?(y+dst_rows/2):(y-dst_rows/2), dst_step, mad24(0, (int)(sizeof(FT)), dst_offset)));
         #pragma unroll
         for (int i=0; i<kercn; i++)
         {
-            dst[i*block_size] = SCALE_VAL(smem[x + i*block_size].x, scale);
+        int shift = mad24(i,block_size,x);
+            dst[shift<dst_cols?shift+dst_cols/2:shift-dst_cols/2] = SCALE_VAL(smem[x + i*block_size].x, scale);
         }
 #endif
     }
@@ -1090,87 +1091,73 @@ static inline int align(int pos)
 #define srcTSIZE (int)sizeof(float)
 
 
-#ifdef NEED_MAXVAL
-#ifdef NEED_MAXLOC
 #define CALC_MAX(p, inc) \
-    if (maxval < temp.p) \
+    if (maxval < *(__global const float *)(srcptr + src_index+p*srcTSIZE)) \
     { \
-        maxval = temp.p; \
+        maxval = *(__global const float *)(srcptr + src_index+p*srcTSIZE); \
         maxloc = id + inc; \
     }
-#endif
-#endif
 
 
-#define CALC_P(p, inc) \
-    CALC_MAX(p, inc)
 
 __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int cols,
                         int total, int searchRows,int searchCols, int groupnum, __global uchar * dstptr, int index,int Xvec,int Yvec)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(1);
-    int  id = get_global_id(0)
-    * kercn;
+    int  id = (gid*cols)+ lid *kercn;
     /* printf("id start: %d\n",id); */
+    const int repetitions = ceil((float)(LOCAL_SIZE/(float)(kercn*get_local_size(0))));
+  /* if ((lid == 0) && (gid == 60)) */
 
     srcptr += src_offset;
 
-#ifdef NEED_MAXVAL
     float maxval = MIN_VAL;
     __local float localmem_max[WGS2_ALIGNED];
-#ifdef NEED_MAXLOC
     __local uint localmem_maxloc[WGS2_ALIGNED];
     uint maxloc = INDEX_MAX;
-#endif
-#endif
 
     int src_index;
 
     dstT temp;
 
-    for (int grain = groupnum * WGS
-        * kercn
-        ; id < total; id += grain)
-    {
+    for (int i=0; i<repetitions; i++){
+    /* for (int grain = groupnum * WGS * kercn ; id < total; id += grain)  */
         {
-          src_index = id * srcTSIZE;//mul24(id, srcTSIZE);
-          temp = (loadpix(srcptr + src_index));
+          src_index = mad24(gid, src_step, mad24(lid*kercn+(kercn*WGS)*i, srcTSIZE,0));
 
+          /* temp = (dstT)(*(__global const float *)(srcptr + src_index),*(__global const float *)(srcptr + src_index+srcTSIZE),0,0,0,0,0,0); */
+
+    /* if ((gid==60)&&(lid==0)) */
+    /*   printf("central value: %f",loadpix(srcptr + mad24(60, src_step, mad24(1, srcTSIZE,0)))); */
 
 #if kercn == 1
-#ifdef NEED_MAXVAL
-#ifdef NEED_MAXLOC
             if (maxval < temp)
             {
                 maxval = temp;
                 maxloc = id;
             }
-#else
-            maxval = MAX(maxval, temp);
-#endif
-#endif
 #elif kercn >= 2
-            CALC_P(s0, 0)
-            CALC_P(s1, 1)
+            CALC_MAX(0, 0)
+            CALC_MAX(1, 1)
 #if kercn >= 3
-            CALC_P(s2, 2)
+            CALC_MAX(2, 2)
 #if kercn >= 4
-            CALC_P(s3, 3)
+            CALC_MAX(3, 3)
 #if kercn >= 8
-            CALC_P(s4, 4)
-            CALC_P(s5, 5)
-            CALC_P(s6, 6)
-            CALC_P(s7, 7)
+            CALC_MAX(4, 4)
+            CALC_MAX(5, 5)
+            CALC_MAX(6, 6)
+            CALC_MAX(7, 7)
 #if kercn == 16
-            CALC_P(s8, 8)
-            CALC_P(s9, 9)
-            CALC_P(sA, 10)
-            CALC_P(sB, 11)
-            CALC_P(sC, 12)
-            CALC_P(sD, 13)
-            CALC_P(sE, 14)
-            CALC_P(sF, 15)
+            CALC_MAX(8, 8)
+            CALC_MAX(9, 9)
+            CALC_MAX(A, 10)
+            CALC_MAX(B, 11)
+            CALC_MAX(C, 12)
+            CALC_MAX(D, 13)
+            CALC_MAX(E, 14)
+            CALC_MAX(F, 15)
 #endif
 #endif
 #endif
@@ -1181,20 +1168,16 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
 
     if (lid < WGS2_ALIGNED)
     {
-#ifdef NEED_MAXVAL
         localmem_max[lid] = maxval;
-#endif
-#ifdef NEED_MAXLOC
         localmem_maxloc[lid] = maxloc;
-#endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (lid >= WGS2_ALIGNED && total >= WGS2_ALIGNED)
     {
         int lid3 = lid - WGS2_ALIGNED;
-#ifdef NEED_MAXVAL
-#ifdef NEED_MAXLOC
+              /* if (gid == 60) */
+              /*   printf("before: LID3: %d V:%f, L:%d - maxloc: %d, maxval: %f\n",  lid3, localmem_max[lid3],localmem_maxloc[lid3], maxloc, maxval); */
         if (localmem_max[lid3] <= maxval)
         {
             if (localmem_max[lid3] == maxval)
@@ -1203,10 +1186,6 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
                 localmem_maxloc[lid3] = maxloc,
             localmem_max[lid3] = maxval;
         }
-#else
-        localmem_max[lid3] = MAX(localmem_max[lid3], maxval);
-#endif
-#endif
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -1214,42 +1193,39 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     {
         if (lid < lsize)
         {
+              /* if ((lid == 0) && (gid == 60)) */
+              /*   printf("lsize: %d, wgs2_al: %d\n", lsize, WGS2_ALIGNED); */
             int lid2 = lsize + lid;
 
-#ifdef NEED_MAXVAL
-#ifdef NEED_MAXLOC
             if (localmem_max[lid] <= localmem_max[lid2])
             {
+
                 if (localmem_max[lid] == localmem_max[lid2])
                     localmem_maxloc[lid] = min(localmem_maxloc[lid2], localmem_maxloc[lid]);
                 else
                     localmem_maxloc[lid] = localmem_maxloc[lid2],
                 localmem_max[lid] = localmem_max[lid2];
+
+              /* if (gid == 60) */
+              /*   printf("after: V:%f, L:%d\n", localmem_max[lid],localmem_maxloc[lid]); */
             }
-#else
-            localmem_max[lid] = MAX(localmem_max[lid], localmem_max[lid2]);
-#endif
-#endif
-        /* printf("maxloc_GPU[%d]:lid: %d lid2: %d  %d\n", gid, lid, lid2, localmem_maxloc[lid]); */
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+
+    /* if (gid == 60) */
+    /*     printf("GID: %d: lid: %d maxloc: %d, maxval: %f\n", gid,lid,localmem_maxloc[lid],localmem_max[lid]); */
     if (lid == 0)
     {
-        int pos = 0;
-        int pos2 = 0;
-#ifdef NEED_MAXVAL
-        pos = mad24(groupnum, (int)sizeof(float), pos);
-        pos = align(pos);
-        pos2 = mad24(groupnum, (int)sizeof(uint), pos);
-        pos2 = align(pos2);
-        *(__global float *)(dstptr +mad24(index,pos2, mad24(gid, (int)sizeof(float), 0))) = localmem_max[0];
-        /* printf("maxval_GPU[%d]: %f\n", gid, localmem_max[0]); */
-#endif
-#ifdef NEED_MAXLOC
-        *(__global uint *)(dstptr + mad24(index,pos2,mad24(gid, (int)sizeof(uint), pos))) = localmem_maxloc[0];
-#endif
+      int valstep = align((int)(sizeof(float))*groupnum);
+      int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
+        int lposv = mad24(index, fullstep, mul24((int)(sizeof(int)),gid));
+        int lposl = mad24(index, fullstep, valstep+mul24((int)(sizeof(float)),gid));
+        *(__global float *)(dstptr +lposv) = localmem_max[0];
+        *(__global uint *)(dstptr + lposl) = localmem_maxloc[0];
+    /* if (gid == 60) */
+    /*     printf("maxval_GPU: %f\n", localmem_max[0]); */
     }
 }
 
@@ -1272,10 +1248,15 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       /* if (y == 0) */
       /* printf("COL: %d, ROW: %d",fft1_cols, fft1_rows); */
 
-  for (int i=0; i<1; i++){
-    for (int j=0; j<1; j++){
-  /* for (int i=0; i<Xfields; i++){ */
-  /*   for (int j=0; j<Yfields; j++){ */
+  /* for (int i=0; i<1; i++){ */
+  /*   for (int j=0; j<1; j++){ */
+  /* for (int j=0; j<Yfields; j++){ */
+  /*   for (int i=0; i<Xfields; i++){ */
+
+  int i = 3;
+    int j = 2;
+    {
+    {
 
       int index = i+Xfields*j;
 

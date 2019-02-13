@@ -2,7 +2,7 @@
 
 cv::Mat storage;
 
-void showFMat(cv::InputOutputArray &M, const char* name = "debugshit"){
+void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     cv::Mat mat_host;
   if (M.isUMat()){
     cv::UMat UM = M.getUMat();
@@ -28,7 +28,8 @@ void showFMat(cv::InputOutputArray &M, const char* name = "debugshit"){
     std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl;
 
     max = std::min(max,20000.0);
-    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
+    cv::convertScaleAbs(catmat, catmat, 255 / (max-min));
+    /* cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min)); */
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -314,7 +315,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       if (dst.cols % 2 == 0)
         options += " -D EVEN";
 
-      size_t wgs = dev.maxWorkGroupSize();
+      size_t wgs = thread_count;
       options += " -D WGS="+std::to_string((int)wgs);
 
       int wgs2_aligned = 1;
@@ -402,17 +403,13 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       std::cout << "MAXVAL: " << maxVal <<std::endl;
       std::cout << "MAXLOC: " << maxloc <<std::endl;
 
-          maxLoc[0] = maxloc / fft1.cols;
-          maxLoc[1] = maxloc % fft1.cols;
+          maxLoc[0] = (maxloc % pcr.cols)-pcr.cols/2;
+          maxLoc[1] = (maxloc / pcr.cols)-pcr.rows/2;
+          /* maxLoc[0] = (maxloc % pcr.cols); */
+          /* maxLoc[1] = (maxloc / pcr.cols); */
 
-          for (int i=0;i<=1;i++){
-            if (maxLoc[i] > fft1.cols/2)
-              maxLoc[i]=maxLoc[i] - fft1.cols/2;
-            else
-              maxLoc[i]=maxLoc[i] + fft1.cols/2;
-          }
 
-          output[i+j*Xfields]  = cv::Point2i(maxLoc[0],maxLoc[1]);
+          output[j+i*Yfields]  = cv::Point2i(maxLoc[0],maxLoc[1]);
       /* std::cout << "OUT: " << output[i+j*Xfields] <<std::endl; */
     }}
       /* std::cout << "OUT: " << output <<std::endl; */
@@ -771,10 +768,13 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   else
     fillRadixTable<double>(twiddles, radixes);
 
-  buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s",
+    char cvt[2][40];
+  buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s -D convertToDT=%s",
       dft_size, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
       dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str(),
-      cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, min_radix)));
+      cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, min_radix)),
+      cv::ocl::convertTypeStr(dft_depth, dft_depth, min_radix, cvt[0])
+      );
   int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
   cv::Size ssize = _src1.size();
   bool doubleSupport = cv::ocl::Device::getDefault().doubleFPConfig() > 0;
@@ -1314,10 +1314,10 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
     peakLocs.resize(sqNum*sqNum);
     if (useNewKernel){
       phaseCorrelate_ocl(usrc1,usrc2, peakLocs, Y,X);
-            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost);
-            for (int i =0; i< ((int)(peakLocs.size())); i++){
-              std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
-  }
+      PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost);
+      for (int i =0; i< ((int)(peakLocs.size())); i++){
+        std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
+      }
 
     }
     for (int i = 0; i < X; i++) {
@@ -1429,17 +1429,17 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           elapsedTime6 += double(end - begin) / CLOCKS_PER_SEC;
           begin = std::clock();
 
-          fftShift(C); // shift the energy to the center of the frame.
+          /* fftShift(C); // shift the energy to the center of the frame. */
 
 
 
           // locate the highest peak
-          minMaxLoc(C, NULL, NULL, NULL, &(peakLocs[i+j*sqNum]));
+          /* minMaxLoc(C, NULL, NULL, NULL, &(peakLocs[i+j*sqNum])); */
 
         // get the phase shift with sub-pixel accuracy, 5x5 window seems about right here...
         cv::Point2d t;
         /* t = weightedCentroid(C,i,j, samplePointSize, peakLocs[i+j*sqNum], cv::Size(5, 5), response); */
-        t = peakLocs[i+j*sqNum];
+        t = peakLocs[j+i*sqNum];
 
         // max response is M*N (not exactly, might be slightly larger due to rounding errors)
         if(response)
@@ -1454,9 +1454,9 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         /* begin = std::clock(); */
 
         // adjust shift relative to image center...
-        cv::Point2d center((double)samplePointSize / 2.0, samplePointSize / 2.0);
+        /* cv::Point2d center((double)samplePointSize / 2.0, samplePointSize / 2.0); */
 
-        output.push_back(t-center);
+        output.push_back(t);
         /* output.push_back(cv::Point(0,0)); */
       }
     }
@@ -1522,7 +1522,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    ML.create(1, dev.getDefault().maxWorkGroupSize()*sqNum*sqNum*(sizeof(uint)+sizeof(float)), CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
   first = true;
 }
@@ -1665,7 +1665,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     /* /1* cv::convertScaleAbs(usrc2, catmat, 255 / max); *1/ */
     /* imshow("debugshit",catmat); */
     /* imshow("debugshit",usrc1); */
-    cv::imshow("mrs_optic_flow", imView);
+    cv::imshow("cv_optic_flow", imView);
     cv::waitKey(1);
   }
 
