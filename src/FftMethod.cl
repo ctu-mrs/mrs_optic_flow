@@ -1230,8 +1230,10 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     barrier(CLK_GLOBAL_MEM_FENCE);
     if ((lid == 0) && (gid == 0))
     {
+      /* printf("valstep: %d, fullstep: %d\n", valstep, fullstep); */
         int lposvZ = mad24(index, fullstep, mul24((int)(sizeof(float)),0));
         int lposlZ = mad24(index, fullstep, mad24((int)(sizeof(uint)),0,valstep));
+      /* printf("lposlZ A: %d\n", lposlZ); */
       for (int i=1; i<groupnum; i++){
         int lposv = mad24(index, fullstep, mul24((int)(sizeof(float)),i));
         int lposl = mad24(index, fullstep, mad24((int)(sizeof(uint)),i,valstep));
@@ -1253,6 +1255,7 @@ void refine(__global const uchar * srcptr, int src_step, int src_offset, int col
     int valstep = align((int)(sizeof(float))*groupnum);
     int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
     int lposlZ = mad24(index, fullstep, mad24((int)(sizeof(uint)),0,valstep));
+      /* printf("lposlZ B: %d\n", lposlZ); */
     int indexMax = *(__global int *)(dstptr + lposlZ);
     int xc = indexMax % cols;
     int yc = indexMax / cols;
@@ -1284,6 +1287,7 @@ void refine(__global const uchar * srcptr, int src_step, int src_offset, int col
     int lposXZ = mad24(index, fullstep, mul24((int)(sizeof(float)),1));
     int lposYZ = mad24(index, fullstep, mul24((int)(sizeof(float)),2));
 
+      /* printf("lposXZ: %d, lposYZ: %d\n", lposXZ, lposYZ); */
     *(__global float *)(dstptr + lposXZ) = centroidX-(float)(cols>>1);
     *(__global float *)(dstptr + lposYZ) = centroidY-(float)(rows>>1);
 
@@ -1313,16 +1317,16 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
   /* for (int j=Yfields-1; j>=0; j--){ */
   /*   for (int i=0; i<Xfields; i++){ */
       /* for (int i=Xfields-1; i>=0; i--){ */
-  for (int j=0; j<Yfields; j++){
-    for (int i=0; i<Xfields; i++){
+  /* for (int j=0; j<Yfields; j++){ */
+  /*   for (int i=0; i<Xfields; i++){ */
 
-  /* int i = 2; */
-  /*   int j = 3; */
-  /*   { */
-  /*   { */
+  int i = 3;
+    int j = 3;
+    {
+    {
+      barrier(CLK_GLOBAL_MEM_FENCE);
 
       int index = i+Xfields*j;
-
 
       fft_multi_radix_rows(
           src1_ptr, src1_step, src1_offset, src1_rows, src1_cols,

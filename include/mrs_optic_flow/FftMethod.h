@@ -46,9 +46,10 @@ private:
 
 struct OCL_FftPlanClassic
 {
+  public:
+  cv::String buildOptions_deprecated;
 private:
   cv::UMat twiddles;
-  cv::String buildOptions;
     int thread_count;
     int dft_size;
     int dft_depth;
@@ -134,9 +135,10 @@ public:
         else
             fillRadixTable<double>(twiddles, radixes);
 
-        buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
+        buildOptions_deprecated = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s",
                               dft_size, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
                               dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str());
+        
     }
 
     static cv::ocl::ProgramSource prep_ocl_kernel(const char* filename);
@@ -156,7 +158,7 @@ public:
 
         bool is1d = (flags & cv::DFT_ROWS) != 0 || num_dfts == 1;
         bool inv = (flags & cv::DFT_INVERSE) != 0;
-        cv::String options = buildOptions;
+        cv::String options = buildOptions_deprecated;
 
         if (rows)
         {
@@ -402,7 +404,7 @@ private:
 
   cv::UMat usrc1, usrc2;
   cv::UMat window1, window2;
-  cv::UMat FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR, P, Pm, C, ML;
+  cv::UMat FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR, P, Pm, C, D, ML;
   cv::UMat twiddles;
 
   int frameSize;

@@ -312,7 +312,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       options += " -D NEED_MAXVAL";
       options += " -D NEED_MAXLOC";
 
-      if (dst.cols % 2 == 0)
+      if ((dst.cols % 2) == 0)
         options += " -D EVEN";
 
       size_t wgs = thread_count;
@@ -615,6 +615,7 @@ bool FftMethod::ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonz
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
     cv::Ptr<OCL_FftPlanClassic> plan = cacheClassic.getFftPlanClassic(_src.cols(), depth);
+    /* std::cout << "HEEEY " << plan->buildOptions_deprecated << std::endl; */
     return plan->enqueueTransformClassic(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
@@ -1269,7 +1270,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   CV_Assert( _src1.type() == CV_32FC1 || _src1.type() == CV_64FC1 );
   CV_Assert( _src1.size() == _src2.size());
 
-  useOCL = false;
+  useOCL = true;
   useNewKernel = true;
 
 
@@ -1328,8 +1329,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
 
 
-        if (!useNewKernel) {
-        /* if ((!useNewKernel) || ((j==0) && (i==0))){ */
+        /* if (!useNewKernel) { */
+        if ((!useNewKernel) || ((j==(Y-1)) && (i==(X-1)))){
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
           roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
@@ -1343,96 +1344,40 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           /* if (!useOCL) { */
           window1 = usrc1(roi);
           window2 = usrc2(roi);
-          /* } */
-          /* ROS_INFO_ONCE("padded size: %dx%d",padded2.rows,padded2.cols); */
 
-          end         = std::clock();
-          elapsedTime1 += double(end - begin) / CLOCKS_PER_SEC;
-          begin = std::clock();
-
-          // execute phase correlation equation
-          // Reference: http://en.wikipedia.org/wiki/Phase_correlation
-          /* dft(usrc1(roi), FFT1, cv::DFT_REAL_OUTPUT); */
-          /* dft(usrc2(roi), FFT2, cv::DFT_REAL_OUTPUT); */
+          cv::Mat Chost;
           if (useOCL){
-            /* FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(fftr1host); */
-            /* mulSpectrums(FFT1, FFT2, P, 0, true); */
-            dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
+            dft_special(window1, D, cv::DFT_REAL_OUTPUT);
             dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
-            /* mulSpectrums(FFT1, FFT2, P, 0, true); */
-            /* magSpectrums(P, Pm); */
-            /* divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...) */
-            /* idft_special(C, C); // gives us the nice peak shift location... */
-            /* C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
-
-            /* dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT); */
-            /* dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT); */
+            mulSpectrums(FFT1, FFT2, P, 0, true);
+            magSpectrums(P, Pm);
+            divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
+            C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage);
+            MUL(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(Chost);
+            idft_special(C, C); // gives us the nice peak shift location...
+          fftShift(C); // shift the energy to the center of the frame.
           }
-          else {
+          else{
+          FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(Chost);
             dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
+          FFT1.copyTo(Chost);
             dft(window2, FFT2, cv::DFT_REAL_OUTPUT);
+            mulSpectrums(FFT1, FFT2, P, 0, true);
+            magSpectrums(P, Pm);
+            divSpectrums(P, Pm, D, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
+            idft(D, C); // gives us the nice peak shift location...
+          fftShift(C); // shift the energy to the center of the frame.
           }
 
-          /* ROS_INFO("[%d]: FFT TYPE", FFT1.type()); */
 
-          /* end         = std::clock(); */
-          /* elapsedTime2 += double(end - begin) / CLOCKS_PER_SEC; */
-          /* begin = std::clock(); */
+
+            /* if ((j==0) && (i==0)){ */
+              cv::Mat diffmap = (Chost) - (storage);
+              showFMat(diffmap);
+              showFMat(storage, "OLD");
+              showFMat(Chost,"NEW");
+            /* } */
         }
-            if ((j==0) && (i==0)){
-              /* cv::Mat diffmap = (fftr1host) - (storage); */
-              /* showFMat(diffmap); */
-              showFMat(showhost);
-              /* showFMat(storage,"OLD"); */
-            }
-
-          /* if (useOCL){ */
-          /*   mulSpectrums_special(FFT1, FFT2, C, 0, true); */
-          /* } */
-          /* else{ */
-          /* } */
-          /* cv::Mat tempView; */
-          /* cv::normalize(FFT1, tempView, 255,0, cv::NORM_MINMAX, CV_8UC1); */
-
-            /* showFMat(FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)), "new"); */
-
-            
-
-          /* if (i==0 && j==0) */
-          /*   cv::imshow("fft1",tempView); */
-          /* ROS_INFO("DEPTH: %d, CHANNELS: %d", FFT1.depth(), FFT1.channels()); */
-
-          /* end         = std::clock(); */
-          /* elapsedTime3 += double(end - begin) / CLOCKS_PER_SEC; */
-          /* begin = std::clock(); */
-
-
-          /* end         = std::clock(); */
-          /* elapsedTime4 += double(end - begin) / CLOCKS_PER_SEC; */
-          /* begin = std::clock(); */
-
-
-          /* end         = std::clock(); */
-          /* elapsedTime5 += double(end - begin) / CLOCKS_PER_SEC; */
-          /* begin = std::clock(); */
-
-
-
-          /* if (useOCL){ */
-          /*   idft_special(C, C); // gives us the nice peak shift location... */
-          /* } */
-          /* else { */
-          /*   idft(C, C); // gives us the nice peak shift location... */
-          /* } */
-
-          /* if ((i==0) && (j==0)) */
-            /* showFMat(FFTR1); */
-
-          end         = std::clock();
-          elapsedTime6 += double(end - begin) / CLOCKS_PER_SEC;
-          begin = std::clock();
-
-          /* fftShift(C); // shift the energy to the center of the frame. */
 
 
 
@@ -1524,7 +1469,8 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     IFFTC.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    /* D.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
   first = true;
