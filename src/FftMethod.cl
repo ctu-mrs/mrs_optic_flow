@@ -1220,8 +1220,8 @@ __kernel void minmaxloc(__global const uchar * srcptr, int src_step, int src_off
     int fullstep = align(mad24(groupnum,(int)(sizeof(int)),valstep));
     if (lid == 0)
     {
-      int lposv = mad24(index, fullstep, mul24((int)(sizeof(int)),gid));
-      int lposl = mad24(index, fullstep, mad24((int)(sizeof(float)),gid,valstep));
+      int lposv = mad24(index, fullstep, mul24((int)(sizeof(float)),gid));
+      int lposl = mad24(index, fullstep, mad24((int)(sizeof(uint)),gid,valstep));
         *(__global float *)(dstptr +lposv) = localmem_max[0];
         *(__global uint *)(dstptr + lposl) = localmem_maxloc[0];
     /* if (gid == 60) */
@@ -1310,8 +1310,9 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       /* if (y == 0) */
       /* printf("COL: %d, ROW: %d",fft1_cols, fft1_rows); */
 
-  /* for (int i=0; i<1; i++){ */
-  /*   for (int j=0; j<1; j++){ */
+  /* for (int j=Yfields-1; j>=0; j--){ */
+  /*   for (int i=0; i<Xfields; i++){ */
+      /* for (int i=Xfields-1; i>=0; i--){ */
   for (int j=0; j<Yfields; j++){
     for (int i=0; i<Xfields; i++){
 
