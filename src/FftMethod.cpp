@@ -21,15 +21,20 @@ void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
         catmat = mat_host;
       }
 
-    double min;
-    double max;
-    cv::minMaxIdx(catmat, &min, &max);
-    std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl;
+    double minval;
+    double maxval;
+    cv::Point minloc, maxloc;
+    cv::minMaxLoc(catmat, &minval, &maxval, &minloc, &maxloc);
+    std::cout << "IMMIN: " << minval << " IMMAX: " << maxval << std::endl;
+    std::cout << "MINLOC: " << minloc << " MAXLOC: " << maxloc << std::endl;
     std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl;
+    
+    if (mat_host.type() == CV_32F)
+      std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl;
 
-    max = std::min(max,20000.0);
-    /* cv::convertScaleAbs(catmat, catmat, 255 / (max-min)); */
-    cv::convertScaleAbs(catmat+min, catmat, 255 / (max-min));
+    /* maxval = std::min(maxval,20000.0); */
+    /* cv::convertScaleAbs(catmat, catmat, 255 / (maxval-minval)); */
+    cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval));
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -685,11 +690,10 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
     if (!inv)
     {
 
-
       if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
         return false;
-      /* showFMat(output(cv::Rect(0,0,nonzero_rows/2,nonzero_rows)), "original"); */
-      /* output(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storage); */
+
+            /* output(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storage); */
 
       int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
       if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
@@ -709,7 +713,7 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
       }
       else
       {
-        int nonzero_cols = src.cols/2 + 1;
+        int nonzero_cols = src.cols/4 + 1;
         if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
           return false;
 
@@ -1330,7 +1334,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
         /* if (!useNewKernel) { */
-        if ((!useNewKernel) || ((j==(Y-1)) && (i==(X-1)))){
+        if ((!useNewKernel) || ((j==3) && (i==3))){
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
           roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
@@ -1347,13 +1351,15 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
           cv::Mat Chost;
           if (useOCL){
-            dft_special(window1, D, cv::DFT_REAL_OUTPUT);
-            dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
+            /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(Chost); */
+            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(Chost);
+            dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
+            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage);
+            /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
+            /* dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT); */
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
             divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
-            C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage);
-            MUL(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(Chost);
             idft_special(C, C); // gives us the nice peak shift location...
           fftShift(C); // shift the energy to the center of the frame.
           }
