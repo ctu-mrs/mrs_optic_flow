@@ -1371,7 +1371,6 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           );
     barrier(CLK_GLOBAL_MEM_FENCE);
       fft_multi_radix_cols(
-
           /* src1_ptr, src1_step, src1_offset, src1_rows, src1_cols, */
           /* fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols, */
           fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols,
