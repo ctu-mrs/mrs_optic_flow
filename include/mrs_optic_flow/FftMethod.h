@@ -193,7 +193,10 @@ public:
             if (dst.cols % 2 == 0)
                 options += " -D EVEN";
         }
-        cv::ocl::ProgramSource ps = prep_ocl_kernel("/home/viktor/OpenCV/opencv_3/modules/core/src/opencl/fft.cl");
+        cv::ocl::ProgramSource ps = prep_ocl_kernel("/home/mrs/OpenCV/opencv_3/modules/core/src/opencl/fft.cl");
+
+        std::cout << "G0 " << globalsize[0] << " G1 " << globalsize[1] << " L0 " << localsize[0] << " L1 " << localsize[1] << std::endl;
+        std::cout << options << std::endl;
 
         cv::ocl::Kernel k(kernel_name.c_str(), ps, options);
         if (k.empty())
@@ -422,6 +425,7 @@ private:
   cv::Point2d shift_raw;
 
   bool first;
+  bool running;
   bool raw_enable;
   bool rot_corr_enable;
   bool tilt_corr_enable;

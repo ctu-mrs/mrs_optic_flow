@@ -153,6 +153,8 @@ namespace mrs_optic_flow
       double     uav_height_curr;
       std::mutex mutex_uav_height;
 
+      std::mutex mutex_process;
+
     private:
       tf2::Quaternion tilt_prev;
       tf2::Quaternion tilt_curr;
@@ -1188,7 +1190,11 @@ namespace mrs_optic_flow
     tf2::Stamped<tf2::Transform> tempTfC2B;
     tf2::fromMsg(transformCam2Base, tempTfC2B);
 
-    mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
+    {
+      std::scoped_lock lock(mutex_process);
+
+      mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
+    }
     tf2::Quaternion rot;
     tf2::Vector3 tran;
     geometry_msgs::TwistWithCovarianceStamped velocity;

@@ -1,6 +1,6 @@
 #include "../include/mrs_optic_flow/FftMethod.h"
 
-cv::Mat storage;
+cv::Mat storageA, storageB, diffmap;
 
 void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     cv::Mat mat_host;
@@ -302,6 +302,8 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       globalsize[1] = block_count;
       localsize[0] = thread_count;
       localsize[1] = 1;
+
+      std::cout << "G0 " << globalsize[0] << " G1 " << globalsize[1] << " L0 " << localsize[0] << " L1 " << localsize[1] << std::endl;
 
       options += " -D ROW_F_REAL_INPUT";
       options += " -D COL_F_COMPLEX_INPUT";
@@ -693,7 +695,7 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
       if (!ocl_dft_rows(src, output, nonzero_rows, flags, fftType))
         return false;
 
-            /* output(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storage); */
+            /* output(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageB); */
 
       int nonzero_cols = fftType == R2R ? output.cols/2 + 1 : output.cols;
       if (!ocl_dft_cols(output, _dst, nonzero_cols, flags, fftType))
@@ -717,7 +719,7 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
         if (!ocl_dft_cols(src, output, nonzero_cols, flags, fftType))
           return false;
 
-        /* output(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storage); */
+        /* output(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageB); */
 
         if (!ocl_dft_rows(output, _dst, nonzero_rows, flags, fftType))
           return false;
@@ -1333,8 +1335,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
 
 
-        /* if (!useNewKernel) { */
-        if ((!useNewKernel) || ((j==3) && (i==3))){
+        if (!useNewKernel) {
+        /* if ((!useNewKernel) || ((j==0) && (i==0))){ */
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
           roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
@@ -1349,24 +1351,27 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           window1 = usrc1(roi);
           window2 = usrc2(roi);
 
-          cv::Mat Chost;
           if (useOCL){
-            /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(Chost); */
-            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(Chost);
+            /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storageA); */
+            storageA = cv::Scalar(0);
+            /* FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
+            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
             dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
-            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage);
-            /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
-            /* dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT); */
+            dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
             divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
             idft_special(C, C); // gives us the nice peak shift location...
-          fftShift(C); // shift the energy to the center of the frame.
+            fftShift(C); // shift the energy to the center of the frame.
+            C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
+            diffmap = (storageA) - (storageB);
+            /* ros::Duration(0.5).sleep(); */
+            /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
           }
           else{
-          FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(Chost);
+          FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA);
             dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
-          FFT1.copyTo(Chost);
+          FFT1.copyTo(storageB);
             dft(window2, FFT2, cv::DFT_REAL_OUTPUT);
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
@@ -1378,13 +1383,16 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
             /* if ((j==0) && (i==0)){ */
-              cv::Mat diffmap = (Chost) - (storage);
-              showFMat(diffmap);
-              showFMat(storage, "OLD");
-              showFMat(Chost,"NEW");
+              /* cv::Mat diffmap = (storageA) - (storageB); */
+              /* showFMat(diffmap); */
+              /* showFMat(storageB, "OLD"); */
+          /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
+          /*     showFMat(storageA,"NEW"); */
             /* } */
         }
 
+          PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
+              showFMat(storageA,"NEW");
 
 
           // locate the highest peak
@@ -1444,10 +1452,10 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     frameSize--;
   }
   if ((frameSize % samplePointSize) != 0) {
-    samplePointSize = frameSize;
     ROS_WARN(
-        "Oh, what kind of setting for OpticFlow is this? Frame size must be a multiple of SamplePointSize! Forcing FrameSize = SamplePointSize (i.e. one "
-        "window)..");
+        "FS: %d, SPS: %d - Oh, what kind of setting for OpticFlow is this? Frame size must be a multiple of SamplePointSize! Forcing FrameSize = SamplePointSize (i.e. one "
+        "window)..",frameSize,samplePointSize);
+    samplePointSize = frameSize;
   }
 
 
@@ -1476,13 +1484,17 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
-    /* D.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    D.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
   first = true;
+  running = false;
 }
 
 std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center, cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy) {
+
+  if (running) return std::vector<cv::Point2d>();
+  running = true;
 
   /* ROS_INFO("FX:%f, FY%f",i_fx,i_fy); */
 
@@ -1632,6 +1644,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   if (storeVideo) {
     outputVideo << imView;
   }
+
+  running = false;
 
   return speeds;
 }
