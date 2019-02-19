@@ -32,9 +32,9 @@ void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     if (mat_host.type() == CV_32F)
       std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl;
 
-    /* maxval = std::min(maxval,50000.0); */
-    /* cv::convertScaleAbs(catmat, catmat, 255 / (maxval-minval)); */
-    cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval));
+    maxval = std::min(maxval,7e6);
+    cv::convertScaleAbs(catmat, catmat, 255 / (maxval));
+    /* cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval)); */
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -272,7 +272,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
 }
 
 
-    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, cv::InputArray _l_smem, cv::InputArray _l_maxval, cv::InputArray _l_maxloc, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count)
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, cv::InputArray _l_smem, cv::InputArray _l_maxval, cv::InputArray _l_maxloc, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count, cv::ocl::Queue &mainQueue)
     {
       if (!status)
         return false;
@@ -386,7 +386,11 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       /*     Yfields */
       /*     ); */
 
-      bool partial = k_phase_corr.run(2, globalsize, localsize, true);
+      std::cout << "LMS USED: " << k_phase_corr.localMemSize() << std::endl;
+      std::cout << "LMS AVAIL: " << cv::ocl::Device::getDefault().localMemSize() << std::endl;
+      std::cout << "BS: " << cv::ocl::Device::getDefault().printfBufferSize() << std::endl;
+
+      bool partial = k_phase_corr.run(2, globalsize, localsize, false, mainQueue);
 
       /* showFMat(fft1); */
 
@@ -902,7 +906,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   int rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
 
   cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(samplePointSize, depth, cl_file_name);
-  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR,  ML, L_SMEM, L_MAXVAL, L_MAXLOC, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
+  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR,  ML, L_SMEM, L_MAXVAL, L_MAXLOC, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize, mainQueue);
 
   return false;
 }
@@ -1304,7 +1308,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   CV_Assert( _src1.type() == CV_32FC1 || _src1.type() == CV_64FC1 );
   CV_Assert( _src1.size() == _src2.size());
 
-  useOCL = true;
+  useOCL = false;
   useNewKernel = true;
 
 
@@ -1382,30 +1386,32 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           if (useOCL){
             /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storageA); */
             /* FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
-            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
-            dft_special(window1, T, cv::DFT_REAL_OUTPUT);
-            T(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
-            /* dft_special(window2, T, cv::DFT_REAL_OUTPUT); */
+            /* FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
+            dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
+            dft_special(window2, FFT1, cv::DFT_REAL_OUTPUT);
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
             divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
             idft_special(C, C); // gives us the nice peak shift location...
             fftShift(C); // shift the energy to the center of the frame.
-            /* C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB); */
+            C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
+            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
             /* diffmap = (storageA) - (storageB); */
             /* ros::Duration(0.5).sleep(); */
             /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
           }
           else{
-          FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA);
-            dft(window1, FFT1, cv::DFT_REAL_OUTPUT);
-          FFT1.copyTo(storageB);
-            dft(window2, FFT2, cv::DFT_REAL_OUTPUT);
-            mulSpectrums(FFT1, FFT2, P, 0, true);
-            magSpectrums(P, Pm);
-            divSpectrums(P, Pm, D, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
-            idft(D, C); // gives us the nice peak shift location...
-          fftShift(C); // shift the energy to the center of the frame.
+          /* FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
+            dft(window1, H_FFT1, cv::DFT_REAL_OUTPUT);
+          /* FFT1.copyTo(storageB); */
+            dft(window2, H_FFT2, cv::DFT_REAL_OUTPUT);
+            mulSpectrums(H_FFT1, H_FFT2, H_P, 0, true);
+            magSpectrums(H_P, H_Pm);
+            divSpectrums(H_P, H_Pm, H_D, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
+            idft(H_D, H_C); // gives us the nice peak shift location...
+            fftShift(H_C); // shift the energy to the center of the frame.
+            H_C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
+            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
           }
 
 
@@ -1502,22 +1508,39 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     usrc2.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* window1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     /* window2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
-    FFT1.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFT2.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFTR1.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    FFTR2.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    MUL.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    IFFTC.create(samplePointSize, samplePointSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT1.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFT2.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFTR1.create(frameSize, frameSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    FFTR2.create(frameSize, frameSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    MUL.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    IFFTC.create(frameSize, frameSize, CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
-    PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
-    D.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    T.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    D.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    T.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
     L_SMEM.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     L_MAXVAL.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     L_MAXLOC.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+
+    mainQueue.create(cv::ocl::Context::getDefault(false), cv::ocl::Device::getDefault());
+
+    H_FFT1.create(samplePointSize, samplePointSize, CV_32FC1);
+    H_FFT2.create(samplePointSize, samplePointSize, CV_32FC1);
+    H_FFTR1.create(samplePointSize, samplePointSize, CV_32FC2);
+    H_FFTR2.create(samplePointSize, samplePointSize, CV_32FC2);
+    H_MUL.create(samplePointSize, samplePointSize, CV_32FC1);
+    H_IFFTC.create(samplePointSize, samplePointSize, CV_32FC2);
+    /* PCR.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    H_PCR.create(samplePointSize, samplePointSize, CV_32FC1);
+    /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
+    H_D.create(samplePointSize, samplePointSize, CV_32FC1);
+    H_T.create(samplePointSize, samplePointSize, CV_32FC1);
+    H_ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1);
+
 
   first = true;
   /* gotBoth = false; */

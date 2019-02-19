@@ -940,8 +940,8 @@ namespace mrs_optic_flow
   /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
     nrep++;
 
-    if ((nrep > 100) )
-      return;
+    /* if ((nrep > 100) ) */
+    /*   return; */
 
     if (!is_initialized || !got_odometry)
       return;
