@@ -32,7 +32,7 @@ void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     if (mat_host.type() == CV_32F)
       std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl;
 
-    /* maxval = std::min(maxval,20000.0); */
+    /* maxval = std::min(maxval,50000.0); */
     /* cv::convertScaleAbs(catmat, catmat, 255 / (maxval-minval)); */
     cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval));
     /* cv::minMaxIdx(usrc2, &min, &max); */
@@ -272,7 +272,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
 }
 
 
-    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count)
+    bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, cv::InputArray _l_smem, cv::InputArray _l_maxval, cv::InputArray _l_maxloc, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count)
     {
       if (!status)
         return false;
@@ -289,6 +289,10 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       cv::UMat ifftc = _ifftc.getUMat();
       cv::UMat pcr = _pcr.getUMat();
       cv::UMat dst = _dst.getUMat();
+
+      cv::UMat l_smem = _l_smem.getUMat();
+      cv::UMat l_maxval = _l_maxval.getUMat();
+      cv::UMat l_maxloc = _l_maxloc.getUMat();
 
       size_t globalsize[2];
       size_t localsize[2];
@@ -340,23 +344,47 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
         return false;
       }
 
-      k_phase_corr.args(
-          cv::ocl::KernelArg::ReadOnly(src1),
-          cv::ocl::KernelArg::ReadOnly(src2),
-          cv::ocl::KernelArg::ReadWrite(fftr1),
-          cv::ocl::KernelArg::ReadWrite(fftr2),
-          cv::ocl::KernelArg::ReadWrite(fft1),
-          cv::ocl::KernelArg::ReadWrite(fft2),
-          cv::ocl::KernelArg::ReadWrite(mul),
-          cv::ocl::KernelArg::ReadWrite(ifftc),
-          cv::ocl::KernelArg::ReadWrite(pcr),
-          cv::ocl::KernelArg::PtrReadWrite(dst),
-          cv::ocl::KernelArg::ReadOnlyNoSize(twiddles),
-          thread_count,
-          rowsPerWI,
-          Xfields,
-          Yfields
-          );
+
+      int ki = 0;
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadOnly(src1));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadOnly(src2));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(fftr1));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(fftr2));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(fft1));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(fft2));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(mul));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(ifftc));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(pcr));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrReadWrite(dst));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_smem));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxloc));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxval));
+      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadOnlyNoSize(twiddles));
+      ki = k_phase_corr.set(ki, thread_count);
+      ki = k_phase_corr.set(ki, rowsPerWI);
+      ki = k_phase_corr.set(ki, Xfields);
+      ki = k_phase_corr.set(ki, Yfields);
+
+      /* k_phase_corr.args( */
+      /*     cv::ocl::KernelArg::ReadOnly(src1), */
+      /*     cv::ocl::KernelArg::ReadOnly(src2), */
+      /*     cv::ocl::KernelArg::ReadWrite(fftr1), */
+      /*     cv::ocl::KernelArg::ReadWrite(fftr2), */
+      /*     cv::ocl::KernelArg::ReadWrite(fft1), */
+      /*     cv::ocl::KernelArg::ReadWrite(fft2), */
+      /*     cv::ocl::KernelArg::ReadWrite(mul), */
+      /*     cv::ocl::KernelArg::ReadWrite(ifftc), */
+      /*     cv::ocl::KernelArg::ReadWrite(pcr), */
+      /*     cv::ocl::KernelArg::PtrReadWrite(dst), */
+      /*     cv::ocl::KernelArg::PtrReadWrite(l_smem), */
+      /*     cv::ocl::KernelArg::PtrReadWrite(l_maxval), */
+      /*     cv::ocl::KernelArg::PtrReadWrite(l_maxloc), */
+      /*     cv::ocl::KernelArg::ReadOnlyNoSize(twiddles), */
+      /*     thread_count, */
+      /*     rowsPerWI, */
+      /*     Xfields, */
+      /*     Yfields */
+      /*     ); */
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true);
 
@@ -874,7 +902,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
   int rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
 
   cv::Ptr<OCL_FftPlan> plan = cache.getFftPlan(samplePointSize, depth, cl_file_name);
-  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR,  ML, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
+  return plan->enqueueTransform(_src1, _src2,  FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR,  ML, L_SMEM, L_MAXVAL, L_MAXLOC, rowsPerWI, vec_cols, vec_rows, out, thread_count,samplePointSize);
 
   return false;
 }
@@ -1319,12 +1347,12 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
     ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI);
 
 
-    cv::Mat showhost;
+    /* cv::Mat showhost; */
     std::vector<cv::Point2f> peakLocs;
     peakLocs.resize(sqNum*sqNum);
     if (useNewKernel){
       phaseCorrelate_ocl(usrc1,usrc2, peakLocs, Y,X);
-      PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost);
+      /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost); */
       for (int i =0; i< ((int)(peakLocs.size())); i++){
         std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
       }
@@ -1335,8 +1363,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
 
 
-        if (!useNewKernel) {
-        /* if ((!useNewKernel) || ((j==0) && (i==0))){ */
+        /* if (!useNewKernel) { */
+        if ((!useNewKernel) || ((j==(X-1)) && (i==(X-1)))){
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
           roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
@@ -1353,18 +1381,18 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
           if (useOCL){
             /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storageA); */
-            storageA = cv::Scalar(0);
             /* FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
-            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
-            dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
-            dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
+            FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
+            dft_special(window1, T, cv::DFT_REAL_OUTPUT);
+            T(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
+            /* dft_special(window2, T, cv::DFT_REAL_OUTPUT); */
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
             divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
             idft_special(C, C); // gives us the nice peak shift location...
             fftShift(C); // shift the energy to the center of the frame.
-            C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
-            diffmap = (storageA) - (storageB);
+            /* C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB); */
+            /* diffmap = (storageA) - (storageB); */
             /* ros::Duration(0.5).sleep(); */
             /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
           }
@@ -1383,16 +1411,15 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
             /* if ((j==0) && (i==0)){ */
-              /* cv::Mat diffmap = (storageA) - (storageB); */
-              /* showFMat(diffmap); */
-              /* showFMat(storageB, "OLD"); */
-          /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
-          /*     showFMat(storageA,"NEW"); */
+              cv::Mat diffmap = (storageB) - (storageA);
+              showFMat(diffmap);
+              showFMat(storageB, "OLD");
+              showFMat(storageA,"NEW");
             /* } */
         }
 
-          PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
-              showFMat(storageA,"NEW");
+          /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
+          /*     showFMat(storageA,"NEW"); */
 
 
           // locate the highest peak
@@ -1485,13 +1512,22 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     PCR.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     D.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    T.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
+    L_SMEM.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    L_MAXVAL.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    L_MAXLOC.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+
   first = true;
+  /* gotBoth = false; */
   running = false;
+  /* Nreps = 0; */
+  /* gotNth = false; */
 }
 
 std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center, cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d> &raw_output, double i_fx, double i_fy) {
+
 
   if (running) return std::vector<cv::Point2d>();
   running = true;
@@ -1510,17 +1546,25 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   // copy first to second
   if (first) {
     imCurr.copyTo(imPrev);
-    first = false;
   }
-
   if (debug) {
     ROS_INFO("[OpticFlow]: Curr type: %d prev type: %d", imCurr.type(), imPrev.type());
   }
 
   // convert images to float images
-  cv::Mat imCurrF, imPrevF;
-  imCurr.convertTo(imCurrF, CV_32FC1);
-  imPrev.convertTo(imPrevF, CV_32FC1);
+  /* if (Nreps > 30) */
+  /*   gotNth = true; */
+  
+  /* if (!gotNth){ */
+    /* std::cout <<" Here A" <<std::endl; */
+    imCurr.convertTo(imCurrF, CV_32FC1);
+    imPrev.convertTo(imPrevF, CV_32FC1);
+    /* Nreps++; */
+  /* } */
+
+  /* if (!first) { */
+  /*   gotBoth = true; */
+  /* } */
 
   // clear the vector with speeds
   speeds.clear();
@@ -1646,6 +1690,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   }
 
   running = false;
+    first = false;
 
   return speeds;
 }

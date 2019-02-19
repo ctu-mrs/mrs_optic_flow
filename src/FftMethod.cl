@@ -24,7 +24,7 @@ CT twiddle(CT a) {
 }
 
 __attribute__((always_inline))
-void butterfly2(CT a0, CT a1, __local CT* smem, __global const CT* twiddles,
+void butterfly2(CT a0, CT a1, __global CT* smem, __global const CT* twiddles,
                 const int x, const int block_size)
 {
     const int k = x & (block_size - 1);
@@ -36,7 +36,7 @@ void butterfly2(CT a0, CT a1, __local CT* smem, __global const CT* twiddles,
 }
 
 __attribute__((always_inline))
-void butterfly4(CT a0, CT a1, CT a2, CT a3, __local CT* smem, __global const CT* twiddles,
+void butterfly4(CT a0, CT a1, CT a2, CT a3, __global CT* smem, __global const CT* twiddles,
                 const int x, const int block_size)
 {
     const int k = x & (block_size - 1);
@@ -58,7 +58,7 @@ void butterfly4(CT a0, CT a1, CT a2, CT a3, __local CT* smem, __global const CT*
 }
 
 __attribute__((always_inline))
-void butterfly3(CT a0, CT a1, CT a2, __local CT* smem, __global const CT* twiddles,
+void butterfly3(CT a0, CT a1, CT a2, __global CT* smem, __global const CT* twiddles,
                 const int x, const int block_size)
 {
     const int k = x % block_size;
@@ -76,7 +76,7 @@ void butterfly3(CT a0, CT a1, CT a2, __local CT* smem, __global const CT* twiddl
 }
 
 __attribute__((always_inline))
-void butterfly5(CT a0, CT a1, CT a2, CT a3, CT a4, __local CT* smem, __global const CT* twiddles,
+void butterfly5(CT a0, CT a1, CT a2, CT a3, CT a4, __global CT* smem, __global const CT* twiddles,
                 const int x, const int block_size)
 {
     const int k = x % block_size;
@@ -86,7 +86,7 @@ void butterfly5(CT a0, CT a1, CT a2, CT a3, CT a4, __local CT* smem, __global co
     a4 = mul_complex(twiddles[k+3*block_size], a4);
 
     const int dst_ind = ((x - k) * 5) + k;
-    __local CT* dst = smem + dst_ind;
+    __global CT* dst = smem + dst_ind;
 
     CT b0, b1, b5;
 
@@ -117,7 +117,7 @@ void butterfly5(CT a0, CT a1, CT a2, CT a3, CT a4, __local CT* smem, __global co
 }
 
 __attribute__((always_inline))
-void fft_radix2(__local CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
+void fft_radix2(__global CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
 {
     CT a0, a1;
 
@@ -136,7 +136,7 @@ void fft_radix2(__local CT* smem, __global const CT* twiddles, const int x, cons
 }
 
 __attribute__((always_inline))
-void fft_radix2_B2(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix2_B2(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/2;
     CT a0, a1, a2, a3;
@@ -159,7 +159,7 @@ void fft_radix2_B2(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B3(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix2_B3(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/3;
     const int x3 = x1 + 2*t/3;
@@ -185,7 +185,7 @@ void fft_radix2_B3(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B4(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix2_B4(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int thread_block = t/4;
     const int x2 = x1 + thread_block;
@@ -215,7 +215,7 @@ void fft_radix2_B4(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix2_B5(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix2_B5(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int thread_block = t/5;
     const int x2 = x1 + thread_block;
@@ -248,7 +248,7 @@ void fft_radix2_B5(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix4(__local CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
+void fft_radix4(__global CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
 {
     CT a0, a1, a2, a3;
 
@@ -266,7 +266,7 @@ void fft_radix4(__local CT* smem, __global const CT* twiddles, const int x, cons
 }
 
 __attribute__((always_inline))
-void fft_radix4_B2(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix4_B2(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/2;
     CT a0, a1, a2, a3, a4, a5, a6, a7;
@@ -289,7 +289,7 @@ void fft_radix4_B2(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix4_B3(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix4_B3(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/3;
     const int x3 = x2 + t/3;
@@ -315,7 +315,7 @@ void fft_radix4_B3(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix8(__local CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
+void fft_radix8(__global CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
 {
     const int k = x % block_size;
     CT a0, a1, a2, a3, a4, a5, a6, a7;
@@ -362,7 +362,7 @@ void fft_radix8(__local CT* smem, __global const CT* twiddles, const int x, cons
     if (x < t)
     {
         const int dst_ind = ((x - k) << 3) + k;
-        __local CT* dst = smem + dst_ind;
+        __global CT* dst = smem + dst_ind;
 
         dst[0] = a0 + a1;
         dst[block_size] = a4 + a5;
@@ -378,7 +378,7 @@ void fft_radix8(__local CT* smem, __global const CT* twiddles, const int x, cons
 }
 
 __attribute__((always_inline))
-void fft_radix3(__local CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
+void fft_radix3(__global CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
 {
     CT a0, a1, a2;
 
@@ -396,7 +396,7 @@ void fft_radix3(__local CT* smem, __global const CT* twiddles, const int x, cons
 }
 
 __attribute__((always_inline))
-void fft_radix3_B2(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix3_B2(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/2;
     CT a0, a1, a2, a3, a4, a5;
@@ -419,7 +419,7 @@ void fft_radix3_B2(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix3_B3(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix3_B3(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1 + t/3;
     const int x3 = x2 + t/3;
@@ -445,7 +445,7 @@ void fft_radix3_B3(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix3_B4(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix3_B4(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int thread_block = t/4;
     const int x2 = x1 + thread_block;
@@ -475,7 +475,7 @@ void fft_radix3_B4(__local CT* smem, __global const CT* twiddles, const int x1, 
 }
 
 __attribute__((always_inline))
-void fft_radix5(__local CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
+void fft_radix5(__global CT* smem, __global const CT* twiddles, const int x, const int block_size, const int t)
 {
     const int k = x % block_size;
     CT a0, a1, a2, a3, a4;
@@ -494,7 +494,7 @@ void fft_radix5(__local CT* smem, __global const CT* twiddles, const int x, cons
 }
 
 __attribute__((always_inline))
-void fft_radix5_B2(__local CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
+void fft_radix5_B2(__global CT* smem, __global const CT* twiddles, const int x1, const int block_size, const int t)
 {
     const int x2 = x1+t/2;
     CT a0, a1, a2, a3, a4, a5, a6, a7, a8, a9;
@@ -527,14 +527,14 @@ void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_o
                                    __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                    __global const CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,
                                    int Xvec,int Yvec,
-                                   __local CT* smem)
+                                   __global CT* smem)
 {
     const int x = get_global_id(0);
     const int y = get_group_id(1);
     const int block_size = LOCAL_SIZE/kercn;
     if (y < nz)
     {
-        /* __local CT smem[LOCAL_SIZE]; */
+        /* __global CT smem[LOCAL_SIZE]; */
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = x;
         FT scale = (FT) 1/(dst_cols*dst_rows);
@@ -572,7 +572,7 @@ void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_o
 
 #else
         // pack row to CCS
-        __local FT* smem_1cn = (__local FT*) smem;
+        __global FT* smem_1cn = (__global FT*) smem;
         __global FT* dst = (__global FT*)(dst_ptr + mad24(y, dst_step, dst_offset));
         for (int i=x; i<dst_cols-1; i+=block_size)
             dst[i+1] = SCALE_VAL(smem_1cn[i+2], scale);
@@ -598,7 +598,7 @@ __attribute__((always_inline))
 void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                                    __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                    __global const CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,
-                                   __local CT* smem)
+                                   __global CT* smem)
 {
     const int x = get_group_id(1);
     const int y = get_global_id(0);
@@ -607,7 +607,7 @@ void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_o
 
     if (x < nz)
     {
-        /* __local CT smem[LOCAL_SIZE]; */
+        /* __global CT smem[LOCAL_SIZE]; */
         __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = y;
@@ -616,7 +616,6 @@ void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_o
         /* if ((x == 0) && (y ==0)) */
         /*   printf("NEW scale = %f", scale); */
 
-        /* __global uchar* dstn = (__global uchar*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)sizeof(CT), dst_offset))); */
         /* #pragma unroll */
         /* for (int i=0; i<kercn; i++){ */
         /*   if (x< (nz-1)) */
@@ -628,33 +627,32 @@ void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_o
 
         #pragma unroll
         for (int i=0; i<kercn; i++){
-            /* smem[y+i*block_size] = (CT)(0.0f,0.0f); */
             smem[y+i*block_size] = *((__global const CT*)(src + i*block_size*src_step));
         }
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        /* barrier(CLK_GLOBAL_MEM_FENCE); */
+        __global uchar* dstn = (__global uchar*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)sizeof(FT), dst_offset)));
+        barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+        #pragma unroll
+        for (int i=0; i<kercn; i++){
+          if (x<(nz-1)){
+            *((__global FT*)(dstn+i*block_size*dst_step))                        = *((__global const FT*)(src + i*block_size*src_step));
+            *((__global FT*)(dstn+i*block_size*dst_step+(nz-1)*(int)sizeof(FT))) = *((__global const FT*)(src + i*block_size*src_step+(int)sizeof(FT)));
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+        return;
 
-        /* __global uchar* dstn = (__global uchar*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)sizeof(CT), dst_offset))); */
-        /* /1* __global uchar* dstn = (__global uchar*)(dst_ptr + mad24(y, dst_step, mad24(x, (int)sizeof(CT), dst_offset))); *1/ */
+        /* barrier(CLK_LOCAL_MEM_FENCE); */
+        /* return; */
+
+        /* barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE); */
         /* for (int i=0; i<kercn; i++){ */
-        /* /1* if ((x == 10) && (y+i*block_size == dst_rows-2)){ *1/ */
-        /* /1*   printf("NEW kercn = %d\n",kercn); *1/ */
-        /* /1*   printf("NEW val = %f\n",*((__global const FT*)(src + i*block_size*src_step))); *1/ */
-        /* /1*   printf("NEW src start %#020x\n",src); *1/ */
-        /* /1* } *1/ */
-        /*   /1* if (((y+i*block_size) % 2) == 0) *1/ */
-        /*         /1* vstore2(SCALE_VAL(smem[y+i*block_size], scale), 0, (__global FT*)(dstn+i*block_size*dst_step)); *1/ */
         /*   if (x<(nz-1)){ */
         /*     *((__global FT*)(dstn+i*block_size*dst_step)) =smem[y+i*block_size].x; */
-        /*     *((__global FT*)(dstn+i*block_size*dst_step+(int)sizeof(FT))) = smem[y+i*block_size].y; */
+        /*     *((__global FT*)(dstn+i*block_size*dst_step+(nz-1)*(int)sizeof(FT))) = smem[y+i*block_size].y; */
         /*   } */
-        /*   /1* if ((x == 0) && (y == 0)) *1/ */
-        /*   /1*   *((__global FT*)(dstn+i*block_size*dst_step)) =10e8; *1/ */
-
-        /*   /1* *(__global FT*)(dstn+i*block_size*dst_step) =    smem2[y+i*block_size]; *1/ */
         /* } */
-        /* barrier(CLK_LOCAL_MEM_FENCE); */
+        /* barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE); */
         /* return; */
 
         RADIX_PROCESS;
@@ -685,7 +683,7 @@ void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_o
         if (x == 0)
         {
             // pack first column to CCS
-            __local FT* smem_1cn = (__local FT*) smem;
+            __global FT* smem_1cn = (__global FT*) smem;
             __global uchar* dst = dst_ptr + mad24(y+1, dst_step, dst_offset);
             for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
                 *((__global FT*) dst) = SCALE_VAL(smem_1cn[i+2], scale);
@@ -695,7 +693,7 @@ void fft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_o
         else if (x == (dst_cols+1)/2)
         {
             // pack last column to CCS (if needed)
-            __local FT* smem_1cn = (__local FT*) smem;
+            __global FT* smem_1cn = (__global FT*) smem;
             __global uchar* dst = dst_ptr + mad24(dst_cols-1, (int)sizeof(FT), mad24(y+1, dst_step, dst_offset));
             for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size)
                 *((__global FT*) dst) = SCALE_VAL(smem_1cn[i+2], scale);
@@ -717,7 +715,7 @@ __attribute__((always_inline))
 void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_offset, int src_rows, int src_cols,
                                     __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                                     __global CT* const twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,
-                                    __local CT* smem)
+                                    __global CT* smem)
 {
     const int x = get_global_id(0);
     const int y = get_group_id(1);
@@ -726,7 +724,7 @@ void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_
 
     if (y < nz)
     {
-        /* __local CT smem[LOCAL_SIZE]; */
+        /* __global CT smem[LOCAL_SIZE]; */
         __global const CT* twiddles = (__global const CT*)(twiddles_ptr + twiddles_offset);
         const int ind = x;
 
@@ -823,7 +821,7 @@ void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_
                               __global uchar* dst_ptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
                               /* __global CT* twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,int Xvec,int Yvec) */
                               __global CT* const twiddles_ptr, int twiddles_step, int twiddles_offset, const int t, const int nz,
-                              __local CT* smem)
+                              __global CT* smem)
 {
     const int x = get_group_id(1);
     const int y = get_global_id(0);
@@ -831,7 +829,7 @@ void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_
 #ifdef COL_I_COMPLEX_INPUT
     if (x < nz)
     {
-        /* __local CT smem[LOCAL_SIZE]; */
+        /* __global CT smem[LOCAL_SIZE]; */
         __global const uchar* src = src_ptr + mad24(y, src_step, mad24(x, (int)(sizeof(CT)), src_offset));
         __global uchar* dst = dst_ptr + mad24(y, dst_step, mad24(x, (int)(sizeof(CT)), dst_offset));
         /* __global uchar* dst = dst_ptr + mad24(mad24(Yvec,dst_rows,y), dst_step, mad24(x, (int)(sizeof(CT)), mad24(Xvec,dst_cols,src_offset))); */
@@ -869,7 +867,7 @@ void ifft_multi_radix_cols(__global const uchar* src_ptr, int src_step, int src_
         const int ind = y;
         const int block_size = LOCAL_SIZE/kercn;
 
-        /* __local CT smem[LOCAL_SIZE]; */
+        /* __global CT smem[LOCAL_SIZE]; */
 #ifdef EVEN
         if (x!=0 && (x!=(nz-1)))
 #else
@@ -1016,7 +1014,7 @@ void mulAndNormalizeSpectrums(
         /* else if (x == (dst_cols+1)/2) */
         /* { */
         /*     // pack last column to CCS (if needed) */
-        /*     __local FT* smem_1cn = (__local FT*) smem; */
+        /*     __global FT* smem_1cn = (__global FT*) smem; */
         /*     __global uchar* dst = dst_ptr + mad24(dst_cols-1, (int)sizeof(FT), mad24(y+1, dst_step, dst_offset)); */
         /*     for (int i=y; i<dst_rows-1; i+=block_size, dst+=dst_step*block_size) */
         /*         *((__global FT*) dst) = SCALE_VAL(smem_1cn[i+2], scale); */
@@ -1124,7 +1122,7 @@ static inline int align(int pos)
 
 void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int cols,
                         int total, int searchRows,int searchCols, int groupnum, __global uchar * dstptr, int index,int Xvec,int Yvec,
-                        __local float* localmem_max, __local uint* localmem_maxloc
+                        __global float* localmem_max, __global uint* localmem_maxloc
                         )
 {
     int lid = get_local_id(0);
@@ -1137,8 +1135,8 @@ void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int 
     srcptr += src_offset;
 
     float maxval = MIN_VAL;
-    /* __local float localmem_max[WGS2_ALIGNED]; */
-    /* __local uint localmem_maxloc[WGS2_ALIGNED]; */
+    /* __global float localmem_max[WGS2_ALIGNED]; */
+    /* __global uint localmem_maxloc[WGS2_ALIGNED]; */
     uint maxloc = INDEX_MAX;
 
     int src_index;
@@ -1329,6 +1327,7 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
                                   __global uchar* ifftc_ptr, int ifftc_step, int ifftc_offset, int ifftc_rows, int ifftc_cols,
                                   __global uchar* pcr_ptr, int pcr_step, int pcr_offset, int pcr_rows, int pcr_cols,
                                   __global uchar * dstptr,// int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                  __global uchar * l_smemptr, __global uchar * l_maxvalptr, __global uchar * l_maxlocptr,
                                   __global const CT * twiddles_ptr, int twiddles_step, int twiddles_offset,
                                    const int t, int rowsPerWI, int Xfields, int Yfields){
 
@@ -1344,16 +1343,20 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
   /* for (int j=0; j<Yfields; j++){ */
   /*   for (int i=0; i<Xfields; i++){ */
 
-  __local CT smem[LOCAL_SIZE];
-  __local float localmem_max[WGS2_ALIGNED];
-  __local uint localmem_maxloc[WGS2_ALIGNED];
+  /* __global CT smem[LOCAL_SIZE*2]; */
+  /* __global float localmem_max[WGS2_ALIGNED]; */
+  /* __global uint localmem_maxloc[WGS2_ALIGNED]; */
 
-  /* int i = 0; */
-  /*   int j = 0; */
-    /* { */
-    /* { */
-  for (int j=0; j<Yfields; j++){
-    for (int i=0; i<Xfields; i++){
+  __global CT* smem = (__global CT*)(l_smemptr + fft1_cols*get_group_id(1)*((int)sizeof(CT)));
+  __global CT* localmem_max = (__global CT*)(l_maxvalptr + WGS2_ALIGNED*get_group_id(1)*((int)sizeof(float)));
+  __global CT* localmem_maxloc = (__global CT*)(l_maxlocptr + WGS2_ALIGNED*get_group_id(1)*((int)sizeof(uint)));
+
+  int i = Xfields-1;
+    int j = Yfields-1;
+    {
+    {
+  /* for (int j=0; j<Yfields; j++){ */
+  /*   for (int i=0; i<Xfields; i++){ */
       int index = i+Xfields*j;
 
       fft_multi_radix_rows(
@@ -1363,7 +1366,16 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           i,j,
           smem
           );
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+      fft_multi_radix_rows(
+          src2_ptr, src2_step, src2_offset, src2_rows, src2_cols,
+          fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
+          twiddles_ptr, twiddles_step, twiddles_offset, t, fft2_rows,
+          i,j,
+          smem
+          );
+
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
           /* src1_ptr, src1_step, src1_offset, src1_rows, src1_cols, */
           /* fftr1_ptr, fftr1_step, fftr1_offset, fftr1_rows, fftr1_cols, */
       fft_multi_radix_cols(
@@ -1371,35 +1383,23 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           fft1_ptr, fft1_step, fft1_offset, fft1_rows, fft1_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fftr1_cols/2+1,
           smem
-
           );
-    /* return; */
-    barrier(CLK_GLOBAL_MEM_FENCE);
-      fft_multi_radix_rows(
-          src2_ptr, src2_step, src2_offset, src2_rows, src2_cols,
-          fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
-          twiddles_ptr, twiddles_step, twiddles_offset, t, fft2_rows,
-          i,j,
-          smem
-
-          );
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
       fft_multi_radix_cols(
           fftr2_ptr, fftr2_step, fftr2_offset, fftr2_rows, fftr2_cols,
           fft2_ptr, fft2_step, fft2_offset, fft2_rows, fft2_cols,
           twiddles_ptr, twiddles_step, twiddles_offset, t, fftr2_cols/2+1,
-          smem
+          smem);
 
-          );
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
 
-    barrier(CLK_GLOBAL_MEM_FENCE);
-
+    /* return; */
 
       mulAndNormalizeSpectrums(
           fft1_ptr, fft1_step, fft1_offset,fft2_ptr, fft2_step, fft2_offset,
           mul_ptr, mul_step, mul_offset, mul_rows, mul_cols);
 
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
 
       ifft_multi_radix_cols(
           mul_ptr, mul_step, mul_offset, mul_rows, mul_cols,
@@ -1407,9 +1407,8 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           /* pcr_ptr, pcr_step, pcr_offset, pcr_rows, pcr_cols, */
           twiddles_ptr, twiddles_step, twiddles_offset, t, mul_cols/2+1,
           smem
-
           );
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
       ifft_multi_radix_rows(
           ifftc_ptr, ifftc_step, ifftc_offset, ifftc_rows, ifftc_cols,
           pcr_ptr, pcr_step, pcr_offset, pcr_rows, pcr_cols,
@@ -1417,12 +1416,15 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
           smem
 
           );
-      barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
 
       minmaxloc(pcr_ptr, pcr_step, pcr_offset, pcr_cols, pcr_cols*pcr_rows, fft1_rows, fft1_cols, get_num_groups(0)*get_num_groups(1), dstptr,index,i,j, localmem_max, localmem_maxloc);
 
-      barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+
       refine(pcr_ptr, pcr_step, pcr_offset, pcr_cols, pcr_rows, get_num_groups(0)*get_num_groups(1), dstptr,index, i, j, 2);
+
+    barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
     } }
 
 

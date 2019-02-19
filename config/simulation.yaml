@@ -25,7 +25,7 @@ mrs_optic_flow:
   scan_radius: 21
   step_size: 24
   frame_size: 480
-  sample_point_size: 96
+  sample_point_size: 120
   filter_method: "allsac"
   # filter_method: "allsac"
 

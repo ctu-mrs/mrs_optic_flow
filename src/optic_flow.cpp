@@ -102,6 +102,8 @@ namespace mrs_optic_flow
       void callbackImage(const sensor_msgs::ImageConstPtr& msg);
       void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
 
+      int nrep;
+
     private:
       void processImage(const cv_bridge::CvImagePtr image);
       bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran);
@@ -717,6 +719,7 @@ namespace mrs_optic_flow
     subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
     subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
     subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
+    nrep = 0;
 
     if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
       subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
@@ -931,6 +934,14 @@ namespace mrs_optic_flow
   /* //{ callbackImage() */
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
+  /* imshow("NEW",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("OLD",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("cv_debugshit",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    nrep++;
+
+    if ((nrep > 100) )
+      return;
 
     if (!is_initialized || !got_odometry)
       return;
@@ -1099,6 +1110,7 @@ namespace mrs_optic_flow
     cv::Point2i mid_point          = cv::Point2i((frame_size_ / 2), (frame_size_ / 2));
 
     //  convert to grayscale
+    /* if (first_image) */
     cv::cvtColor(image_scaled(cropping_rectangle), imCurr, CV_RGB2GRAY);
 
     // | ----------------- angular rate correction ---------------- |

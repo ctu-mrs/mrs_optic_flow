@@ -37,7 +37,7 @@ private:
 
 public:
     OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name);
-    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count);
+    bool enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2, cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc, cv::InputOutputArray _pcr, cv::InputOutputArray _dst, cv::InputArray l_smem, cv::InputArray l_maxval, cv::InputArray l_maxloc, int rowsPerWI,int Xfields,int Yfields, std::vector<cv::Point2f> &output,int thread_count,int block_count);
 private:
     static void ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix);
     template <typename T>
@@ -193,7 +193,7 @@ public:
             if (dst.cols % 2 == 0)
                 options += " -D EVEN";
         }
-        cv::ocl::ProgramSource ps = prep_ocl_kernel("/home/mrs/OpenCV/opencv_3/modules/core/src/opencl/fft.cl");
+        cv::ocl::ProgramSource ps = prep_ocl_kernel("/home/viktor/OpenCV/opencv_3/modules/core/src/opencl/fft.cl");
 
         std::cout << "G0 " << globalsize[0] << " G1 " << globalsize[1] << " L0 " << localsize[0] << " L1 " << localsize[1] << std::endl;
         std::cout << options << std::endl;
@@ -399,6 +399,8 @@ private:
 
   std::mutex process_mutex;
 
+  cv::Mat imCurrF, imPrevF;
+
   bool useOCL;
   bool useNewKernel;
   OCL_FftPlanCache cache;
@@ -407,7 +409,8 @@ private:
 
   cv::UMat usrc1, usrc2;
   cv::UMat window1, window2;
-  cv::UMat FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR, P, Pm, C, D, ML;
+  cv::UMat FFT1, FFT2, FFTR1, FFTR2, MUL, IFFTC, PCR, P, Pm, C, D, ML, T;
+  cv::UMat L_SMEM,L_MAXVAL,L_MAXLOC;
   cv::UMat twiddles;
 
   int frameSize;
@@ -425,6 +428,9 @@ private:
   cv::Point2d shift_raw;
 
   bool first;
+  bool gotBoth;
+  bool gotNth;
+  int Nreps;
   bool running;
   bool raw_enable;
   bool rot_corr_enable;
