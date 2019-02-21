@@ -32,9 +32,9 @@ void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
     if (mat_host.type() == CV_32F)
       std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl;
 
-    maxval = std::min(maxval,7e6);
-    cv::convertScaleAbs(catmat, catmat, 255 / (maxval));
-    /* cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval)); */
+    /* maxval = std::min(maxval,7e6); */
+    /* cv::convertScaleAbs(catmat, catmat, 255 / (maxval)); */
+    cv::convertScaleAbs(catmat-minval, catmat, 255 / (maxval-minval));
     /* cv::minMaxIdx(usrc2, &min, &max); */
     /* std::cout << "IMMIN: " << min << " IMMAX: " << max << std::endl; */
     /* cv::convertScaleAbs(usrc2, catmat, 255 / max); */
@@ -323,7 +323,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       options += " -D NEED_MAXVAL";
       options += " -D NEED_MAXLOC";
 
-      if ((dst.cols % 2) == 0)
+      if ((block_count % 2) == 0)
         options += " -D EVEN";
 
       size_t wgs = thread_count;
@@ -364,6 +364,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       ki = k_phase_corr.set(ki, rowsPerWI);
       ki = k_phase_corr.set(ki, Xfields);
       ki = k_phase_corr.set(ki, Yfields);
+      ki = k_phase_corr.set(ki, block_count);
 
       /* k_phase_corr.args( */
       /*     cv::ocl::KernelArg::ReadOnly(src1), */
@@ -390,7 +391,9 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       std::cout << "LMS AVAIL: " << cv::ocl::Device::getDefault().localMemSize() << std::endl;
       std::cout << "BS: " << cv::ocl::Device::getDefault().printfBufferSize() << std::endl;
 
-      bool partial = k_phase_corr.run(2, globalsize, localsize, false, mainQueue);
+      bool partial = k_phase_corr.run(2, globalsize, localsize, true, mainQueue);
+
+      return false;
 
       /* showFMat(fft1); */
 
@@ -1331,6 +1334,10 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   _src1.copyTo(usrc1);
   _src2.copyTo(usrc2);
 
+  cv::Mat src1, src2, h_window1, h_window2;
+  _src1.copyTo(src1);
+  _src2.copyTo(src2);
+
 
   /* usrc1 = _src1.getUMat(cv::ACCESS_READ); */
   /* usrc2 = _src2.getUMat(cv::ACCESS_READ); */
@@ -1368,7 +1375,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
         /* if (!useNewKernel) { */
-        if ((!useNewKernel) || ((j==(X-1)) && (i==(X-1)))){
+        if ((!useNewKernel) || ((j==(Y-1)) && (i==(X-2)))){
+        /* if ((!useNewKernel) || ((j==0) && (i==0))){ */
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
           roi = cv::Rect(xi,yi,samplePointSize,samplePointSize);
@@ -1380,15 +1388,15 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
           /* } */
 
           /* if (!useOCL) { */
-          window1 = usrc1(roi);
-          window2 = usrc2(roi);
 
           if (useOCL){
+            window1 = usrc1(roi);
+            window2 = usrc2(roi);
             /* FFTR1(cv::Rect(0,0,samplePointSize/4,samplePointSize)).copyTo(storageA); */
             /* FFTR1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
             /* FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
             dft_special(window1, FFT1, cv::DFT_REAL_OUTPUT);
-            dft_special(window2, FFT1, cv::DFT_REAL_OUTPUT);
+            dft_special(window2, FFT2, cv::DFT_REAL_OUTPUT);
             mulSpectrums(FFT1, FFT2, P, 0, true);
             magSpectrums(P, Pm);
             divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
@@ -1401,23 +1409,29 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
             /* s(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storage); */
           }
           else{
+            h_window1 = src1(roi);
+            h_window2 = src2(roi);
           /* FFT1(cv::Rect(0,0,samplePointSize/2,samplePointSize)).copyTo(storageA); */
-            dft(window1, H_FFT1, cv::DFT_REAL_OUTPUT);
+            dft(h_window1, H_FFT1, cv::DFT_REAL_OUTPUT);
           /* FFT1.copyTo(storageB); */
-            dft(window2, H_FFT2, cv::DFT_REAL_OUTPUT);
+            dft(h_window2, H_FFT2, cv::DFT_REAL_OUTPUT);
             mulSpectrums(H_FFT1, H_FFT2, H_P, 0, true);
             magSpectrums(H_P, H_Pm);
             divSpectrums(H_P, H_Pm, H_D, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
             idft(H_D, H_C); // gives us the nice peak shift location...
             fftShift(H_C); // shift the energy to the center of the frame.
-            H_C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA);
-            PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
+            /* FFT1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)).copyTo(storageA); */
+            FFT2.copyTo(storageA);
+            /* FFTR1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize/2,samplePointSize)).copyTo(storageA); */
+            /* FFTR1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize/2,samplePointSize)).copyTo(storageA); */
+            /* H_FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB); */
+            H_FFT2(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
           }
 
 
 
             /* if ((j==0) && (i==0)){ */
-              cv::Mat diffmap = (storageB) - (storageA);
+              cv::Mat diffmap = (storageB) - (storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)));
               showFMat(diffmap);
               showFMat(storageB, "OLD");
               showFMat(storageA,"NEW");
