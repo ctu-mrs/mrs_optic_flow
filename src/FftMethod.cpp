@@ -245,7 +245,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
             n *= radix;
         }
 
-        twiddles.create(1, twiddle_size, CV_MAKE_TYPE(dft_depth, 2));
+        twiddles.create(1, twiddle_size, CV_MAKE_TYPE(dft_depth, 2),cv::USAGE_ALLOCATE_DEVICE_MEMORY);
         if (dft_depth == CV_32F)
             fillRadixTable<float>(twiddles, radixes);
         else
@@ -356,9 +356,9 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(ifftc));
       ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadWrite(pcr));
       ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrReadWrite(dst));
-      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_smem));
-      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxloc));
-      ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxval));
+      /* ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_smem)); */
+      /* ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxloc)); */
+      /* ki = k_phase_corr.set(ki, cv::ocl::KernelArg::PtrWriteOnly(l_maxval)); */
       ki = k_phase_corr.set(ki, cv::ocl::KernelArg::ReadOnlyNoSize(twiddles));
       ki = k_phase_corr.set(ki, thread_count);
       ki = k_phase_corr.set(ki, rowsPerWI);
@@ -393,7 +393,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true, mainQueue);
 
-      return false;
+      /* return false; */
 
       /* showFMat(fft1); */
 
@@ -414,10 +414,10 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
           const float * maxptr = NULL, * maxptr2 = NULL;
           const uint * maxlocptr = NULL;
           maxptr = (const float *)(dst_host.ptr() + index);
-          index += sizeof(float) * pcr.rows;
+          index += sizeof(float) * block_count;
           index = cv::alignSize(index, 8);
           maxlocptr = (const uint *)(dst_host.ptr() + index);
-          index += sizeof(uint) * pcr.rows;
+          index += sizeof(uint) * block_count;
           index = cv::alignSize(index, 8);
 
           /* for (int k = 0; k < pcr.rows; k++) */
@@ -449,11 +449,13 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       /* std::cout << "MAXVAL: " << maxVal <<std::endl; */
       /* std::cout << "MAXLOC: " << maxloc <<std::endl; */
 
-          maxLoc[0] = (maxloc % pcr.cols)-pcr.cols/2;
-          maxLoc[1] = (maxloc / pcr.cols)-pcr.rows/2;
+          maxLoc[0] = (maxloc % block_count)-block_count/2;
+          maxLoc[1] = (maxloc / block_count)-block_count/2;
+
+          std::cout << i << ":" << j << " - " << maxLoc[0] << ":" << maxLoc[1] << " | " << std::endl;
 
 
-          /* output[i+j*Xfields]  = cv::Point2i(maxLoc[0],maxLoc[1]); */
+          /* output[i+j*Xfields]  = cv::Point2f(maxLoc[0],maxLoc[1]); */
           output[i+j*Xfields]  = cv::Point2f(maxLocF[0],maxLocF[1]);
       /* std::cout << "OUT: " << output[i+j*Xfields] <<std::endl; */
     }}
@@ -1374,8 +1376,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
         begin = std::clock();
 
 
-        /* if (!useNewKernel) { */
-        if ((!useNewKernel) || ((j==(Y-1)) && (i==(X-2)))){
+        if (!useNewKernel) {
+        /* if ((!useNewKernel) || ((j==(Y-2)) && (i==(X-1)))){ */
         /* if ((!useNewKernel) || ((j==0) && (i==0))){ */
           xi    = i * samplePointSize;
           yi    = j * samplePointSize;
@@ -1421,12 +1423,24 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
             idft(H_D, H_C); // gives us the nice peak shift location...
             fftShift(H_C); // shift the energy to the center of the frame.
             /* FFT1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)).copyTo(storageA); */
-            FFT2.copyTo(storageA);
+            /* MUL.copyTo(storageA); */
+            /* IFFTC(cv::Rect(0,0,frameSize,frameSize/2)).copyTo(storageA); */
+            /* IFFTC.copyTo(storageA); */
+            PCR.copyTo(storageA);
             /* FFTR1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize/2,samplePointSize)).copyTo(storageA); */
             /* FFTR1(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize/2,samplePointSize)).copyTo(storageA); */
             /* H_FFT1(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB); */
-            H_FFT2(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
+            H_C(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageB);
           }
+            /* cv::Mat storageData; */
+            /* ML.copyTo(storageData); */
+          /* std::cout<< "Starting to vomit the output data array: " << std::endl; */
+
+          /* for (int n=0; n<16*samplePointSize*2; n++){ */
+            /* std::cout << n << ": " << storageData.at<uint>(n) << " | "; */
+          /* } */
+
+          /* std::cout<< "Ending the vomitting."<< std::endl; */
 
 
 
@@ -1434,9 +1448,13 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
               cv::Mat diffmap = (storageB) - (storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)));
               showFMat(diffmap);
               showFMat(storageB, "OLD");
-              showFMat(storageA,"NEW");
+              showFMat(storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)),"NEW");
+              showFMat(storageA,"FULL");
+              /* showFMat(ML,"DATA"); */
             /* } */
         }
+            PCR.copyTo(storageA);
+              showFMat(storageA,"NEW");
 
           /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
           /*     showFMat(storageA,"NEW"); */
@@ -1533,7 +1551,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
     /* C.create(samplePointSize, samplePointSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY); */
     D.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     T.create(frameSize, frameSize, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
-    ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float))*2, CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
+    ML.create(1, sqNum*sqNum*samplePointSize*(sizeof(uint)+sizeof(float)), CV_32FC1,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
 
     L_SMEM.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
     L_MAXVAL.create(1,samplePointSize*samplePointSize,CV_32FC2,cv::USAGE_ALLOCATE_DEVICE_MEMORY);
