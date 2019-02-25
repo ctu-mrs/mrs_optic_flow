@@ -2,7 +2,7 @@
 
 cv::Mat storageA, storageB, diffmap;
 
-void showFMat(cv::InputOutputArray &M, const char* name = "cv_debugshit"){
+void showFMat(cv::InputOutputArray &M, const char* name = "ocv_debugshit"){
     cv::Mat mat_host;
   if (M.isUMat()){
     cv::UMat UM = M.getUMat();
@@ -452,11 +452,16 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
           maxLoc[0] = (maxloc % block_count)-block_count/2;
           maxLoc[1] = (maxloc / block_count)-block_count/2;
 
-          std::cout << i << ":" << j << " - " << maxLoc[0] << ":" << maxLoc[1] << " | " << std::endl;
+          if ((abs(maxLoc[0])>block_count/4) || (abs(maxLoc[1])>block_count/4)){
+            /* pcr.copyTo(storageB); */
+            ROS_WARN("LARGE SHIFT DETECTED!: %d:%d - %d:%d", i,j, maxLoc[0] ,maxLoc[1]);
+            output[i+j*Xfields]  = cv::Point2f(std::numeric_limits<float>::quiet_NaN(),std::numeric_limits<float>::quiet_NaN());
+          }
+          else
+            output[i+j*Xfields]  = cv::Point2f(maxLocF[0],maxLocF[1]);
 
 
           /* output[i+j*Xfields]  = cv::Point2f(maxLoc[0],maxLoc[1]); */
-          output[i+j*Xfields]  = cv::Point2f(maxLocF[0],maxLocF[1]);
       /* std::cout << "OUT: " << output[i+j*Xfields] <<std::endl; */
     }}
       /* std::cout << "OUT: " << output <<std::endl; */
@@ -816,8 +821,8 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1,cv::InputArray _src2, st
     fillRadixTable<double>(twiddles, radixes);
 
     char cvt[2][40];
-  buildOptions = cv::format("-D LOCAL_SIZE=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s -D convertToDT=%s",
-      dft_size, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
+  buildOptions = cv::format("-D LOCAL_SIZE=%d -D SEARCH_RADIUS=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s -D convertToDT=%s",
+      dft_size, dft_size/4, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
       dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str(),
       cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, min_radix)),
       cv::ocl::convertTypeStr(dft_depth, dft_depth, min_radix, cvt[0])
@@ -1453,8 +1458,10 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
               /* showFMat(ML,"DATA"); */
             /* } */
         }
-            PCR.copyTo(storageA);
-              showFMat(storageA,"NEW");
+            /* PCR.copyTo(storageA); */
+            /*   showFMat(storageA,"ocv_NEW"); */
+            /* IFFTC.copyTo(storageB); */
+              /* showFMat(storageB,"ocv_NEW"); */
 
           /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
           /*     showFMat(storageA,"NEW"); */
@@ -1735,7 +1742,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     /* /1* cv::convertScaleAbs(usrc2, catmat, 255 / max); *1/ */
     /* imshow("debugshit",catmat); */
     /* imshow("debugshit",usrc1); */
-    cv::imshow("cv_optic_flow", imView);
+    cv::imshow("ocv_optic_flow", imView);
     /* cv::imshow("cv_optic_flow", imView(cv::Rect(samplePointSize*3,samplePointSize*2,samplePointSize,samplePointSize))); */
     cv::waitKey(1);
   }

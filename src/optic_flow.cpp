@@ -412,6 +412,11 @@ namespace mrs_optic_flow
       if( cv::determinant(rot[bestIndex]) <0){
         std::cout << "Invalid rotation found" << std::endl;
       }
+      if (bestAngDiff>(M_PI/4)){
+        std::cout << "Angle difference greater than pi/4, skipping." << std::endl;
+        return false;
+      }
+
       std::cout << "ANGLE: " << bestAngDiff << std::endl;
       tf2::Matrix3x3(bestQuatRateOF).getRPY(roll,pitch,yaw);
       std::cout << "Angles  OF: [" << roll << " " << pitch << " " << yaw << "]" << std::endl;
@@ -592,10 +597,11 @@ namespace mrs_optic_flow
 
 
     if (gui_) {
-      cv::namedWindow("cv_optic_flow", cv::WINDOW_FREERATIO);
-      cv::namedWindow("cv_debugshit", cv::WINDOW_FREERATIO);
-      cv::namedWindow("OLD", cv::WINDOW_FREERATIO);
-      cv::namedWindow("NEW", cv::WINDOW_FREERATIO);
+      cv::namedWindow("ocv_optic_flow", cv::WINDOW_FREERATIO);
+      /* cv::namedWindow("ocv_debugshit", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("OLD", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("ocv_NEW", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("ocv_iffc", cv::WINDOW_FREERATIO); */
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
