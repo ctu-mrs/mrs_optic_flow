@@ -1476,7 +1476,7 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
 
     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
 
-      refine(pcr_ptr, pcr_step, pcr_offset, LOCAL_SIZE, LOCAL_SIZE, get_num_groups(0)*get_num_groups(1), dstptr,index, i, j, samplePointSize,2);
+      refine(pcr_ptr, pcr_step, pcr_offset, LOCAL_SIZE, LOCAL_SIZE, get_num_groups(0)*get_num_groups(1), dstptr,index, i, j, samplePointSize,3);
 
     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
     } }
