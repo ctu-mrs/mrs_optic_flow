@@ -645,7 +645,7 @@ namespace mrs_optic_flow
               }
 
               cv::ocl::Context context;
-              if (!context.create(cv::ocl::Device::TYPE_ALL))
+              if (!context.create(cv::ocl::Device::TYPE_GPU))
               {
                 ROS_INFO("Failed creating the context...");
                 //return;
