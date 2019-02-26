@@ -102,6 +102,8 @@ namespace mrs_optic_flow
       void callbackImage(const sensor_msgs::ImageConstPtr& msg);
       void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
 
+      int nrep;
+
     private:
       void processImage(const cv_bridge::CvImagePtr image);
       bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran);
@@ -152,6 +154,8 @@ namespace mrs_optic_flow
       double     uav_height;
       double     uav_height_curr;
       std::mutex mutex_uav_height;
+
+      std::mutex mutex_process;
 
     private:
       tf2::Quaternion tilt_prev;
@@ -238,6 +242,8 @@ namespace mrs_optic_flow
       double       RansacThresholdRadSq;
       
       std::string camera_frame_, uav_frame_,uav_untilted_frame_;
+
+      std::string fft_cl_file_;
 
       std::string filter_method_;
 
@@ -406,6 +412,11 @@ namespace mrs_optic_flow
       if( cv::determinant(rot[bestIndex]) <0){
         std::cout << "Invalid rotation found" << std::endl;
       }
+      if (bestAngDiff>(M_PI/4)){
+        std::cout << "Angle difference greater than pi/4, skipping." << std::endl;
+        return false;
+      }
+
       std::cout << "ANGLE: " << bestAngDiff << std::endl;
       tf2::Matrix3x3(bestQuatRateOF).getRPY(roll,pitch,yaw);
       std::cout << "Angles  OF: [" << roll << " " << pitch << " " << yaw << "]" << std::endl;
@@ -508,44 +519,46 @@ namespace mrs_optic_flow
     int videoFPS = param_loader.load_param2<int>("video_fps");
 
     // | -------------------- optic flow params ------------------- |
-  param_loader.load_param("optic_flow/scale_factor", scale_factor_);
+    param_loader.load_param("FftCLFile", fft_cl_file_);
 
-    param_loader.load_param("optic_flow/max_processing_rate", max_processing_rate_);
-    param_loader.load_param("optic_flow/method", method_);
-    param_loader.load_param("optic_flow/scan_radius", scan_radius_);
-    param_loader.load_param("optic_flow/step_size", step_size_);
-    param_loader.load_param("optic_flow/frame_size", frame_size_);
+    param_loader.load_param("mrs_optic_flow/scale_factor", scale_factor_);
+
+    param_loader.load_param("mrs_optic_flow/max_processing_rate", max_processing_rate_);
+    param_loader.load_param("mrs_optic_flow/method", method_);
+    param_loader.load_param("mrs_optic_flow/scan_radius", scan_radius_);
+    param_loader.load_param("mrs_optic_flow/step_size", step_size_);
+    param_loader.load_param("mrs_optic_flow/frame_size", frame_size_);
 
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     frame_size_=frame_size_/scale_factor_;
   }
 
-    param_loader.load_param("optic_flow/sample_point_size", sample_point_size_);
+    param_loader.load_param("mrs_optic_flow/sample_point_size", sample_point_size_);
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     sample_point_size_=sample_point_size_/scale_factor_;
   }
     sample_point_count_sqrt_ = frame_size_/sample_point_size_;
     sample_point_count_ = sample_point_count_sqrt_*sample_point_count_sqrt_;
-    param_loader.load_param("optic_flow/filter_method", filter_method_);
-    param_loader.load_param("optic_flow/apply_abs_bouding", apply_abs_bounding_);
-    param_loader.load_param("optic_flow/apply_rel_bouding", apply_rel_bouding_);
+    param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
+    param_loader.load_param("mrs_optic_flow/apply_abs_bouding", apply_abs_bounding_);
+    param_loader.load_param("mrs_optic_flow/apply_rel_bouding", apply_rel_bouding_);
 
     {
       double calibration_coeff_both; // use this as a backup value in case calibrations for separate axes are not available
-      param_loader.load_param("optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
-      param_loader.load_param("optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
-      param_loader.load_param("optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
+      param_loader.load_param("mrs_optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
+      param_loader.load_param("mrs_optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
     }
 
 
-    param_loader.load_param("optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
-    param_loader.load_param("optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
-    RansacThresholdRadSq = pow(param_loader.load_param2<double>("optic_flow/ransac/threshold_rad"), 2);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_chosen", ransac_num_of_chosen_);
+    param_loader.load_param("mrs_optic_flow/ransac/num_of_iter", ransac_num_of_iter_);
+    RansacThresholdRadSq = pow(param_loader.load_param2<double>("mrs_optic_flow/ransac/threshold_rad"), 2);
 
-    param_loader.load_param("optic_flow/rotation_correction", rotation_correction_);
-    param_loader.load_param("optic_flow/tilt_correction", tilt_correction_);
-    param_loader.load_param("optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
-    param_loader.load_param("optic_flow/filtering/analyze_duration", analyze_duration_);
+    param_loader.load_param("mrs_optic_flow/rotation_correction", rotation_correction_);
+    param_loader.load_param("mrs_optic_flow/tilt_correction", tilt_correction_);
+    param_loader.load_param("mrs_optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
+    param_loader.load_param("mrs_optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
   if (method_ < 3 || method_ > 5) {
     ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
@@ -584,7 +597,11 @@ namespace mrs_optic_flow
 
 
     if (gui_) {
-      cv::namedWindow("optic_flow", cv::WINDOW_FREERATIO);
+      cv::namedWindow("ocv_optic_flow", cv::WINDOW_FREERATIO);
+      /* cv::namedWindow("ocv_debugshit", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("OLD", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("ocv_NEW", cv::WINDOW_FREERATIO); */
+      /* cv::namedWindow("ocv_iffc", cv::WINDOW_FREERATIO); */
     }
 
   if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
@@ -619,7 +636,7 @@ namespace mrs_optic_flow
               }
       case 4: {
 
-              std::cout << cv::getBuildInformation() << std::endl;
+              /* std::cout << cv::getBuildInformation() << std::endl; */
 
               if (!cv::ocl::haveOpenCL())
               {
@@ -654,7 +671,7 @@ namespace mrs_optic_flow
 
               cv::ocl::setUseOpenCL(true);
 
-                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS);
+                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS, fft_cl_file_);
                 break;
               }
 
@@ -708,6 +725,7 @@ namespace mrs_optic_flow
     subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
     subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
     subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
+    nrep = 0;
 
     if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
       subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
@@ -922,6 +940,14 @@ namespace mrs_optic_flow
   /* //{ callbackImage() */
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
+  /* imshow("NEW",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("OLD",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("cv_debugshit",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+  /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    nrep++;
+
+    /* if ((nrep > 100) ) */
+    /*   return; */
 
     if (!is_initialized || !got_odometry)
       return;
@@ -1090,6 +1116,7 @@ namespace mrs_optic_flow
     cv::Point2i mid_point          = cv::Point2i((frame_size_ / 2), (frame_size_ / 2));
 
     //  convert to grayscale
+    /* if (first_image) */
     cv::cvtColor(image_scaled(cropping_rectangle), imCurr, CV_RGB2GRAY);
 
     // | ----------------- angular rate correction ---------------- |
@@ -1181,7 +1208,11 @@ namespace mrs_optic_flow
     tf2::Stamped<tf2::Transform> tempTfC2B;
     tf2::fromMsg(transformCam2Base, tempTfC2B);
 
-    mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
+    {
+      std::scoped_lock lock(mutex_process);
+
+      mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
+    }
     tf2::Quaternion rot;
     tf2::Vector3 tran;
     geometry_msgs::TwistWithCovarianceStamped velocity;
@@ -1195,8 +1226,9 @@ namespace mrs_optic_flow
       /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
       detilt.setRPY(imu_roll,imu_pitch,odometry_yaw);
+      /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
-      /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << std::endl; */
+      /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << " " << imu_yaw << std::endl; */
     }
 
     /* detilt = detilt.inverse(); */
@@ -1207,7 +1239,13 @@ namespace mrs_optic_flow
 
       tran = tf2::Transform(detilt)*(tf2::Transform(tempTfC2B.getRotation())*tran);
       std::cout << "Detilted: " << tran.x() << " " << tran.y() << " "<< tran.z() << " "<< std::endl;
-      rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle());
+
+      /* double troll, tpitch, tyaw; */
+      /* tf2::Matrix3x3(tempTfC2B.getRotation()).getRPY(troll,tpitch,tyaw); */
+      /* std::cout << "C2B: " << troll << " " << tpitch << " "<< tyaw << " "<< std::endl; */
+
+      /* rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle()); */
+      rot = tf2::Quaternion(tempTfC2B*(rot.getAxis()), rot.getAngle());
 
       velocity.header.frame_id = uav_untilted_frame_;
       velocity.header.stamp    = ros::Time::now();
@@ -1222,7 +1260,7 @@ namespace mrs_optic_flow
       velocity.twist.covariance[7] = velocity.twist.covariance[0];
       velocity.twist.covariance[14] = velocity.twist.covariance[0]*2;
 
-      velocity.twist.covariance[21] = atan(2/fx); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[21] = atan(0.25); //I expect error of 0.5 rad/s.
       velocity.twist.covariance[27] = velocity.twist.covariance[21];
       velocity.twist.covariance[36] = velocity.twist.covariance[21];
       publisher_velocity.publish(velocity);

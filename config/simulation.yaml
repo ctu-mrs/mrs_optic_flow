@@ -18,7 +18,7 @@ store_video: false
 video_path: "/dev/null"
 video_fps: 30
 
-optic_flow:
+mrs_optic_flow:
 
   max_processing_rate: 500
   method: 4

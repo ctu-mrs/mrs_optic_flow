@@ -64,6 +64,11 @@ include_directories(
 add_library(util_functions src/utilityFunctions.cpp)
 # add_library(block_method src/BlockMethod.cpp)
 add_library(fft_method src/FftMethod.cpp)
+# # add_custom_target(fft_method_cl COMMAND "pwd; cp src/FftMethod.cl ~/home/.ros/" SOURCES src/FftMethod.cl)
+# add_custom_target(fft_method_cl SOURCES src/FftMethod.cl)
+# add_custom_command(TARGET fft_method_cl PRE_BUILD
+#                    COMMAND ${CMAKE_COMMAND} -E copy
+#                        ${CMAKE_SOURCE_DIR}/src/FftMethod.cl ~/.ros/)
 add_library(scaleRotationEstimator src/scaleRotationEstimator.cpp)
 #add_library(fastSpacedOCL_method src/FastSpacedBMMethod_OCL.cpp)
 
@@ -75,11 +80,13 @@ target_link_libraries(scaleRotationEstimator ${OpenCV_LIBRARIES})
 ## Declare a C++ executable
 add_library(OpticFlow src/optic_flow.cpp)
 
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(OpticFlow
   ${${PROJECT_NAME}_EXPORTED_TARGETS} 
   ${catkin_EXPORTED_TARGETS}
+  # fft_method_cl
   )
 
 add_custom_target(headers SOURCES ${HEADER_FILES} ${OPENCL_FILES} ${LAUNCHER_FILES} ${YAML_FILES})
