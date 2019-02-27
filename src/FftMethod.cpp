@@ -1451,11 +1451,11 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
 
             /* if ((j==0) && (i==0)){ */
-              cv::Mat diffmap = (storageB) - (storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)));
-              showFMat(diffmap);
-              showFMat(storageB, "OLD");
-              showFMat(storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)),"NEW");
-              showFMat(storageA,"FULL");
+              /* cv::Mat diffmap = (storageB) - (storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize))); */
+              /* showFMat(diffmap); */
+              /* showFMat(storageB, "OLD"); */
+              /* showFMat(storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)),"NEW"); */
+              /* showFMat(storageA,"FULL"); */
               /* showFMat(ML,"DATA"); */
             /* } */
         }

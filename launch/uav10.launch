@@ -119,7 +119,7 @@
       <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
         <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
 
-          <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
+          <rosparam file="$(find mrs_optic_flow)/config/uav10.yaml" />
           <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
           <param name="enable_profiler" value="$(arg profiler)" />
 
