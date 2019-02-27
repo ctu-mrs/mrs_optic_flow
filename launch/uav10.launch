@@ -36,119 +36,117 @@
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
     <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
-      <!-- <node name="$(arg uav_name)_vision_nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="screen"> -->
-        <param name="num_worker_threads" value="4" />
-      </node>
+      <param name="num_worker_threads" value="4" />
+    </node>
 
+    <!-- Bluefox2 nodelet -->
+    <!-- Camera Settings -->
+    <arg name="serial" default="$(arg cam_device)" />
+    <arg name="camera_name" default="bluefox" />
+    <arg name="camera" default="$(arg camera_name)" />
+    <arg name="frame_id" default="$(arg camera)" />
+    <arg name="calib_url" default="file://$(find mrs_general)/config/camera_calibrations/mv_$(arg cam_device)_radtan.yaml" />
+    <arg name="fps" default="$(arg cam_rate)" />
+    <arg name="color" default="false"/>
+    <arg name="idpf" default="0" />
+    <arg name="aec" default="false" />
+    <!-- sunny -->
+    <!-- <arg name="expose_us" default="75" /> -->
+    <arg name="expose_us" default="400" /> <!-- dusk -->
+    <arg name="agc" default="false" />
+    <arg name="boost" value="false"/>
+    <arg name="gain_db" default="0.0" />
+    <arg name="cbm" default="0" />
+    <arg name="ctm" default="1" />
+    <arg name="dcfm" default="0" />
+    <arg name="hdr" default="false" />
+    <arg name="wbp" default="-1" />
+    <arg name="request" default="0" />
+    <arg name="mm" default="0" />
 
-      <!-- Bluefox2 nodelet -->
+    <!-- Arguments for theora quality, images being compressed into "stream" -->
+    <arg name="compressed_jpeg_quality" default="90" />
+    <arg name="theora_keyframe_frequency" default="60"  />
+    <arg name="theora_target_bitrate" default="50000"  />
+    <arg name="theora_quality" default="8"  />
+    <arg name="theora_optimize_for" default="0"  />
+
+    <include file="$(find bluefox2)/launch/single_nodelet.launch" >
+
+      <!-- Common Interface -->
+      <arg name="device" value="$(arg cam_device)"/>
+      <arg name="rate" value="$(arg cam_rate)"/>
+
       <!-- Camera Settings -->
-      <arg name="serial" default="$(arg cam_device)" />
-      <arg name="camera_name" default="bluefox" />
-      <arg name="camera" default="$(arg camera_name)" />
-      <arg name="frame_id" default="$(arg camera)" />
-      <arg name="calib_url" default="file://$(find mrs_general)/config/camera_calibrations/mv_$(arg cam_device)_radtan.yaml" />
-      <arg name="fps" default="$(arg cam_rate)" />
-      <arg name="color" default="false"/>
-      <arg name="idpf" default="0" />
-      <arg name="aec" default="false" />
-      <!-- sunny -->
-      <!-- <arg name="expose_us" default="75" /> -->
-      <arg name="expose_us" default="400" /> <!-- dusk -->
-      <arg name="agc" default="false" />
-      <arg name="boost" value="false"/>
-      <arg name="gain_db" default="0.0" />
-      <arg name="cbm" default="0" />
-      <arg name="ctm" default="1" />
-      <arg name="dcfm" default="0" />
-      <arg name="hdr" default="false" />
-      <arg name="wbp" default="-1" />
-      <arg name="request" default="0" />
-      <arg name="mm" default="0" />
+      <arg name="serial" value="$(arg cam_device)"/>
+      <arg name="camera_name" value="$(arg camera_name)"/>
+      <arg name="camera" value="$(arg camera)"/>
+      <arg name="frame_id" value="$(arg frame_id)"/>
+      <arg name="calib_url" value="$(arg calib_url)"/>
+      <arg name="fps" value="$(arg fps)"/>
+      <arg name="color" value="$(arg color)"/>
+      <arg name="aec" value="$(arg aec)"/>
+      <arg name="cbm" value="$(arg cbm)"/>
+      <arg name="ctm" value="$(arg ctm)"/>
+      <arg name="dcfm" value="$(arg dcfm)"/>
+      <arg name="hdr" value="$(arg hdr)"/>
+      <arg name="wbp" value="$(arg wbp)"/>
+      <arg name="expose_us" value="$(arg expose_us)"/>
+      <arg name="gain_db" value="$(arg gain_db)"/>
+      <arg name="boost" value="$(arg boost)"/>
+      <arg name="mm" value="$(arg mm)"/>
+
+      <!-- Node Settings -->
+      <arg name="plugin" value="$(arg cam_plugin)"/>
+      <arg name="manager" value="$(arg uav_name)_vision_nodelet_manager"/>
+      <arg name="output" value="$(arg cam_output)"/>
+      <arg name="proc" value="$(arg cam_proc)"/>
+      <arg name="view" value="$(arg cam_view)"/>
+      <arg name="calib" value="$(arg cam_calib)"/>
 
       <!-- Arguments for theora quality, images being compressed into "stream" -->
-      <arg name="compressed_jpeg_quality" default="90" />
-      <arg name="theora_keyframe_frequency" default="60"  />
-      <arg name="theora_target_bitrate" default="50000"  />
-      <arg name="theora_quality" default="8"  />
-      <arg name="theora_optimize_for" default="0"  />
+      <arg name="compressed_jpeg_quality" default="$(arg compressed_jpeg_quality)" />
+      <arg name="theora_keyframe_frequency" default="$(arg theora_keyframe_frequency)"  />
+      <arg name="theora_target_bitrate" default="$(arg theora_target_bitrate)"  />
+      <arg name="theora_quality" default="$(arg theora_quality)"  />
+      <arg name="theora_optimize_for" default="$(arg theora_optimize_for)"  />
 
-      <include file="$(find bluefox2)/launch/single_nodelet.launch" >
+    </include>
 
-        <!-- Common Interface -->
-        <arg name="device" value="$(arg cam_device)"/>
-        <arg name="rate" value="$(arg cam_rate)"/>
+    <!-- Optic flow nodelet -->
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true">
 
-        <!-- Camera Settings -->
-        <arg name="serial" value="$(arg cam_device)"/>
-        <arg name="camera_name" value="$(arg camera_name)"/>
-        <arg name="camera" value="$(arg camera)"/>
-        <arg name="frame_id" value="$(arg frame_id)"/>
-        <arg name="calib_url" value="$(arg calib_url)"/>
-        <arg name="fps" value="$(arg fps)"/>
-        <arg name="color" value="$(arg color)"/>
-        <arg name="aec" value="$(arg aec)"/>
-        <arg name="cbm" value="$(arg cbm)"/>
-        <arg name="ctm" value="$(arg ctm)"/>
-        <arg name="dcfm" value="$(arg dcfm)"/>
-        <arg name="hdr" value="$(arg hdr)"/>
-        <arg name="wbp" value="$(arg wbp)"/>
-        <arg name="expose_us" value="$(arg expose_us)"/>
-        <arg name="gain_db" value="$(arg gain_db)"/>
-        <arg name="boost" value="$(arg boost)"/>
-        <arg name="mm" value="$(arg mm)"/>
+      <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
+        <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
 
-        <!-- Node Settings -->
-        <arg name="plugin" value="$(arg cam_plugin)"/>
-        <arg name="manager" value="$(arg uav_name)_vision_nodelet_manager"/>
-        <arg name="output" value="$(arg cam_output)"/>
-        <arg name="proc" value="$(arg cam_proc)"/>
-        <arg name="view" value="$(arg cam_view)"/>
-        <arg name="calib" value="$(arg cam_calib)"/>
+          <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
+          <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
+          <param name="enable_profiler" value="$(arg profiler)" />
 
-        <!-- Arguments for theora quality, images being compressed into "stream" -->
-        <arg name="compressed_jpeg_quality" default="$(arg compressed_jpeg_quality)" />
-        <arg name="theora_keyframe_frequency" default="$(arg theora_keyframe_frequency)"  />
-        <arg name="theora_target_bitrate" default="$(arg theora_target_bitrate)"  />
-        <arg name="theora_quality" default="$(arg theora_quality)"  />
-        <arg name="theora_optimize_for" default="$(arg theora_optimize_for)"  />
+          <param name="camera_frame" value="$(arg camera_frame)" />
+          <param name="uav_frame" value="$(arg uav_frame)" />
+          <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
-      </include>
+          <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
 
-      <!-- Optic flow nodelet -->
-      <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true">
+          <!-- Subscribers -->
+          <!--remap from="~odometry_in" to="ground_truth" /-->
+          <remap from="~odometry_in" to="mavros/local_position/odom" />
+          <remap from="~camera_in" to="bluefox/image_raw" />
+          <remap from="~camera_info_in" to="bluefox/camera_info" />
+          <remap from="~uav_height_in" to="odometry/altitude" />
+          <remap from="~imu_in" to="mavros/imu/data" />
 
-        <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
-          <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
+          <!-- Publishers -->
+          <remap from="~velocity_out" to="~velocity" />
+          <remap from="~velocity_raw_out" to="~velocity_raw" />
+          <remap from="~velocity_stddev_out" to="~velocity_stddev" />
+          <remap from="~tilt_correction_out" to="~tilt_correction" />
+          <remap from="~allsac_chosen_out" to="~allsac_chosen" />
+          <remap from="~profiler" to="profiler" />
 
-            <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
-            <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
-            <param name="enable_profiler" value="$(arg profiler)" />
+        </node>
 
-            <param name="camera_frame" value="$(arg camera_frame)" />
-            <param name="uav_frame" value="$(arg uav_frame)" />
-            <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
+      </group>
 
-            <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
-
-            <!-- Subscribers -->
-            <!--remap from="~odometry_in" to="ground_truth" /-->
-            <remap from="~odometry_in" to="mavros/local_position/odom" />
-            <remap from="~camera_in" to="bluefox/image_raw" />
-            <remap from="~camera_info_in" to="bluefox/camera_info" />
-            <remap from="~uav_height_in" to="odometry/altitude" />
-            <remap from="~imu_in" to="mavros/imu/data" />
-
-            <!-- Publishers -->
-            <remap from="~velocity_out" to="~velocity" />
-            <remap from="~velocity_raw_out" to="~velocity_raw" />
-            <remap from="~velocity_stddev_out" to="~velocity_stddev" />
-            <remap from="~tilt_correction_out" to="~tilt_correction" />
-            <remap from="~allsac_chosen_out" to="~allsac_chosen" />
-            <remap from="~profiler" to="profiler" />
-
-          </node>
-
-        </group>
-
-      </launch>
+    </launch>
