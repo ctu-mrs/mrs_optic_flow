@@ -3,6 +3,7 @@
 cv::Mat storageA, storageB, diffmap;
 
 void showFMat(cv::InputOutputArray &M, const char* name = "ocv_debugshit"){
+
     cv::Mat mat_host;
   if (M.isUMat()){
     cv::UMat UM = M.getUMat();
@@ -25,12 +26,13 @@ void showFMat(cv::InputOutputArray &M, const char* name = "ocv_debugshit"){
     double maxval;
     cv::Point minloc, maxloc;
     cv::minMaxLoc(catmat, &minval, &maxval, &minloc, &maxloc);
-    std::cout << "IMMIN: " << minval << " IMMAX: " << maxval << std::endl;
-    std::cout << "MINLOC: " << minloc << " MAXLOC: " << maxloc << std::endl;
-    std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl;
+
+    /* std::cout << "IMMIN: " << minval << " IMMAX: " << maxval << std::endl; */
+    /* std::cout << "MINLOC: " << minloc << " MAXLOC: " << maxloc << std::endl; */
+    /* std::cout << "WIDTH: " << mat_host.cols << " HEIGHT: " << mat_host.rows << std::endl; */
     
-    if (mat_host.type() == CV_32F)
-      std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl;
+    /* if (mat_host.type() == CV_32F) */
+    /*   std::cout << "0:0: " << mat_host.at<float>(0,0) << " HEIGHT: " << mat_host.rows << std::endl; */
 
     /* maxval = std::min(maxval,7e6); */
     /* cv::convertScaleAbs(catmat, catmat, 255 / (maxval)); */
@@ -42,7 +44,7 @@ void showFMat(cv::InputOutputArray &M, const char* name = "ocv_debugshit"){
 }
 
 cv::ocl::ProgramSource prep_ocl_kernel(const char* filename){
-  std::cout << "Loading OpenCL kernel file \" " << filename << std::endl;
+  /* std::cout << "Loading OpenCL kernel file \" " << filename << std::endl; */
   std::ifstream ist(filename, std::ifstream::in);
   std::string str((std::istreambuf_iterator<char>(ist)),
       std::istreambuf_iterator<char>());
@@ -260,7 +262,7 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
     }
 
 cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename){
-  std::cout << "Loading OpenCL kernel file \" " << filename << std::endl;
+  /* std::cout << "Loading OpenCL kernel file \" " << filename << std::endl; */
   std::ifstream ist(filename, std::ifstream::in);
   std::string str((std::istreambuf_iterator<char>(ist)),
       std::istreambuf_iterator<char>());
@@ -307,7 +309,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       localsize[0] = thread_count;
       localsize[1] = 1;
 
-      std::cout << "G0 " << globalsize[0] << " G1 " << globalsize[1] << " L0 " << localsize[0] << " L1 " << localsize[1] << std::endl;
+      /* std::cout << "G0 " << globalsize[0] << " G1 " << globalsize[1] << " L0 " << localsize[0] << " L1 " << localsize[1] << std::endl; */
 
       options += " -D ROW_F_REAL_INPUT";
       options += " -D COL_F_COMPLEX_INPUT";
@@ -336,7 +338,7 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       options += " -D WGS2_ALIGNED=";
       options += std::to_string(wgs2_aligned);
 
-      std::cout << options << std::endl;
+      /* std::cout << options << std::endl; */
       if (k_phase_corr.empty())
         k_phase_corr = cv::ocl::Kernel(kernel_name.c_str(), prep_ocl_kernel(cl_file_name.c_str()), options);
 
@@ -387,9 +389,9 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
       /*     Yfields */
       /*     ); */
 
-      std::cout << "LMS USED: " << k_phase_corr.localMemSize() << std::endl;
-      std::cout << "LMS AVAIL: " << cv::ocl::Device::getDefault().localMemSize() << std::endl;
-      std::cout << "BS: " << cv::ocl::Device::getDefault().printfBufferSize() << std::endl;
+      /* std::cout << "LMS USED: " << k_phase_corr.localMemSize() << std::endl; */
+      /* std::cout << "LMS AVAIL: " << cv::ocl::Device::getDefault().localMemSize() << std::endl; */
+      /* std::cout << "BS: " << cv::ocl::Device::getDefault().printfBufferSize() << std::endl; */
 
       bool partial = k_phase_corr.run(2, globalsize, localsize, true, mainQueue);
 
@@ -1362,8 +1364,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
 
     end         = std::clock();
     elapsedTimeI = double(end - begin) / CLOCKS_PER_SEC;
-    ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI);
-
+    /* ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI); */
 
     /* cv::Mat showhost; */
     std::vector<cv::Point2f> peakLocs;
@@ -1372,7 +1373,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
       phaseCorrelate_ocl(usrc1,usrc2, peakLocs, Y,X);
       /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost); */
       for (int i =0; i< ((int)(peakLocs.size())); i++){
-        std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
+        /* std::cout << "out " << i << " = " << peakLocs[i] << std::endl; */
       }
 
     }
@@ -1502,7 +1503,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
     /* ROS_INFO("Step 6: %f s, %f Hz", elapsedTime6 , 1.0 / elapsedTime6); */
     end         = std::clock();
     elapsedTimeO = double(end - begin_overall) / CLOCKS_PER_SEC;
-    ROS_INFO("OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO);
+    /* ROS_INFO("OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO); */
     return output;
 }
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
@@ -1609,6 +1610,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   if (first) {
     imCurr.copyTo(imPrev);
   }
+
   if (debug) {
     ROS_INFO("[OpticFlow]: Curr type: %d prev type: %d", imCurr.type(), imPrev.type());
   }
@@ -1742,6 +1744,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     /* /1* cv::convertScaleAbs(usrc2, catmat, 255 / max); *1/ */
     /* imshow("debugshit",catmat); */
     /* imshow("debugshit",usrc1); */
+    /* ROS_INFO("[%s]: Showing image", ros::this_node::getName().c_str()); */
     cv::imshow("ocv_optic_flow", imView);
     /* cv::imshow("cv_optic_flow", imView(cv::Rect(samplePointSize*3,samplePointSize*2,samplePointSize,samplePointSize))); */
     cv::waitKey(1);

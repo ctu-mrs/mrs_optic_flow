@@ -1,4 +1,3 @@
-
 /* includes //{ */
 
 #include <ros/ros.h>
@@ -64,22 +63,22 @@ namespace enc = sensor_msgs::image_encodings;
 namespace mrs_optic_flow
 {
 
-  cv::Matx33d rotX(double ang){
+  cv::Matx33d rotX(double ang) {
     cv::Matx33d output = cv::Matx33d::zeros();
-    output(0,0) = 1;
-    output(1,1) = cos(ang);
-    output(2,2) = cos(ang);
-    output(2,1) = -sin(ang);
-    output(1,2) = sin(ang);
+    output(0, 0)       = 1;
+    output(1, 1)       = cos(ang);
+    output(2, 2)       = cos(ang);
+    output(2, 1)       = -sin(ang);
+    output(1, 2)       = sin(ang);
     return output;
   }
-  cv::Matx33d rotY(double ang){
+  cv::Matx33d rotY(double ang) {
     cv::Matx33d output = cv::Matx33d::zeros();
-    output(1,1) = 1;
-    output(0,0) = cos(ang);
-    output(2,2) = cos(ang);
-    output(2,0) = sin(ang);
-    output(0,2) = -sin(ang);
+    output(1, 1)       = 1;
+    output(0, 0)       = cos(ang);
+    output(2, 2)       = cos(ang);
+    output(2, 0)       = sin(ang);
+    output(0, 2)       = -sin(ang);
     return output;
   }
 
@@ -89,191 +88,202 @@ namespace mrs_optic_flow
     cv::Point2i location;
   };
 
+  /* class OpticFlow //{ */
+
   class OpticFlow : public nodelet::Nodelet {
 
-    public:
-      virtual void    onInit();
-      ros::NodeHandle nh_;
+  public:
+    virtual void    onInit();
+    ros::NodeHandle nh_;
 
-    private:
-      void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg);
-      void callbackImu(const sensor_msgs::ImuConstPtr& msg);
-      void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
-      void callbackImage(const sensor_msgs::ImageConstPtr& msg);
-      void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  private:
+    void callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg);
+    void callbackImu(const sensor_msgs::ImuConstPtr& msg);
+    void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
+    void callbackImage(const sensor_msgs::ImageConstPtr& msg);
+    void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
 
-      int nrep;
+    int nrep;
 
-    private:
-      void processImage(const cv_bridge::CvImagePtr image);
-      bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran);
-      void TfThread();
-      std::thread tf_thread;
+  private:
+    void        processImage(const cv_bridge::CvImagePtr image);
+    bool        getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
+    void        TfThread();
+    std::thread tf_thread;
 
-    private:
-      ros::Timer cam_init_timer;
-      void       camInitTimer(const ros::TimerEvent& event);
+  private:
+    ros::Timer cam_init_timer;
+    void       camInitTimer(const ros::TimerEvent& event);
 
-      tf2_ros::Buffer buffer;
-      tf2_ros::TransformListener *listener;
-      geometry_msgs::TransformStamped  transformCam2Base;
-      geometry_msgs::TransformStamped  transformBase2Cam;
-      /* geometry_msgs::Transform  transformBase2World; */
+    tf2_ros::Buffer                 buffer;
+    tf2_ros::TransformListener*     listener;
+    geometry_msgs::TransformStamped transformCam2Base;
+    geometry_msgs::TransformStamped transformBase2Cam;
+    /* geometry_msgs::Transform  transformBase2World; */
 
-    private:
-      double max_processing_rate_;
-      double max_pixel_speed_;
-      double max_horizontal_speed_;
-      double max_horizontal_acceleration_;
-      double max_vertical_speed_;
-      double max_yaw_rate_;
+  private:
+    double max_processing_rate_;
+    double max_pixel_speed_;
+    double max_horizontal_speed_;
+    double max_horizontal_acceleration_;
+    double max_vertical_speed_;
+    double max_yaw_rate_;
 
-    private:
-      ros::Subscriber subscriber_image;
-      ros::Subscriber subscriber_uav_height;
-      ros::Subscriber subscriber_camera_info;
-      ros::Subscriber subscriber_odometry;
-      ros::Subscriber subscriber_imu;
+  private:
+    ros::Subscriber subscriber_image;
+    ros::Subscriber subscriber_uav_height;
+    ros::Subscriber subscriber_camera_info;
+    ros::Subscriber subscriber_odometry;
+    ros::Subscriber subscriber_imu;
 
-      ros::Publisher publisher_velocity;
-      ros::Publisher publisher_velocity_std;
-      ros::Publisher publisher_points_raw;
-      ros::Publisher publisher_max_allowed_velocity;
-      ros::Publisher publisher_tilt_correction;
-      ros::Publisher publisher_chosen_allsac;
+    ros::Publisher publisher_velocity;
+    ros::Publisher publisher_velocity_std;
+    ros::Publisher publisher_points_raw;
+    ros::Publisher publisher_max_allowed_velocity;
+    ros::Publisher publisher_tilt_correction;
+    ros::Publisher publisher_chosen_allsac;
 
-      bool got_camera_info = false;
-      bool got_image       = false;
-      bool got_height      = false;
-      bool got_imu         = false;
-      bool got_odometry    = false;
+    bool got_camera_info = false;
+    bool got_image       = false;
+    bool got_height      = false;
+    bool got_imu         = false;
+    bool got_odometry    = false;
 
-      ros::Time camera_info_timeout;
 
-    private:
-      double     uav_height;
-      double     uav_height_curr;
-      std::mutex mutex_uav_height;
+    ros::Time camera_info_timeout;
 
-      std::mutex mutex_process;
+  private:
+    double     uav_height;
+    double     uav_height_curr;
+    std::mutex mutex_uav_height;
 
-    private:
-      tf2::Quaternion tilt_prev;
-      tf2::Quaternion tilt_curr;
-      cv::Point3d angular_rate;
-      tf2::Quaternion angular_rate_tf;
-      cv::Point3d angle_diff;
-      tf2::Matrix3x3 rotMatDiff;
-      cv::Point3d angle_diff_curr;
-      cv::Point3d angular_rate_curr;
-      std::mutex  mutex_angular_rate;
-      std::mutex  mutex_static_tilt;
+    std::mutex mutex_process;
 
-    private:
-      tf2::Quaternion odometry_orientation;
-      tf2::Quaternion imu_orientation;
-      double      odometry_roll, odometry_pitch, odometry_yaw;
-      double      imu_roll, imu_pitch, imu_yaw;
-      double odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
-      cv::Point2f odometry_speed;
-      ros::Time   odometry_stamp;
-      std::mutex  mutex_odometry;
-      std::mutex  mutex_tf;
+  private:
+    tf2::Quaternion tilt_prev;
+    tf2::Quaternion tilt_curr;
+    cv::Point3d     angular_rate;
+    tf2::Quaternion angular_rate_tf;
+    cv::Point3d     angle_diff;
+    tf2::Matrix3x3  rotMatDiff;
+    cv::Point3d     angle_diff_curr;
+    cv::Point3d     angular_rate_curr;
+    std::mutex      mutex_angular_rate;
+    std::mutex      mutex_static_tilt;
 
-    private:
-      std::vector<double> fallback_camera_data;
-      std::vector<double> fallback_distortion_coeffs;
+  private:
+    tf2::Quaternion odometry_orientation;
+    tf2::Quaternion imu_orientation;
+    double          odometry_roll, odometry_pitch, odometry_yaw;
+    double          imu_roll, imu_pitch, imu_yaw;
+    double          odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
+    cv::Point2f     odometry_speed;
+    ros::Time       odometry_stamp;
+    std::mutex      mutex_odometry;
+    std::mutex      mutex_tf;
 
-    private:
-      bool first_image = true;
+  private:
+    std::vector<double> fallback_camera_data;
+    std::vector<double> fallback_distortion_coeffs;
 
-      cv::Mat image_scaled;
-      cv::Mat imCurr;
-      cv::Mat imPrev;
+  private:
+    bool first_image = true;
 
-      double vam;
+    cv::Mat image_scaled;
+    cv::Mat imCurr;
+    cv::Mat imPrev;
 
-      ros::Time      begin;
-      ros::Duration  dur;
-      OpticFlowCalc* processClass;
+    double vam;
 
-      /*double ypr_time;
-        double roll_old, pitch_old, yaw_old;
-        double ypr_old_time;
+    ros::Time      begin;
+    ros::Duration  dur;
+    OpticFlowCalc* processClass;
 
-        double roll_im_old, pitch_im_old, yaw_im_old;
-        double roll_dif, pitch_dif, yaw_dif;*/
+    /*double ypr_time;
+      double roll_old, pitch_old, yaw_old;
+      double ypr_old_time;
 
-      // scale to altitude..
-      double d1, t12;
+      double roll_im_old, pitch_im_old, yaw_im_old;
+      double roll_dif, pitch_dif, yaw_dif;*/
 
-      // Input arguments
-      bool debug_;
-      bool gui_;
-      int  method_;
-      bool silent_debug_;
-      bool store_video_;
+    // scale to altitude..
+    double d1, t12;
 
-      double camera_yaw_offset_;
+    // Input arguments
+    bool debug_;
+    bool gui_;
+    int  method_;
+    bool silent_debug_;
+    bool store_video_;
 
-      // optic flow parameters
-      int scan_radius_;
-      int scanDiameter;
-      int scanCount;
-      int step_size_;
+    double camera_yaw_offset_;
 
-      int scale_factor_;
+    // optic flow parameters
+    int scan_radius_;
+    int scanDiameter;
+    int scanCount;
+    int step_size_;
 
-      int frame_size_;
-      int sample_point_size_;
+    int scale_factor_;
 
-      int sample_point_count_;
-      int sample_point_count_sqrt_;
+    int frame_size_;
+    int sample_point_size_;
 
-      double calibration_coeff_x_;
-      double calibration_coeff_y_;
+    int sample_point_count_;
+    int sample_point_count_sqrt_;
 
-      double cx, cy, fx, fy, s;
-      double k1, k2, p1, p2, k3;
-      cv::Mat camMatrix, distCoeffs;
+    double calibration_coeff_x_;
+    double calibration_coeff_y_;
 
-      int         ransac_num_of_chosen_;
-      int         ransac_num_of_iter_;
-      double       RansacThresholdRadSq;
-      
-      std::string camera_frame_, uav_frame_,uav_untilted_frame_;
+    double  cx, cy, fx, fy, s;
+    double  k1, k2, p1, p2, k3;
+    cv::Mat camMatrix, distCoeffs;
 
-      std::string fft_cl_file_;
+    int    ransac_num_of_chosen_;
+    int    ransac_num_of_iter_;
+    double RansacThresholdRadSq;
 
-      std::string filter_method_;
+    std::string camera_frame_, uav_frame_, uav_untilted_frame_;
 
-      bool                    rotation_correction_, tilt_correction_, raw_enabled_;
-      std::string             ang_rate_source_;
-      bool                    scale_rotation;
-      double                  scale_rotation_magnitude_;
-      std::string             scale_rot_output_;
-      scaleRotationEstimator* scale_rotation_estimator;
-      std::string             d3d_method_;
+    std::string fft_cl_file_;
 
-      bool apply_abs_bounding_;
-      bool apply_rel_bouding_;
+    std::string filter_method_;
 
-      float speed_noise;
+    bool                    rotation_correction_, tilt_correction_, raw_enabled_;
+    std::string             ang_rate_source_;
+    bool                    scale_rotation;
+    double                  scale_rotation_magnitude_;
+    std::string             scale_rot_output_;
+    scaleRotationEstimator* scale_rotation_estimator;
+    std::string             d3d_method_;
 
-      std::vector<SpeedBox> lastSpeeds;
-      double                analyze_duration_;
+    bool apply_abs_bounding_;
+    bool apply_rel_bouding_;
 
-      double                min_tilt_correction_;
-    private:
-      mrs_lib::Profiler* profiler;
-      bool profiler_enabled_ = false;
-    private:
-      bool is_initialized = false;
-      std::string uav_name;
+    float speed_noise;
+
+    std::vector<SpeedBox> lastSpeeds;
+    double                analyze_duration_;
+
+    double min_tilt_correction_;
+
+  private:
+    mrs_lib::Profiler* profiler;
+    bool               profiler_enabled_ = false;
+
+  private:
+    bool        is_initialized = false;
+    std::string uav_name;
   };
+
+  //}
+
+  /* TfThread() //{ */
+
   void OpticFlow::TfThread() {
+
     ros::Rate transformRate(0.1);
-    bool got_c2b, got_b2c, got_b2w;
+    bool      got_c2b, got_b2c, got_b2w;
     got_c2b = false;
     got_b2c = false;
     got_b2w = false;
@@ -282,7 +292,7 @@ namespace mrs_optic_flow
         {
           std::scoped_lock lock(mutex_tf);
           /* transformCam2Base = tf_buffer.lookupTransform(uav_frame_, camera_frame_, time - ros::Duration(uav2_delay), timeout); */
-          transformCam2Base = buffer.lookupTransform(uav_frame_, camera_frame_, ros::Time(0),  ros::Duration(2));
+          transformCam2Base = buffer.lookupTransform(uav_frame_, camera_frame_, ros::Time(0), ros::Duration(2));
         }
         got_c2b = true;
       }
@@ -294,7 +304,7 @@ namespace mrs_optic_flow
       try {
         {
           std::scoped_lock lock(mutex_tf);
-          transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0),  ros::Duration(2));
+          transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0), ros::Duration(2));
         }
         got_b2c = true;
       }
@@ -321,17 +331,23 @@ namespace mrs_optic_flow
       /* ROS_INFO("TF next"); */
     }
   }
-  bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion &o_rot, tf2::Vector3 &o_tran){
+
+  //}
+
+  /* getRT() //{ */
+
+  bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran) {
+
     cv::Matx33d camMatrixLocal = camMatrix;
-    camMatrixLocal(0,2) -= ulCorner.x;
+    camMatrixLocal(0, 2) -= ulCorner.x;
     std::vector<cv::Point2d> initialPts, shiftedPts, undistPtsA, undistPtsB;
-    int sqNum            = frame_size_ / sample_point_size_;
+    int                      sqNum = frame_size_ / sample_point_size_;
     for (int j = 0; j < sqNum; j++) {
       for (int i = 0; i < sqNum; i++) {
-        int xi    = i * sample_point_size_+(sample_point_size_ / 2);
-        int yi    = j * sample_point_size_+(sample_point_size_ / 2);
-        initialPts.push_back(cv::Point2d(xi,yi));
-        shiftedPts.push_back(cv::Point2d(xi,yi)+shifts[i+sqNum*j]);
+        int xi = i * sample_point_size_ + (sample_point_size_ / 2);
+        int yi = j * sample_point_size_ + (sample_point_size_ / 2);
+        initialPts.push_back(cv::Point2d(xi, yi));
+        shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
       }
     }
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
@@ -344,97 +360,116 @@ namespace mrs_optic_flow
     cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3);
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
-    std::vector<cv::Mat> rot, tran, normals;
-    int solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
-    std::vector<int> filteredSolutions;
+    std::vector<cv::Mat>         rot, tran, normals;
+    int                          solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
+    std::vector<int>             filteredSolutions;
     tf2::Stamped<tf2::Transform> tempTfC2B, tempTfB2C;
     {
       std::scoped_lock lock(mutex_tf);
-      
+
       tf2::fromMsg(transformCam2Base, tempTfC2B);
       tf2::fromMsg(transformBase2Cam, tempTfB2C);
     }
     /* tf2::Quaternion cam_orientation = tempTf*odometry_orientation; */
-    /* tf2::Vector3 expNormal = */ 
+    /* tf2::Vector3 expNormal = */
     /* std::cout << "C2B: " << cam_orientation(tf2::Vector3(0,0,1)) << std::endl; */
 
     /* std::cout << "C2B: "<< tempTfC2B.getRotation().getAngle() << std::endl; */
 
     /* std::cout << "Next: " << std::endl; */
-    double roll,pitch,yaw;
-    tf2::Matrix3x3(angular_rate_tf).getRPY(roll,pitch,yaw);
-    std::cout << "Exp. rate: [" << roll << " " << pitch << " " << yaw << "]" << std::endl;
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(angular_rate_tf).getRPY(roll, pitch, yaw);
+    /* std::cout << "Exp. rate: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
     /* tf2::Matrix3x3(angular_rate_tf).getRPY(roll,pitch,yaw); */
     /* std::cout << "Exp. rate NEW: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
     tf2::Matrix3x3 tempRotMat;
     tf2::Transform tempTransform;
-    std::cout << std::endl;
+    /* std::cout << std::endl; */
 
-    int bestIndex = -1;
-    double bestAngDiff = M_PI;
+    int             bestIndex   = -1;
+    double          bestAngDiff = M_PI;
     tf2::Quaternion bestQuatRateOF;
 
-    int bestIndex2 = -1;
-    double bestAngDiff2 = M_PI;
+    int             bestIndex2   = -1;
+    double          bestAngDiff2 = M_PI;
     tf2::Quaternion bestQuatRateOF2;
 
-
     tf2::Quaternion quatRateOF, quatRateOFB;
-    for (int i=0; i<solutions; i++){
-    std::cout << normals[i] << std::endl;
-    std::cout << normals[i].at<double>(2) << std::endl;
 
-      if (normals[i].at<double>(2)<0) {
-        for (int j=0; j<3; j++){ for (int k=0; k<3; k++){
-            tempRotMat[k][j] = rot[i].at<double>(j,k); } }
+    for (int i = 0; i < solutions; i++) {
+
+      /* std::cout << normals[i] << std::endl; */
+      /* std::cout << normals[i].at<double>(2) << std::endl; */
+
+      if (normals[i].at<double>(2) < 0) {
+
+        for (int j = 0; j < 3; j++) {
+          for (int k = 0; k < 3; k++) {
+            tempRotMat[k][j] = rot[i].at<double>(j, k);
+          }
+        }
+
         tempTransform = tf2::Transform(tempRotMat);
-        quatRateOF = tempTransform.getRotation();
+        quatRateOF    = tempTransform.getRotation();
         /* quatRateOFB = tf2::Quaternion((quatRateOF.getAxis()), quatRateOF.getAngle()/dur.toSec()); */
-        quatRateOFB = tf2::Quaternion(tempTfC2B*(quatRateOF.getAxis()), quatRateOF.getAngle()/dur.toSec());
+        quatRateOFB = tf2::Quaternion(tempTfC2B * (quatRateOF.getAxis()), quatRateOF.getAngle() / dur.toSec());
         /* tf2::Matrix3x3(quatRateOFB).getRPY(roll,pitch,yaw); */
         /* std::cout << "Angles  OFT: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
         double angDiff = quatRateOFB.angle(angular_rate_tf);
         /* std::cout << angDiff << std::endl; */
-        if (fabs(bestAngDiff-angDiff) < 0.0001){
-          std::cout << "SMALL DIFFERENCE" << std::endl;
-          bestAngDiff2 = angDiff;
-          bestIndex2 = i;
+
+        if (fabs(bestAngDiff - angDiff) < 0.0001) {
+          /* std::cout << "SMALL DIFFERENCE" << std::endl; */
+          bestAngDiff2    = angDiff;
+          bestIndex2      = i;
           bestQuatRateOF2 = quatRateOF;
-        }
-        else if (bestAngDiff > angDiff ){
-          bestAngDiff = angDiff;
-          bestIndex = i;
+        } else if (bestAngDiff > angDiff) {
+          bestAngDiff    = angDiff;
+          bestIndex      = i;
           bestQuatRateOF = quatRateOF;
         }
+
       }
     }
-    if ((bestIndex != -1) && (solutions>1)) {
-      if( cv::determinant(rot[bestIndex]) <0){
-        std::cout << "Invalid rotation found" << std::endl;
+
+    if ((bestIndex != -1) && (solutions > 1)) {
+
+      if (cv::determinant(rot[bestIndex]) < 0) {
+        /* std::cout << "Invalid rotation found" << std::endl; */
       }
-      if (bestAngDiff>(M_PI/4)){
-        std::cout << "Angle difference greater than pi/4, skipping." << std::endl;
+      if (bestAngDiff > (M_PI / 4)) {
+        ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Angle difference greater than pi/4, skipping.");
         return false;
       }
 
-      std::cout << "ANGLE: " << bestAngDiff << std::endl;
-      tf2::Matrix3x3(bestQuatRateOF).getRPY(roll,pitch,yaw);
-      std::cout << "Angles  OF: [" << roll << " " << pitch << " " << yaw << "]" << std::endl;
-      tf2::Matrix3x3(angular_rate_tf).getRPY(roll,pitch,yaw);
-      std::cout << "Angles IMU: [" << roll << " " << pitch << " " << yaw << "]" << std::endl;
-      std::cout << "Normals: " << normals[bestIndex] << std::endl;
-      std::cout << std::endl;
-      std::cout << "Translations: " << tran[bestIndex]*uav_height_curr/dur.toSec() << std::endl;
-      std::cout << std::endl;
-      o_rot = tf2::Quaternion(bestQuatRateOF.getAxis(),bestQuatRateOF.getAngle()/dur.toSec());
-      /* o_tran = tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height/dur.toSec(); */
+      /* std::cout << "ANGLE: " << bestAngDiff << std::endl; */
+      tf2::Matrix3x3(bestQuatRateOF).getRPY(roll, pitch, yaw);
+      /* std::cout << "Angles  OF: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
+      tf2::Matrix3x3(angular_rate_tf).getRPY(roll, pitch, yaw);
+      /* std::cout << "Angles IMU: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
+      /* std::cout << "Normals: " << normals[bestIndex] << std::endl; */
+      /* std::cout << std::endl; */
+      /* std::cout << "Translations: " << tran[bestIndex] * uav_height_curr / dur.toSec() << std::endl; */
+      /* std::cout << std::endl; */
+
+      o_rot = tf2::Quaternion(bestQuatRateOF.getAxis(), bestQuatRateOF.getAngle() / dur.toSec());
+
+      /* o_tran =
+       * tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height/dur.toSec();
+       */
+
       {
-        std::scoped_lock(mutex_uav_height);
-      /* o_tran = tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec(); */
-      o_tran = tf2::Transform(bestQuatRateOF)*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec();
+        std::scoped_lock lock(mutex_uav_height);
+        /* o_tran =
+         * tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec();
+         */
+        o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(tran[bestIndex].at<double>(0), tran[bestIndex].at<double>(1), tran[bestIndex].at<double>(2)) *
+                 uav_height_curr / dur.toSec();
         /* o_tran = tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec(); */
       }
+
       return true;
+
       /* if (bestIndex2 != -1) { */
       /*   std::cout << "ANGLE: " << bestAngDiff2 << std::endl; */
       /*   std::cout << "Det: " << cv::determinant(rot[bestIndex2]) << std::endl; */
@@ -447,45 +482,53 @@ namespace mrs_optic_flow
       /*   std::cout << std::endl; */
       /* } */
     }
+
     /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
-    else if (solutions == 1){
-      if (cv::norm(tran[0]) < 0.001){
-        std::cout << "No motion detected" << std::endl;
-        o_rot = tf2::Quaternion(tf2::Vector3(0,0,1), 0);
-        o_tran = tf2::Vector3(0,0,0);
+    else if (solutions == 1) {
+      if (cv::norm(tran[0]) < 0.001) {
+        /* std::cout << "No motion detected" << std::endl; */
+        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+        o_tran = tf2::Vector3(0, 0, 0);
         return true;
       }
+    } else {
+      /* std::cout << "ERROR" << std::endl; */
     }
-    else {
-      std::cout << "ERROR" << std::endl;
-    }
-    return false;
 
+    return false;
   }
-  /* std::vector<cv::Point2d> getExpectedShifts(cv::Point2i ulCorner){ */
+
+  //}
+
+  /* getExpectedShifts() //{ */
+
+  /* std::vector<cv::Point2d> getExpectedShifts(cv::Point2i ulCorner) { */
   /*   camMatrixLocal = camMatrix; */
-  /*   camMatrixLocal.at<double>(0,2) -= ulCorner.x; */
+  /*   camMatrixLocal.at<double>(0, 2) -= ulCorner.x; */
   /*   std::vector<cv::Point2d> initialPts, undistPts, differences; */
   /*   std::vector<cv::Point3d> 3dPts, rotPts; */
-  /*   sqNum            = frameSize / samplePointSize; */
+  /*   sqNum = frameSize / samplePointSize; */
   /*   for (int i = 0; i < sqNum; i++) { */
   /*     for (int j = 0; j < sqNum; j++) { */
-  /*       xi    = i * samplePointSize; */
-  /*       yi    = j * samplePointSize; */
-  /*       initialPts.push_back(cv::Point2f(xi,yi)); */
+  /*       xi = i * samplePointSize; */
+  /*       yi = j * samplePointSize; */
+  /*       initialPts.push_back(cv::Point2f(xi, yi)); */
   /*     } */
   /*   } */
   /*   cv::undistortPoints(initialPts, undistPts, camMatrixLocal, distCoeffs); */
-
-  /*   for (const auto& ptCurr : undistPts){ */
-  /*     camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1) */
-  /*     3dPts.push_back(camMatrixLocal.inv()*cv::Point3d(ptCurr.x,ptCurr.y,1)); */
+  /*   for (const auto& ptCurr : undistPts) { */
+  /*     camMatrixLocal.inv() * cv::Point3d(ptCurr.x, ptCurr.y, 1) 3dPts.push_back(camMatrixLocal.inv() * cv::Point3d(ptCurr.x, ptCurr.y, 1)); */
   /*   } */
   /*   cv::Matx33d rotMatDiffCv = cv::Matx33d::zeros(); */
-  /*   for (int i=0;i<9;i++){ */
-  /*     output(i) = rotMatDiff(3dPts,rotPts,rotMatDiffCv*rotZ()); */
+  /*   for (int i = 0; i < 9; i++) { */
+  /*     output(i) = rotMatDiff(3dPts, rotPts, rotMatDiffCv * rotZ()); */
   /*   } */
   /*   cv::transform(3dPts */
+  /* } */
+
+  //}
+
+  /* onInit() //{ */
 
   void OpticFlow::onInit() {
 
@@ -506,7 +549,7 @@ namespace mrs_optic_flow
     param_loader.load_param("silent_debug", silent_debug_);
 
     // | --------------------- general params --------------------- |
- 
+
     param_loader.load_param("ang_rate_source", ang_rate_source_);
     param_loader.load_param("raw_output", raw_enabled_);
     param_loader.load_param("camera_yaw_offset", camera_yaw_offset_);
@@ -529,22 +572,22 @@ namespace mrs_optic_flow
     param_loader.load_param("mrs_optic_flow/step_size", step_size_);
     param_loader.load_param("mrs_optic_flow/frame_size", frame_size_);
 
-  if (fabs(scale_factor_ - 1.0) > 0.01) {
-    frame_size_=frame_size_/scale_factor_;
-  }
+    if (fabs(scale_factor_ - 1.0) > 0.01) {
+      frame_size_ = frame_size_ / scale_factor_;
+    }
 
     param_loader.load_param("mrs_optic_flow/sample_point_size", sample_point_size_);
-  if (fabs(scale_factor_ - 1.0) > 0.01) {
-    sample_point_size_=sample_point_size_/scale_factor_;
-  }
-    sample_point_count_sqrt_ = frame_size_/sample_point_size_;
-    sample_point_count_ = sample_point_count_sqrt_*sample_point_count_sqrt_;
+    if (fabs(scale_factor_ - 1.0) > 0.01) {
+      sample_point_size_ = sample_point_size_ / scale_factor_;
+    }
+    sample_point_count_sqrt_ = frame_size_ / sample_point_size_;
+    sample_point_count_      = sample_point_count_sqrt_ * sample_point_count_sqrt_;
     param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
     param_loader.load_param("mrs_optic_flow/apply_abs_bouding", apply_abs_bounding_);
     param_loader.load_param("mrs_optic_flow/apply_rel_bouding", apply_rel_bouding_);
 
     {
-      double calibration_coeff_both; // use this as a backup value in case calibrations for separate axes are not available
+      double calibration_coeff_both;  // use this as a backup value in case calibrations for separate axes are not available
       param_loader.load_param("mrs_optic_flow/calibration/both_velocity_correction_ratio", calibration_coeff_both, 1.0);
       param_loader.load_param("mrs_optic_flow/calibration/x_velocity_correction_ratio", calibration_coeff_x_, calibration_coeff_both);
       param_loader.load_param("mrs_optic_flow/calibration/y_velocity_correction_ratio", calibration_coeff_y_, calibration_coeff_both);
@@ -557,15 +600,14 @@ namespace mrs_optic_flow
 
     param_loader.load_param("mrs_optic_flow/rotation_correction", rotation_correction_);
     param_loader.load_param("mrs_optic_flow/tilt_correction", tilt_correction_);
-    param_loader.load_param("mrs_optic_flow/minimum_tilt_correction", min_tilt_correction_,0.01);
+    param_loader.load_param("mrs_optic_flow/minimum_tilt_correction", min_tilt_correction_, 0.01);
     param_loader.load_param("mrs_optic_flow/filtering/analyze_duration", analyze_duration_);
     // method check
-  if (method_ < 3 || method_ > 5) {
-    ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
-  }
+    if (method_ < 3 || method_ > 5) {
+      ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
+    }
 
-  // | ------------------------ filtering ----------------------- |
-
+    // | ------------------------ filtering ----------------------- |
 
 
     param_loader.load_param("store_video", store_video_);
@@ -584,16 +626,9 @@ namespace mrs_optic_flow
     param_loader.load_param("distortion_coefficients/data", fallback_distortion_coeffs);
 
 
-
     // --------------------------------------------------------------
     // |                    end of loading params                   |
     // --------------------------------------------------------------
- 
-
-
-
-
-
 
 
     if (gui_) {
@@ -604,9 +639,9 @@ namespace mrs_optic_flow
       /* cv::namedWindow("ocv_iffc", cv::WINDOW_FREERATIO); */
     }
 
-  if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
-    ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
-    ros::shutdown();
+    if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) {
+      ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
+      ros::shutdown();
     }
 
     if (filter_method_.compare("ransac") && ransac_num_of_chosen_ != 2) {
@@ -630,59 +665,56 @@ namespace mrs_optic_flow
     // | -------------------- choose the method ------------------- |
     switch (method_) {
       case 3: {
-                ROS_ERROR("Method 3 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
-                /* processClass = new BlockMethod(frame_size_, sample_point_size_, scan_radius_, scanDiameter, scanCount, step_size_); */
-                break;
-              }
+        ROS_ERROR("Method 3 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
+        /* processClass = new BlockMethod(frame_size_, sample_point_size_, scan_radius_, scanDiameter, scanCount, step_size_); */
+        break;
+      }
       case 4: {
 
-              /* std::cout << cv::getBuildInformation() << std::endl; */
+        /* std::cout << cv::getBuildInformation() << std::endl; */
 
-              if (!cv::ocl::haveOpenCL())
-              {
-                ROS_INFO("NO OCL SUPPORT");
-                //return;
-              }
+        if (!cv::ocl::haveOpenCL()) {
+          ROS_INFO("NO OCL SUPPORT");
+          // return;
+        }
 
-              cv::ocl::Context context;
-              if (!context.create(cv::ocl::Device::TYPE_GPU))
-              {
-                ROS_INFO("Failed creating the context...");
-                //return;
-              }
+        cv::ocl::Context context;
+        if (!context.create(cv::ocl::Device::TYPE_GPU)) {
+          ROS_INFO("Failed creating the context...");
+          // return;
+        }
 
-              ROS_INFO(" GPU devices are detected."); //This bit provides an overview of the OpenCL devices you have in your computer
-              for (int i = 0; i < int(context.ndevices()); i++)
-              {
-                cv::ocl::Device device = context.device(i);
-                ROS_INFO("name:              %s", device.name().c_str() );
-                if(device.available() )
-                  ROS_INFO("available!");
-                else
-                  ROS_INFO("unavailable");
-                if( device.imageSupport() )
-                  ROS_INFO("image support!");
-                else
-                  ROS_INFO("no image support");
-                ROS_INFO("OpenCL_C_Version:  %s", device.OpenCL_C_Version().c_str() );
-              }
+        ROS_INFO(" GPU devices are detected.");  // This bit provides an overview of the OpenCL devices you have in your computer
+        for (int i = 0; i < int(context.ndevices()); i++) {
+          cv::ocl::Device device = context.device(i);
+          ROS_INFO("name:              %s", device.name().c_str());
+          if (device.available())
+            ROS_INFO("available!");
+          else
+            ROS_INFO("unavailable");
+          if (device.imageSupport())
+            ROS_INFO("image support!");
+          else
+            ROS_INFO("no image support");
+          ROS_INFO("OpenCL_C_Version:  %s", device.OpenCL_C_Version().c_str());
+        }
 
-              cv::ocl::Device(context.device(0)); //Here is where you change which GPU to use (e.g. 0 or 1)
+        cv::ocl::Device(context.device(0));  // Here is where you change which GPU to use (e.g. 0 or 1)
 
-              cv::ocl::setUseOpenCL(true);
+        cv::ocl::setUseOpenCL(true);
 
-                processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_, &video_path_, videoFPS, fft_cl_file_);
-                break;
-              }
+        processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_,
+                                     &video_path_, videoFPS, fft_cl_file_);
+        break;
+      }
 
       case 5: {
-                ROS_ERROR("Method 5 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
-                /* processClass = new FastSpacedBMMethod(sample_point_size_, scan_radius_, step_size_, cx, cy, fx, fy, k1, k2, k3, p1, p2, store_video_, &video_path_); */
-                break;
-              }
-      default: {
-                 throw std::invalid_argument( "Invalid method ID!" );
-               }
+        ROS_ERROR("Method 5 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
+        /* processClass = new FastSpacedBMMethod(sample_point_size_, scan_radius_, step_size_, cx, cy, fx, fy, k1, k2, k3, p1, p2, store_video_, &video_path_);
+         */
+        break;
+      }
+      default: { throw std::invalid_argument("Invalid method ID!"); }
     }
 
     imPrev = cv::Mat(frame_size_, frame_size_, CV_8UC1);
@@ -714,7 +746,7 @@ namespace mrs_optic_flow
     publisher_tilt_correction      = nh_.advertise<geometry_msgs::Vector3>("tilt_correction_out", 1);
 
     if (raw_enabled_) {
-      publisher_points_raw = nh_.advertise< std_msgs::UInt32MultiArray >("points_raw_out", 1);
+      publisher_points_raw = nh_.advertise<std_msgs::UInt32MultiArray>("points_raw_out", 1);
     }
 
     // --------------------------------------------------------------
@@ -723,23 +755,26 @@ namespace mrs_optic_flow
 
     subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
     subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
-    subscriber_uav_height  = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
-    subscriber_odometry    = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
-    nrep = 0;
+    ROS_INFO("[OpticFlow]: Image subscriber topic name is %s", subscriber_image.getTopic().c_str());
+    subscriber_uav_height = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
+    subscriber_odometry   = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
+    nrep                  = 0;
 
     if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
       subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
-    } else if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) { }
-    else {
+    } else if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+    } else {
       if (ang_rate_source_.compare("odometry") != 0) {
         ROS_ERROR("[OpticFlow]: Wrong parameter ang_rate_source_ - possible choices: imu, odometry, odometry_diff. Entered: %s", ang_rate_source_.c_str());
         ros::shutdown();
       }
     }
+
     // --------------------------------------------------------------
     // |                          profiler                          |
     // --------------------------------------------------------------
     profiler = new mrs_lib::Profiler(nh_, "OpticFlow", profiler_enabled_);
+
     // --------------------------------------------------------------
     // |                           timers                           |
     // --------------------------------------------------------------
@@ -754,10 +789,10 @@ namespace mrs_optic_flow
 
     /* tilt_curr = tf::Quaternion(); */
     /* tilt_prev = tilt_curr; */
-    listener = new tf2_ros::TransformListener(buffer);
-    tf_thread   = std::thread(&OpticFlow::TfThread, this);
+    listener       = new tf2_ros::TransformListener(buffer);
+    tf_thread      = std::thread(&OpticFlow::TfThread, this);
     is_initialized = true;
-    
+
     ROS_INFO("[OpticFlow]: initialized");
   }
 
@@ -766,8 +801,8 @@ namespace mrs_optic_flow
   // --------------------------------------------------------------
   // |                           timers                           |
   // --------------------------------------------------------------
-  //
-  /* //{ camInitTimer() */
+
+  /* camInitTimer() //{ */
 
   void OpticFlow::camInitTimer([[maybe_unused]] const ros::TimerEvent& event) {
 
@@ -799,20 +834,20 @@ namespace mrs_optic_flow
       p1 = fallback_distortion_coeffs[2];
       p2 = fallback_distortion_coeffs[3];
 
-      camMatrix = cv::Mat(3,3,CV_64F,cv::Scalar(0));
-      distCoeffs = cv::Mat(1,5,CV_64F,cv::Scalar(0));
+      camMatrix  = cv::Mat(3, 3, CV_64F, cv::Scalar(0));
+      distCoeffs = cv::Mat(1, 5, CV_64F, cv::Scalar(0));
 
-      camMatrix.at<double>(0,0)=fx;
-      camMatrix.at<double>(1,1)=fy;
-      camMatrix.at<double>(0,2)=cx;
-      camMatrix.at<double>(1,2)=cy;
-      camMatrix.at<double>(2,2)=1;
+      camMatrix.at<double>(0, 0) = fx;
+      camMatrix.at<double>(1, 1) = fy;
+      camMatrix.at<double>(0, 2) = cx;
+      camMatrix.at<double>(1, 2) = cy;
+      camMatrix.at<double>(2, 2) = 1;
 
-      distCoeffs.at<double>(0)=k1;
-      distCoeffs.at<double>(1)=k2;
-      distCoeffs.at<double>(2)=p1;
-      distCoeffs.at<double>(3)=p2;
-      distCoeffs.at<double>(4)=k3;
+      distCoeffs.at<double>(0) = k1;
+      distCoeffs.at<double>(1) = k2;
+      distCoeffs.at<double>(2) = p1;
+      distCoeffs.at<double>(3) = p2;
+      distCoeffs.at<double>(4) = k3;
 
       got_camera_info = true;
 
@@ -820,14 +855,16 @@ namespace mrs_optic_flow
       ROS_INFO("[OpticFlow]: camera parameters loaded");
     }
 
-  cam_init_timer.stop();
+    cam_init_timer.stop();
   }
+
+  //}
 
   // --------------------------------------------------------------
   // |                          callbacks                         |
   // --------------------------------------------------------------
-  //
-  /* //{ callbackHeight() */
+
+  /* callbackHeight() //{ */
 
   void OpticFlow::callbackHeight(const mrs_msgs::Float64StampedConstPtr& msg) {
 
@@ -840,31 +877,24 @@ namespace mrs_optic_flow
       return;
     }
 
-
     {
       std::scoped_lock lock(mutex_uav_height);
       /* uav_height = msg->value; */
       /* if (!got_imu) */
       /*   uav_height = msg->value; */
       /* else */
-    {
-      std::scoped_lock lock(mutex_odometry);
-      /* uav_height = msg->value/(cos(odometry_pitch)*(cos(odometry_roll))); */
-      uav_height = msg->value;
-    }
+      {
+        std::scoped_lock lock(mutex_odometry);
+        /* uav_height = msg->value/(cos(odometry_pitch)*(cos(odometry_roll))); */
+        uav_height = msg->value;
+      }
     }
     got_height = true;
   }
 
+  //}
 
-
-
-
-
-
-
-
-  /* //{ callbackImu() */
+  /* callbackImu() //{ */
 
   void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
 
@@ -885,20 +915,21 @@ namespace mrs_optic_flow
 
       got_imu = true;
     }
-      
-      {
-        std::scoped_lock lock(mutex_static_tilt);
 
-        tf2::fromMsg(msg->orientation,imu_orientation); 
-        tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw);
+    {
+      std::scoped_lock lock(mutex_static_tilt);
+
+      tf2::fromMsg(msg->orientation, imu_orientation);
+      tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw);
       /* std::cout << "OR IMUM CB: " << msg->orientation.x<< msg->orientation.y <<msg->orientation.z <<" - " << msg->orientation.w << std::endl; */
-      /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " << imu_orientation.getAngle() << std::endl; */
+      /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " <<
+       * imu_orientation.getAngle() << std::endl; */
       /* std::cout << "RP IMU CB: " << imu_roll << " " << imu_pitch << std::endl; */
-      }
+    }
   }
 
   //}
-  //
+
   /* //{ callbackOdometry() */
 
   void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
@@ -911,9 +942,6 @@ namespace mrs_optic_flow
     /* tf2::quaternionMsgToTF(msg->pose.pose.orientation, bt); */
 
 
-
-
-
     if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
       {
         std::scoped_lock lock(mutex_angular_rate);
@@ -922,28 +950,28 @@ namespace mrs_optic_flow
     }
 
     {
-    tf2::Quaternion bt;
-    tf2::fromMsg(msg->pose.pose.orientation, bt);
+      tf2::Quaternion bt;
+      tf2::fromMsg(msg->pose.pose.orientation, bt);
       std::scoped_lock lock(mutex_odometry);
 
-      odometry_speed = cv::Point2d(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
-      odometry_stamp = ros::Time::now();
+      odometry_speed       = cv::Point2d(msg->twist.twist.linear.x, msg->twist.twist.linear.y);
+      odometry_stamp       = ros::Time::now();
       odometry_orientation = bt;
-    tf2::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
+      tf2::Matrix3x3(bt).getRPY(odometry_roll, odometry_pitch, odometry_yaw);
     }
 
     got_odometry = true;
   }
 
   //}
-  //
+
   /* //{ callbackImage() */
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
-  /* imshow("NEW",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
-  /* imshow("OLD",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
-  /* imshow("cv_debugshit",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
-  /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    /* imshow("NEW",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    /* imshow("OLD",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    /* imshow("cv_debugshit",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
+    /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
     nrep++;
 
     /* if ((nrep > 100) ) */
@@ -976,12 +1004,12 @@ namespace mrs_optic_flow
     if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
       {
         std::scoped_lock lock(mutex_odometry);
-        tilt_curr = odometry_orientation;
-        tf2::Quaternion diffquat = tilt_prev.inverse()*tilt_curr;
-        double yaw_a, pitch_a,roll_a;
+        tilt_curr                = odometry_orientation;
+        tf2::Quaternion diffquat = tilt_prev.inverse() * tilt_curr;
+        double          yaw_a, pitch_a, roll_a;
         tf2::Matrix3x3(diffquat).getRPY(roll_a, pitch_a, yaw_a);
         rotMatDiff = tf2::Matrix3x3(diffquat);
-        angle_diff = cv::Point3d(roll_a,pitch_a,yaw_a);
+        angle_diff = cv::Point3d(roll_a, pitch_a, yaw_a);
       }
       tilt_prev = tilt_curr;
     }
@@ -991,7 +1019,7 @@ namespace mrs_optic_flow
 
   //}
 
-  /* //{ callbackCameraInfo() */
+  /* callbackCameraInfo() //{ */
 
   void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
@@ -1019,27 +1047,27 @@ namespace mrs_optic_flow
       cx = msg->K.at(2);
       cy = msg->K.at(5);
 
-      k1              = msg->D.at(0);
-      k2              = msg->D.at(1);
-      p1              = msg->D.at(2);
-      p2              = msg->D.at(3);
-      k3              = msg->D.at(4);
+      k1 = msg->D.at(0);
+      k2 = msg->D.at(1);
+      p1 = msg->D.at(2);
+      p2 = msg->D.at(3);
+      k3 = msg->D.at(4);
 
-      camMatrix = cv::Mat(3,3,CV_64F,cv::Scalar(0));
-      distCoeffs = cv::Mat(1,5,CV_64F,cv::Scalar(0));
-      camMatrix.at<double>(0,0)=fx;
-      camMatrix.at<double>(1,1)=fy;
-      camMatrix.at<double>(0,2)=cx;
-      camMatrix.at<double>(1,2)=cy;
-      camMatrix.at<double>(2,2)=1;
-      distCoeffs.at<double>(0)=k1;
-      distCoeffs.at<double>(1)=k2;
-      distCoeffs.at<double>(2)=p1;
-      distCoeffs.at<double>(3)=p2;
-      distCoeffs.at<double>(4)=k3;
-      got_camera_info = true;
+      camMatrix                  = cv::Mat(3, 3, CV_64F, cv::Scalar(0));
+      distCoeffs                 = cv::Mat(1, 5, CV_64F, cv::Scalar(0));
+      camMatrix.at<double>(0, 0) = fx;
+      camMatrix.at<double>(1, 1) = fy;
+      camMatrix.at<double>(0, 2) = cx;
+      camMatrix.at<double>(1, 2) = cy;
+      camMatrix.at<double>(2, 2) = 1;
+      distCoeffs.at<double>(0)   = k1;
+      distCoeffs.at<double>(1)   = k2;
+      distCoeffs.at<double>(2)   = p1;
+      distCoeffs.at<double>(3)   = p2;
+      distCoeffs.at<double>(4)   = k3;
+      got_camera_info            = true;
 
-      //maybe mutex this later
+      // maybe mutex this later
 
       if (debug_) {
         ROS_INFO("[OpticFlow]: Camera params: %f %f %f %f %f %f %f %f %f", fx, fy, cx, cy, k1, k2, p1, p2, k3);
@@ -1047,13 +1075,13 @@ namespace mrs_optic_flow
     }
   }
 
-
+  //}
 
   // --------------------------------------------------------------
   // |                          routines                          |
   // --------------------------------------------------------------
-  //
-  /* //{ processImage() */
+
+  /* processImage() //{ */
 
   void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
@@ -1083,18 +1111,19 @@ namespace mrs_optic_flow
       std::scoped_lock lock(mutex_uav_height);
       uav_height_curr = uav_height;
     }
+
     if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
-    {
-      std::scoped_lock lock(mutex_odometry);
+      {
+        std::scoped_lock lock(mutex_odometry);
 
-      angle_diff_curr = angle_diff;
-    }
-    }else{
-    {
-      std::scoped_lock lock(mutex_angular_rate);
+        angle_diff_curr = angle_diff;
+      }
+    } else {
+      {
+        std::scoped_lock lock(mutex_angular_rate);
 
-      angular_rate_curr = angular_rate;
-    }
+        angular_rate_curr = angular_rate;
+      }
     }
 
     // scale the image
@@ -1103,10 +1132,10 @@ namespace mrs_optic_flow
     } else {
       image_scaled = image->image.clone();
     }
-    
+
     // cropping
     /* int image_center_x = image_scaled.size().width / 2; */
-    int image_center_x = cx; //The distortion will be more symmetrical ->  better compensation
+    int image_center_x = cx;  // The distortion will be more symmetrical ->  better compensation
     int image_center_y = image_scaled.size().height / 2;
     int xi             = image_center_x - (frame_size_ / 2);
     int yi             = image_center_y - (frame_size_ / 2);
@@ -1121,36 +1150,34 @@ namespace mrs_optic_flow
 
     // | ----------------- angular rate correction ---------------- |
 
-    cv::Point2d tiltCorr = cv::Point2d(0, 0);
+    cv::Point2d tiltCorr    = cv::Point2d(0, 0);
     cv::Point2d tiltCorrPix = cv::Point2d(0, 0);
     cv::Point2d tiltCorrVel = cv::Point2d(0, 0);
 
     if (tilt_correction_) {
 
-    if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
-          tiltCorr.x = angle_diff_curr.x;
-          tiltCorr.y = angle_diff_curr.y;
-    }
-    else {
-          tiltCorr.x = angular_rate_curr.x;
-          tiltCorr.y = angular_rate_curr.y;
-    }
+      if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+        tiltCorr.x = angle_diff_curr.x;
+        tiltCorr.y = angle_diff_curr.y;
+      } else {
+        tiltCorr.x = angular_rate_curr.x;
+        tiltCorr.y = angular_rate_curr.y;
+      }
       tiltCorr.x = tan(tiltCorr.x);  // version V - the good one dammit
       tiltCorr.y = tan(-tiltCorr.y);
 
       rotate2d(tiltCorr.x, tiltCorr.y, -camera_yaw_offset_);
 
-      tiltCorrPix.x = tiltCorr.x*fx;
-      tiltCorrPix.y = tiltCorr.y*fy;
+      tiltCorrPix.x = tiltCorr.x * fx;
+      tiltCorrPix.y = tiltCorr.y * fy;
 
+      /* if (fabs(tiltCorr.x)<min_tilt_correction_) tiltCorr.x=0; */
+      /* if (fabs(tiltCorr.y)<min_tilt_correction_) tiltCorr.y=0; */
 
-        /* if (fabs(tiltCorr.x)<min_tilt_correction_) tiltCorr.x=0; */
-        /* if (fabs(tiltCorr.y)<min_tilt_correction_) tiltCorr.y=0; */
-
-        /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
-        /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
+      /* double xTiltCorr = -fx * sqrt(2 - 2 * cos(angular_rate.x * dur.toSec())) * angular_rate.x / abs(angular_rate.x);  // version 5 */
+      /* double yTiltCorr = fy * sqrt(2 - 2 * cos(angular_rate.y * dur.toSec())) * angular_rate.y / abs(angular_rate.y); */
     }
-    
+
     // Estimate scale and rotation (if enabled)
     cv::Point2d scale_and_rotation = cv::Point2d(0, 0);
 
@@ -1185,8 +1212,8 @@ namespace mrs_optic_flow
 
     if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
       temp_angle_diff = angle_diff_curr.z;
-    }else{
-      temp_angle_diff = angular_rate_curr.z* dur.toSec();
+    } else {
+      temp_angle_diff = angular_rate_curr.z * dur.toSec();
     }
 
     {
@@ -1211,21 +1238,22 @@ namespace mrs_optic_flow
     {
       std::scoped_lock lock(mutex_process);
 
-      mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0,0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
+      mrs_optic_flow_vectors =
+          processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), tiltCorr, mrs_optic_flow_vectors_raw, fx, fy);
     }
-    tf2::Quaternion rot;
-    tf2::Vector3 tran;
+    tf2::Quaternion                           rot;
+    tf2::Vector3                              tran;
     geometry_msgs::TwistWithCovarianceStamped velocity;
-    tf2::Quaternion detilt;
-    
+    tf2::Quaternion                           detilt;
+
     {
       /* std::scoped_lock lock(mutex_odometry); */
 
-        std::scoped_lock lock(mutex_static_tilt);
+      std::scoped_lock lock(mutex_static_tilt);
 
       /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
-      detilt.setRPY(imu_roll,imu_pitch,odometry_yaw);
+      detilt.setRPY(imu_roll, imu_pitch, odometry_yaw);
       /* detilt.setRPY(imu_roll,imu_pitch,0); */
       /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
       /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << " " << imu_yaw << std::endl; */
@@ -1235,37 +1263,43 @@ namespace mrs_optic_flow
     /* detilt = tf2::Quaternion(tf2::Vector3(0,0,1),0); */
     /* std::cout << "Detilt: [" << odometry_roll << " " << odometry_pitch << " " << 0 << "]" << std::endl; */
 
-    if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi,yi), rot, tran)){
+    if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
 
-      tran = tf2::Transform(detilt)*(tf2::Transform(tempTfC2B.getRotation())*tran);
-      std::cout << "Detilted: " << tran.x() << " " << tran.y() << " "<< tran.z() << " "<< std::endl;
+      tran = tf2::Transform(detilt) * (tf2::Transform(tempTfC2B.getRotation()) * tran);
+      /* std::cout << "Detilted: " << tran.x() << " " << tran.y() << " " << tran.z() << " " << std::endl; */
 
       /* double troll, tpitch, tyaw; */
       /* tf2::Matrix3x3(tempTfC2B.getRotation()).getRPY(troll,tpitch,tyaw); */
       /* std::cout << "C2B: " << troll << " " << tpitch << " "<< tyaw << " "<< std::endl; */
 
       /* rot = tf2::Quaternion(tf2::Transform(detilt)*tempTfC2B*(rot.getAxis()), rot.getAngle()); */
-      rot = tf2::Quaternion(tempTfC2B*(rot.getAxis()), rot.getAngle());
+      rot = tf2::Quaternion(tempTfC2B * (rot.getAxis()), rot.getAngle());
 
       velocity.header.frame_id = uav_untilted_frame_;
       velocity.header.stamp    = ros::Time::now();
 
-      velocity.twist.twist.linear.x  = tran.x();
-      velocity.twist.twist.linear.y  = tran.y();
-      velocity.twist.twist.linear.z  = tran.z();
+      velocity.twist.twist.linear.x = tran.x();
+      velocity.twist.twist.linear.y = tran.y();
+      velocity.twist.twist.linear.z = tran.z();
 
       tf2::Matrix3x3(rot).getRPY(velocity.twist.twist.angular.x, velocity.twist.twist.angular.y, velocity.twist.twist.angular.z);
 
-      velocity.twist.covariance[0] = pow(5*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
-      velocity.twist.covariance[7] = velocity.twist.covariance[0];
-      velocity.twist.covariance[14] = velocity.twist.covariance[0]*2;
+      velocity.twist.covariance[0]  = pow(5 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[7]  = velocity.twist.covariance[0];
+      velocity.twist.covariance[14] = velocity.twist.covariance[0] * 2;
 
-      velocity.twist.covariance[21] = atan(0.25); //I expect error of 0.5 rad/s.
-      velocity.twist.covariance[27] = velocity.twist.covariance[21];
-      velocity.twist.covariance[36] = velocity.twist.covariance[21];
-      publisher_velocity.publish(velocity);
+      velocity.twist.covariance[21] = atan(0.25);  // I expect error of 0.5 rad/s.
+      velocity.twist.covariance[28] = velocity.twist.covariance[21];
+      velocity.twist.covariance[35] = velocity.twist.covariance[21];
+
+      try {
+        publisher_velocity.publish(velocity);
+      }
+      catch (...) {
+        ROS_ERROR("Exception caught during publishing topic %s.", publisher_velocity.getTopic().c_str());
+      }
     }
-    return; 
+    return;
 
     // check for nans
     mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
@@ -1292,7 +1326,7 @@ namespace mrs_optic_flow
       msg_raw.layout.dim[1].size   = 2;
       msg_raw.layout.dim[1].label  = "value";
       msg_raw.layout.dim[1].stride = 2;
-      std::vector< unsigned int > convert;
+      std::vector<unsigned int> convert;
       for (int i = 0; i < (int)(mrs_optic_flow_vectors_raw.size()); i++) {
         convert.push_back(mrs_optic_flow_vectors_raw[i].x);
         convert.push_back(mrs_optic_flow_vectors_raw[i].y);
@@ -1329,13 +1363,14 @@ namespace mrs_optic_flow
 
       std::vector<cv::Point2d> trvv;
 
-        trvv = estimateTranRotVvel(mrs_optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height_curr, RansacThresholdRadSq, dur.toSec(), max_vertical_speed_, max_yaw_rate_);
+      trvv = estimateTranRotVvel(mrs_optic_flow_vectors, (double)sample_point_size_, fx, fy, uav_height_curr, RansacThresholdRadSq, dur.toSec(),
+                                 max_vertical_speed_, max_yaw_rate_);
 
       mrs_optic_flow_vectors.clear();
       mrs_optic_flow_vectors.push_back(trvv[0]);  // translation in px
-      scale_and_rotation.x = trvv[1].y;     // rotation in rad/s
-      scale_and_rotation.y = trvv[1].x;     // vertical velocity
-    } else{
+      scale_and_rotation.x = trvv[1].y;           // rotation in rad/s
+      scale_and_rotation.y = trvv[1].x;           // vertical velocity
+    } else {
 
       mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
 
@@ -1344,69 +1379,19 @@ namespace mrs_optic_flow
         return;
       }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       std::vector<cv::Point2d> physical_speed_vectors;
       // scale the velocity using height
-        physical_speed_vectors = multiplyAllPts(mrs_optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),false); // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
+      physical_speed_vectors = multiplyAllPts(mrs_optic_flow_vectors, uav_height_curr / (fx * dur.toSec()), -uav_height_curr / (fy * dur.toSec()),
+                                              false);  // -x fixes the difference in chirality between the image axes and the XY plane of the UAV.
 
       // rotate by camera yaw
-  rotateAllPts(physical_speed_vectors, -camera_yaw_offset_-(M_PI_2)); // -pi/2 to turn X,Y into the body axes.
+      rotateAllPts(physical_speed_vectors, -camera_yaw_offset_ - (M_PI_2));  // -pi/2 to turn X,Y into the body axes.
 
       // rotate to global system
-      rotateAllPts(physical_speed_vectors, odometry_yaw); //is it wise to do here? It should be done with tf, and the output should be in the body frame, or even better, the camera frame! TODO
+      rotateAllPts(physical_speed_vectors, odometry_yaw);  // is it wise to do here? It should be done with tf, and the output should be in the body frame, or
+                                                           // even better, the camera frame! TODO
 
-      //apply odometry calibration coefficients
+      // apply odometry calibration coefficients
       multiplyAllPts(mrs_optic_flow_vectors, calibration_coeff_x_, calibration_coeff_y_);
 
       // Print output
@@ -1431,7 +1416,7 @@ namespace mrs_optic_flow
       int af_abs = 0;
       int af_acc = 0;
 
-      // absolute bouding 
+      // absolute bouding
       //
       if (apply_abs_bounding_) {
 
@@ -1451,7 +1436,7 @@ namespace mrs_optic_flow
       }
 
 
-      //relative bounding 
+      // relative bounding
       if (apply_rel_bouding_) {
 
         {
@@ -1464,7 +1449,8 @@ namespace mrs_optic_flow
         }
 
         if (debug_) {
-          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Speeds after acceleration bound #%lu, max speed from acc: %f", physical_speed_vectors.size(), max_sp_dif_from_accel);
+          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Speeds after acceleration bound #%lu, max speed from acc: %f", physical_speed_vectors.size(),
+                            max_sp_dif_from_accel);
         }
 
         if (physical_speed_vectors.size() < 1) {
@@ -1476,10 +1462,10 @@ namespace mrs_optic_flow
 
               for (uint i = 0; i < bck_speeds.size(); i++) {
                 ROS_INFO_THROTTLE(0.1, "[OpticFlow]: %d -> vx = %f; vy=%f; v=%f; dist from odom=%f", i, bck_speeds[i].x, bck_speeds[i].y,
-                    sqrt(getNormSq(bck_speeds[i])), sqrt(getDistSq(bck_speeds[i], odometry_speed)));
+                                  sqrt(getNormSq(bck_speeds[i])), sqrt(getDistSq(bck_speeds[i], odometry_speed)));
               }
               ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Absolute max: %f, Odometry: vx = %f, vy = %f, v = %f, Max odom distance: %f", max_horizontal_speed_,
-                  odometry_speed.x, odometry_speed.y, sqrt(getNormSq(odometry_speed)), max_sp_dif_from_accel);
+                                odometry_speed.x, odometry_speed.y, sqrt(getNormSq(odometry_speed)), max_sp_dif_from_accel);
               ROS_INFO_THROTTLE(0.1, "[OpticFlow]: After absoulute bound: #%d, after accel: #%d", af_abs, af_acc);
             }
           }
@@ -1488,16 +1474,10 @@ namespace mrs_optic_flow
         }
       } else if (debug_) {
         ROS_INFO_THROTTLE(0.1, "[OpticFlow]: Acceleration-based bounding of physical_speed_vectors not enabled.");
-
       }
-
 
       // post-process by Allsac/Ransac/Averaging
 
-      
-      
-      
-      
       // apply Allsac/Ransac/Averaging
       cv::Point2d filtered_speed_vector;
       if (filter_method_.compare("average") == STRING_EQUAL) {
@@ -1521,31 +1501,21 @@ namespace mrs_optic_flow
       }
 
 
-        tiltCorrVel.x = tiltCorr.x*uav_height_curr;
-        tiltCorrVel.y = tiltCorr.y*uav_height_curr;
+      tiltCorrVel.x = tiltCorr.x * uav_height_curr;
+      tiltCorrVel.y = tiltCorr.y * uav_height_curr;
 
-        geometry_msgs::Vector3 tiltCorrOut;
-        tiltCorrOut.x = tiltCorrVel.x;  // (tan(angular_rate.y*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
-        tiltCorrOut.y = tiltCorrVel.y;  // (tan(angular_rate.x*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
-        tiltCorrOut.z = 0;
-        publisher_tilt_correction.publish(tiltCorrOut);
+      geometry_msgs::Vector3 tiltCorrOut;
+      tiltCorrOut.x =
+          tiltCorrVel.x;  // (tan(angular_rate.y*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
+      tiltCorrOut.y =
+          tiltCorrVel.y;  // (tan(angular_rate.x*dur.toSec())*uav_height_curr)/dur.toSec(); // if enabling, dont forget to mutex range and angular_rate
+      tiltCorrOut.z = 0;
+      publisher_tilt_correction.publish(tiltCorrOut);
 
       /* if (tilt_correction_) */
       /*   filtered_speed_vector = filtered_speed_vector  + tiltCorrVel; */
 
-
-
-
-
-
-
-
-
-
-
       vam = sqrt(getNormSq(filtered_speed_vector));
-
-
 
       // | -------------------- publish velocity -------------------- |
       geometry_msgs::TwistWithCovarianceStamped velocity;
@@ -1553,23 +1523,21 @@ namespace mrs_optic_flow
       velocity.header.frame_id = "local_origin";
       velocity.header.stamp    = ros::Time::now();
 
-      velocity.twist.twist.linear.x  = filtered_speed_vector.x;
-      velocity.twist.twist.linear.y  = filtered_speed_vector.y;
-      velocity.twist.twist.linear.z  = 0;
+      velocity.twist.twist.linear.x = filtered_speed_vector.x;
+      velocity.twist.twist.linear.y = filtered_speed_vector.y;
+      velocity.twist.twist.linear.z = 0;
       /* velocity.twist.linear.z  = scale_and_rotation.x; */
       /* velocity.twist.angular.z = -scale_and_rotation.y; */
       velocity.twist.twist.linear.z  = 0;
       velocity.twist.twist.angular.z = 0;
-      velocity.twist.covariance[0] = pow(10*(uav_height_curr/fx),2); //I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
-      velocity.twist.covariance[7] = velocity.twist.covariance[0];
+      velocity.twist.covariance[0]   = pow(10 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[7]   = velocity.twist.covariance[0];
       publisher_velocity.publish(velocity);
       if (debug_) {
 
-          ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", filtered_speed_vector.x, filtered_speed_vector.y, vam, uav_height_curr, odometry_yaw);
+        ROS_INFO_THROTTLE(0.1, "[OpticFlow]: vxm = %f; vym=%f; vam=%f; range=%f; odometry_yaw=%f", filtered_speed_vector.x, filtered_speed_vector.y, vam,
+                          uav_height_curr, odometry_yaw);
       }
-
-
-
 
       // Add speedbox to lastspeeds array - speedbox carries time, optflow velocity and odom. velocity
       SpeedBox sb;
@@ -1582,29 +1550,26 @@ namespace mrs_optic_flow
       }
 
       ros::Time fromTime = sb.time - ros::Duration(analyze_duration_);
-      if ((int)(lastSpeeds.size())>0)
-      while (lastSpeeds.begin()->time < fromTime){
+      if ((int)(lastSpeeds.size()) > 0)
+        while (lastSpeeds.begin()->time < fromTime) {
           lastSpeeds.erase(lastSpeeds.begin());
-          }
+        }
 
       lastSpeeds.push_back(sb);
 
       // Create statistical data
 
-      StatData  sd       = analyzeSpeeds(fromTime, lastSpeeds); //check what bullshit this one contains later TODO
-
-
+      StatData sd = analyzeSpeeds(fromTime, lastSpeeds);  // check what bullshit this one contains later TODO
 
       geometry_msgs::Vector3 v3;
       v3.x = sd.stdDevX;
       v3.y = sd.stdDevY;
       v3.z = sd.stdDev;
 
-
       publisher_velocity_std.publish(v3);
 
       if (method_ == 5) {
-        //ON ICE
+        // ON ICE
         std_msgs::Float32 maxVel;
         {
           std::scoped_lock lock(mutex_uav_height);
@@ -1615,8 +1580,9 @@ namespace mrs_optic_flow
       }
     }
   }
+
+  //}
 }  // namespace mrs_optic_flow
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(mrs_optic_flow::OpticFlow, nodelet::Nodelet)
-
