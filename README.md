@@ -18,9 +18,9 @@ for testing if your GPU even shows up as an OpenCL device.
 #### Intel GPUs
 For generations greater than 8th (Broadwell) you have to install the NEO OpenCL drivers:
 https://github.com/intel/compute-runtime/releases
-
-For older () you have to install the Beignet OpenCL drivers:
+For older (3rd to 6th gen) you have to install the Beignet OpenCL drivers:
 https://github.com/intel/beignet
+For generations in between, either may or may not work, try it starting with NEO drivers.
 
 The lightdm has to be started for the GPU to show as a OpenCL device. For this to be the case, include in /etc/lightdm/ a file `lightdm.conf`, with the connents:
 
