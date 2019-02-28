@@ -2,11 +2,12 @@
 
 ## System requirements
 - Either a GPU (Integrated is often sufficient) or a decent CPU.
-- A downwards facing camera - we use mvBlueFOX cameras with ~90 degrees of vertical FOV.
+- A downwards facing camera - we use mvBlueFOX cameras with ~90 degrees of vertical FOV. This camera HAS TO be properly calibrated.
 
 ## Troubleshooting
 ### General
 Make sure that the `gui` parameter is set to false if you are running this on a UAV, as the missing access to a display server WILL lead to crash otherwise.
+If the optical flow works but the outputs lead to crashing, check if the stated camera orientation in launcher w.r.t the UAV frame is correct.
 
 ### GPU accelerated processing
 The acceleration is implemented in OpenCL framework. Regardless of your GPU, install packages:
