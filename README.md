@@ -1,7 +1,7 @@
-# The Optic flow processing for GPU-denied environments
+# The Optic flow processing for GPS-denied environments
 
 ## System requirements
-Either a GPS (Integrated is often sufficient) or a decent CPU.
+Either a GPU (Integrated is often sufficient) or a decent CPU.
 
 ## Troubleshooting
 ### GPU accelerated processing
