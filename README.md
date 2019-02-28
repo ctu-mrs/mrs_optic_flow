@@ -24,8 +24,7 @@ https://github.com/intel/beignet
 
 For generations in between, either may or may not work, try it starting with NEO drivers.
 
-The lightdm has to be started for the GPU to show as a OpenCL device. For this to be the case, include in /etc/lightdm/ a file `lightdm.conf`, with the connents:
-
+The lightdm has to be started for the GPU to show as a OpenCL device. For this to be the case, include in `/etc/lightdm/` a file `lightdm.conf`, with the contents:
 ```
 [SeatDefaults]
 autologin-user=mrs
