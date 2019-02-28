@@ -13,7 +13,7 @@
   <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
-  <arg name="cam_yaw" default="1.57079632679" />
+  <arg name="cam_yaw" default="-1.57079632679" />
 
   <!-- <group ns="$(arg uav_name)"> -->
 
@@ -31,8 +31,8 @@
         <!-- </node> -->
 
       <!--node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" -->
-      <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
-        <node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen">
+      <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch">
+        <!--node name="optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"-->
 
           <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
           <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
@@ -43,6 +43,7 @@
           <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
           <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+          <param name="useOCL" value="true" />
 
           <!-- Subscribers -->
           <!--remap from="~odometry_in" to="ground_truth" /-->

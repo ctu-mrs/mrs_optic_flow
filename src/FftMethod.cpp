@@ -1642,6 +1642,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   // calculate correlation for each window and store it if it doesn't exceed the limit
   if (useOCL)
     speeds = phaseCorrelateField(imCurrF, imPrevF,sqNum,sqNum);
+  else
+    speeds.resize(sqNum*sqNum);
 
   for (int j = 0; j < sqNum; j++) {
     for (int i = 0; i < sqNum; i++) {
@@ -1650,7 +1652,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       if (useOCL)
         shift = speeds[i+sqNum*j];
       else
-        shift = cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+        shift = -cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
+
       shift_raw = shift;
 
       bool valid=true;
