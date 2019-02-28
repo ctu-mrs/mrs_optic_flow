@@ -1,7 +1,8 @@
-# The Optic flow processing for GPS-denied environments
+# The Optical flow processing for GPS-denied environments
 
 ## System requirements
-Either a GPU (Integrated is often sufficient) or a decent CPU.
+- Either a GPU (Integrated is often sufficient) or a decent CPU.
+- A downwards facing camera - we use mvBlueFOX cameras with ~90 degrees of vertical FOV.
 
 ## Troubleshooting
 ### GPU accelerated processing
