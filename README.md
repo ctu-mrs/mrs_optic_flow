@@ -6,10 +6,12 @@ Either a GPU (Integrated may be sufficient) or a decent CPUT
 ## Troubleshooting
 ### GPU accelerated processing
 The acceleration is implemented in OpenCL framework. Regardless of your GPU, install packages:
-```ocl-icd-dev ocl-icd-lbopencl1 ocl-icd-opencl-dev opencl-headers
+```
+ocl-icd-dev ocl-icd-lbopencl1 ocl-icd-opencl-dev opencl-headers
 ```
 and I also recommend to install
-```clinfo
+```
+clinfo
 ```
 for testing if your GPU even shows up as an OpenCL device.
 
@@ -22,7 +24,8 @@ https://github.com/intel/beignet
 
 The lightdm has to be started for the GPU to show as a OpenCL device. For this to be the case, include in /etc/lightdm/ a file `lightdm.conf`, with the connents:
 
-```[SeatDefaults]
+```
+[SeatDefaults]
 autologin-user=viktor
 autologin-user-timeout=0
 ```
@@ -34,7 +37,8 @@ This is even worse if the GPU is connected via Thunderbolt.
 With new devices, don't assume that one GPU works better, but rather test this empirically.
 
 Also, install packages:
-```nvidia-libopencl1-XXX [nvidia-libopencl1-XXX-updates] nvidia-opencl-icd-XXX nvidia-opencl-dev
+```
+nvidia-libopencl1-XXX [nvidia-libopencl1-XXX-updates] nvidia-opencl-icd-XXX nvidia-opencl-dev
 ```
 where XXX is your Nvidia driver version.
 In some cases, you may also have to install CUDA Toolkit.
