@@ -1,7 +1,7 @@
 # The Optic flow processing for GPU-denied environments
 
 ## System requirements
-Either a GPU (Integrated may be sufficient) or a decent CPUT
+Either a GPU (Integrated is often sufficient) or a decent CPU.
 
 ## Troubleshooting
 ### GPU accelerated processing
