@@ -7,6 +7,7 @@
 ## Troubleshooting
 ### General
 Make sure that the `gui` parameter is set to false if you are running this on a UAV, as the missing access to a display server WILL lead to crash otherwise.
+
 If the optical flow works but the outputs lead to crashing, check if the stated camera orientation in launcher w.r.t the UAV frame is correct.
 
 ### GPU accelerated processing
@@ -49,6 +50,7 @@ Also, install packages:
 nvidia-libopencl1-XXX [nvidia-libopencl1-XXX-updates] nvidia-opencl-icd-XXX nvidia-opencl-dev
 ```
 where XXX is your Nvidia driver version.
+
 In some cases, you may also have to install CUDA Toolkit.
 
 
