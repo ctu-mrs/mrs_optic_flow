@@ -1320,7 +1320,6 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
   CV_Assert( _src1.type() == CV_32FC1 || _src1.type() == CV_64FC1 );
   CV_Assert( _src1.size() == _src2.size());
 
-  useOCL = false;
   useNewKernel = true;
 
 
@@ -1507,12 +1506,13 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat &_src1, cv::Mat 
     return output;
 }
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
-            bool i_tilt_corr_enable, std::string *videoPath, int videoFPS, std::string i_cl_file_name) {
+            bool i_tilt_corr_enable, std::string *videoPath, int videoFPS, std::string i_cl_file_name, bool i_useOCL) {
   frameSize       = i_frameSize;
   samplePointSize = i_samplePointSize;
   max_px_speed_sq = pow(max_px_speed_t, 2);
 
   cl_file_name = i_cl_file_name;
+  useOCL = i_useOCL;
 
   storeVideo = i_storeVideo;
   if (storeVideo) {
@@ -1640,14 +1640,17 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   double corrX, corrY;  // yaw corrections
 
   // calculate correlation for each window and store it if it doesn't exceed the limit
-  speeds = phaseCorrelateField(imCurrF, imPrevF,sqNum,sqNum);
+  if (useOCL)
+    speeds = phaseCorrelateField(imCurrF, imPrevF,sqNum,sqNum);
 
   for (int j = 0; j < sqNum; j++) {
     for (int i = 0; i < sqNum; i++) {
       xi    = i * samplePointSize;
       yi    = j * samplePointSize;
-      /* shift = cv::phaseCorrelate(imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize))); */
-      shift = speeds[i+sqNum*j];
+      if (useOCL)
+        shift = speeds[i+sqNum*j];
+      else
+        shift = cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize, samplePointSize)), imPrevF(cv::Rect(xi, yi, samplePointSize, samplePointSize)));
       shift_raw = shift;
 
       bool valid=true;

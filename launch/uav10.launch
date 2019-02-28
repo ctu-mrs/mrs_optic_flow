@@ -130,6 +130,7 @@
             <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
             <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+            <param name="useOCL" value="true" />
 
             <!-- Subscribers -->
             <!--remap from="~odometry_in" to="ground_truth" /-->

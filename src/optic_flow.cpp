@@ -246,6 +246,7 @@ namespace mrs_optic_flow
     std::string camera_frame_, uav_frame_, uav_untilted_frame_;
 
     std::string fft_cl_file_;
+    bool useOCL_;
 
     std::string filter_method_;
 
@@ -563,6 +564,7 @@ namespace mrs_optic_flow
 
     // | -------------------- optic flow params ------------------- |
     param_loader.load_param("FftCLFile", fft_cl_file_);
+    param_loader.load_param("useOCL", useOCL_);
 
     param_loader.load_param("mrs_optic_flow/scale_factor", scale_factor_);
 
@@ -674,14 +676,19 @@ namespace mrs_optic_flow
         /* std::cout << cv::getBuildInformation() << std::endl; */
 
         if (!cv::ocl::haveOpenCL()) {
-          ROS_INFO("NO OCL SUPPORT");
-          // return;
+          ROS_ERROR("NO OCL SUPPORT - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+          return;
         }
 
         cv::ocl::Context context;
         if (!context.create(cv::ocl::Device::TYPE_GPU)) {
-          ROS_INFO("Failed creating the context...");
-          // return;
+          ROS_ERROR("Failed creating the context - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+          return;
+        }
+        
+        if ((context.ndevices()) == 0) {
+          ROS_ERROR("No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+          return;
         }
 
         ROS_INFO(" GPU devices are detected.");  // This bit provides an overview of the OpenCL devices you have in your computer
@@ -704,7 +711,7 @@ namespace mrs_optic_flow
         cv::ocl::setUseOpenCL(true);
 
         processClass = new FftMethod(frame_size_, sample_point_size_, max_pixel_speed_, store_video_, raw_enabled_, rotation_correction_, tilt_correction_,
-                                     &video_path_, videoFPS, fft_cl_file_);
+                                     &video_path_, videoFPS, fft_cl_file_, useOCL_);
         break;
       }
 
