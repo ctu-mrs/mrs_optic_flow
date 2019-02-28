@@ -28,7 +28,7 @@ The lightdm has to be started for the GPU to show as a OpenCL device. For this t
 
 ```
 [SeatDefaults]
-autologin-user=viktor
+autologin-user=mrs
 autologin-user-timeout=0
 ```
 
