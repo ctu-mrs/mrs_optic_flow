@@ -5,6 +5,9 @@
 - A downwards facing camera - we use mvBlueFOX cameras with ~90 degrees of vertical FOV.
 
 ## Troubleshooting
+### General
+Make sure that the `gui` parameter is set to false if you are running this on a UAV, as the missing access to a display server WILL lead to crash otherwise.
+
 ### GPU accelerated processing
 The acceleration is implemented in OpenCL framework. Regardless of your GPU, install packages:
 ```
@@ -31,6 +34,8 @@ The lightdm has to be started for the GPU to show as a OpenCL device. For this t
 autologin-user=mrs
 autologin-user-timeout=0
 ```
+
+Additionally, if these steps were not sufficient, check if headless video is enabled (or available) in BIOS.
 
 #### Nvidia GPUs
 Processing a single piece of data on an external GPU is faster, but the transfer of data into and from these devices creates a significant overhead, which typically leads to the integrated GPU providing a better output rate.
