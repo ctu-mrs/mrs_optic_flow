@@ -1379,18 +1379,6 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
                                   __global const CT * twiddles_ptr, int twiddles_step, int twiddles_offset,
                                    const int t, int rowsPerWI, int Xfields, int Yfields, int samplePointSize){
 
-    /* const int x = get_global_id(0); */
-    /* const int y = get_group_id(1); */
-    /* if (x == 0) */
-      /* if (y == 0) */
-      /* printf("COL: %d, ROW: %d",fft1_cols, fft1_rows); */
-
-  /* for (int j=Yfields-1; j>=0; j--){ */
-  /*   for (int i=0; i<Xfields; i++){ */
-      /* for (int i=Xfields-1; i>=0; i--){ */
-  /* for (int j=0; j<Yfields; j++){ */
-  /*   for (int i=0; i<Xfields; i++){ */
-
   __local CT smem[LOCAL_SIZE];
   __local float localmem_max[WGS2_ALIGNED];
   __local uint localmem_maxloc[WGS2_ALIGNED];
@@ -1445,8 +1433,6 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
 
     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
 
-    /* /1* return; *1/ */
-
       mulAndNormalizeSpectrums(
           fft1_ptr, fft1_step, fft1_offset,fft2_ptr, fft2_step, fft2_offset,
           mul_ptr, mul_step, mul_offset, mul_rows, mul_cols,
@@ -1479,7 +1465,8 @@ __kernel void phaseCorrelateField(__global const uchar* src1_ptr, int src1_step,
       refine(pcr_ptr, pcr_step, pcr_offset, LOCAL_SIZE, LOCAL_SIZE, get_num_groups(0)*get_num_groups(1), dstptr,index, i, j, samplePointSize,3);
 
     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
-    } }
+    }
+  }
 
 
 }
