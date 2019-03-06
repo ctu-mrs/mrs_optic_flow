@@ -110,6 +110,7 @@ namespace mrs_optic_flow
     bool        getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
     void        TfThread();
     std::thread tf_thread;
+    bool        got_tfs = false;
 
   private:
     ros::Timer cam_init_timer;
@@ -283,18 +284,36 @@ namespace mrs_optic_flow
 
   void OpticFlow::TfThread() {
 
-    ros::Rate transformRate(0.1);
+    if (!is_initialized) {
+      return; 
+    }
+
+    ros::Rate transformRate(1.0);
     bool      got_c2b, got_b2c, got_b2w;
     got_c2b = false;
     got_b2c = false;
     got_b2w = false;
+
     while ((!got_c2b) || (!got_b2c)) {
+
       try {
         {
           std::scoped_lock lock(mutex_tf);
           /* transformCam2Base = tf_buffer.lookupTransform(uav_frame_, camera_frame_, time - ros::Duration(uav2_delay), timeout); */
           transformCam2Base = buffer.lookupTransform(uav_frame_, camera_frame_, ros::Time(0), ros::Duration(2));
         }
+        ROS_INFO_STREAM("[OpticFlow]: received cam2base tf" << transformCam2Base);
+
+        double tf_roll, tf_pitch, tf_yaw;
+
+        // calculate the euler angles
+        tf::Quaternion quaternion_tf;
+        quaternionMsgToTF(transformCam2Base.transform.rotation, quaternion_tf);
+        tf::Matrix3x3 m(quaternion_tf);
+        m.getRPY(tf_roll, tf_pitch, tf_yaw);
+
+        ROS_INFO("[OpticFlow]: R %f P %f Y %f", tf_roll, tf_pitch, tf_yaw);
+
         got_c2b = true;
       }
       catch (tf2::TransformException ex) {
@@ -302,11 +321,24 @@ namespace mrs_optic_flow
         ros::Duration(1.0).sleep();
         continue;
       }
+
       try {
         {
           std::scoped_lock lock(mutex_tf);
           transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0), ros::Duration(2));
         }
+
+        ROS_INFO_STREAM("[OpticFlow]: received base2cam tf" << transformBase2Cam);
+
+        double tf_roll, tf_pitch, tf_yaw;
+
+        // calculate the euler angles
+        tf::Quaternion quaternion_tf;
+        quaternionMsgToTF(transformBase2Cam.transform.rotation, quaternion_tf);
+        tf::Matrix3x3 m(quaternion_tf);
+        m.getRPY(tf_roll, tf_pitch, tf_yaw);
+
+        ROS_INFO("[OpticFlow]: R %f P %f Y %f", tf_roll, tf_pitch, tf_yaw);
         got_b2c = true;
       }
       catch (tf2::TransformException ex) {
@@ -314,23 +346,13 @@ namespace mrs_optic_flow
         ros::Duration(1.0).sleep();
         continue;
       }
-      /* try { */
-      /*   listener.waitForTransform("local_origin", "fcu_" + uav_name, ros::Time::now(), ros::Duration(1.0)); */
-      /*   { */
-      /*     std::scoped_lock(mutex_tf); */
 
-      /*     listener.lookupTransform("local_origin", "fcu_" + uav_name, ros::Time(0), transformBase2World); */
-      /*   } */
-      /*   got_b2w = true; */
-      /* } */
-      /* catch (tf2::TransformException ex) { */
-      /*   ROS_ERROR("TF: %s", ex.what()); */
-      /*   ros::Duration(1.0).sleep(); */
-      /*   continue; */
-      /* } */
       transformRate.sleep();
-      /* ROS_INFO("TF next"); */
     }
+
+    ROS_INFO("[OpticFlow]: got TFs, quiting tf thread");
+
+    got_tfs = true;
   }
 
   //}
@@ -364,6 +386,7 @@ namespace mrs_optic_flow
     std::vector<cv::Mat>         rot, tran, normals;
     int                          solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
     std::vector<int>             filteredSolutions;
+
     tf2::Stamped<tf2::Transform> tempTfC2B, tempTfB2C;
     {
       std::scoped_lock lock(mutex_tf);
@@ -371,6 +394,7 @@ namespace mrs_optic_flow
       tf2::fromMsg(transformCam2Base, tempTfC2B);
       tf2::fromMsg(transformBase2Cam, tempTfB2C);
     }
+
     /* tf2::Quaternion cam_orientation = tempTf*odometry_orientation; */
     /* tf2::Vector3 expNormal = */
     /* std::cout << "C2B: " << cam_orientation(tf2::Vector3(0,0,1)) << std::endl; */
@@ -412,8 +436,10 @@ namespace mrs_optic_flow
 
         tempTransform = tf2::Transform(tempRotMat);
         quatRateOF    = tempTransform.getRotation();
+
         /* quatRateOFB = tf2::Quaternion((quatRateOF.getAxis()), quatRateOF.getAngle()/dur.toSec()); */
         quatRateOFB = tf2::Quaternion(tempTfC2B * (quatRateOF.getAxis()), quatRateOF.getAngle() / dur.toSec());
+
         /* tf2::Matrix3x3(quatRateOFB).getRPY(roll,pitch,yaw); */
         /* std::cout << "Angles  OFT: [" << roll << " " << pitch << " " << yaw << "]" << std::endl; */
         double angDiff = quatRateOFB.angle(angular_rate_tf);
@@ -988,6 +1014,11 @@ namespace mrs_optic_flow
 
     if (!is_initialized || !got_odometry)
       return;
+
+    if (!got_tfs) {
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for TFs"); 
+      return;
+    }
 
     ROS_INFO("[OpticFlow]: callbackImage() start");
 
