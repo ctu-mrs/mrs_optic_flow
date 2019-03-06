@@ -246,7 +246,7 @@ namespace mrs_optic_flow
     std::string camera_frame_, uav_frame_, uav_untilted_frame_;
 
     std::string fft_cl_file_;
-    bool useOCL_;
+    bool        useOCL_;
 
     std::string filter_method_;
 
@@ -429,7 +429,6 @@ namespace mrs_optic_flow
           bestIndex      = i;
           bestQuatRateOF = quatRateOF;
         }
-
       }
     }
 
@@ -682,12 +681,14 @@ namespace mrs_optic_flow
 
         cv::ocl::Context context;
         if (!context.create(cv::ocl::Device::TYPE_GPU)) {
-          ROS_ERROR("Failed creating the context - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+          ROS_ERROR(
+              "Failed creating the context - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
           return;
         }
-        
+
         if ((context.ndevices()) == 0) {
-          ROS_ERROR("No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+          ROS_ERROR(
+              "No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
           return;
         }
 
@@ -975,6 +976,7 @@ namespace mrs_optic_flow
   /* //{ callbackImage() */
 
   void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
+
     /* imshow("NEW",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
     /* imshow("OLD",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
     /* imshow("cv_debugshit",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
@@ -986,6 +988,8 @@ namespace mrs_optic_flow
 
     if (!is_initialized || !got_odometry)
       return;
+
+    ROS_INFO("[OpticFlow]: callbackImage() start");
 
     mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
 
@@ -1021,7 +1025,10 @@ namespace mrs_optic_flow
       tilt_prev = tilt_curr;
     }
     image = cv_bridge::toCvCopy(msg, enc::BGR8);
+
     processImage(image);
+
+    ROS_INFO("[OpticFlow]: callbackImage() end");
   }
 
   //}
@@ -1097,6 +1104,8 @@ namespace mrs_optic_flow
       first_image = false;
       return;
     }
+
+    ROS_INFO("[OpticFlow]: processImage() start");
 
     // we need camera info!
     if (!got_camera_info) {
@@ -1216,7 +1225,6 @@ namespace mrs_optic_flow
     std::vector<cv::Point2d> mrs_optic_flow_vectors_raw;
     double                   temp_angle_diff;
 
-
     if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
       temp_angle_diff = angle_diff_curr.z;
     } else {
@@ -1306,7 +1314,12 @@ namespace mrs_optic_flow
         ROS_ERROR("Exception caught during publishing topic %s.", publisher_velocity.getTopic().c_str());
       }
     }
+
+    ROS_INFO("[OpticFlow]: processImage() end");
+
     return;
+
+    /* THIS IS NOT USED //{ */
 
     // check for nans
     mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
@@ -1350,6 +1363,7 @@ namespace mrs_optic_flow
 
     // | ----------------- advanced 3D positioning ---------------- |
     if (scale_rotation && d3d_method_.compare("advanced") == STRING_EQUAL) {
+
       ROS_ERROR("[opticflow]: This implementation of R3xS1 motion called \"advanced\" is stupid. Wait for a new one, named \"pnp\". ~Viktor");
       return;
 
@@ -1377,6 +1391,7 @@ namespace mrs_optic_flow
       mrs_optic_flow_vectors.push_back(trvv[0]);  // translation in px
       scale_and_rotation.x = trvv[1].y;           // rotation in rad/s
       scale_and_rotation.y = trvv[1].x;           // vertical velocity
+
     } else {
 
       mrs_optic_flow_vectors = removeNanPoints(mrs_optic_flow_vectors);
@@ -1586,6 +1601,8 @@ namespace mrs_optic_flow
         publisher_max_allowed_velocity.publish(maxVel);
       }
     }
+
+    //}
   }
 
   //}

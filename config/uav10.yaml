@@ -1,4 +1,4 @@
-camera_yaw_offset: 0 # 0 means top edge of image is towards the front of the UAV. Consider re-implementing using tf. TODO
+camera_yaw_offset: 3.1415 # 0 means top edge of image is towards the front of the UAV. Consider re-implementing using tf. TODO
 
 gui: false
 debug: false
