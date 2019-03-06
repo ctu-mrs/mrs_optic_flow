@@ -57,4 +57,4 @@ In some cases, you may also have to install CUDA Toolkit.
 ### CPU
 If you can't get any GPU to cooperate, enable the CPU processing by passing the parameter useOCL in launcher as false.
 This will work everywhere, but the output rate may be less than satisfactory.
-Set flight control to appropriate speeds, as the lower rate leads to sticter limits on the maximum measurable speeds - the shift during a longer period may move the ground image out of matching range.
+Set flight control to appropriate speeds, as the lower rate leads to stricter limits on the maximum measurable speeds - the shift during a longer period may move the ground image out of matching range.
