@@ -13,7 +13,7 @@ If the optical flow works but the outputs lead to crashing, check if the stated 
 ### GPU accelerated processing
 The acceleration is implemented in OpenCL framework. Regardless of your GPU, install packages:
 ```
-ocl-icd-dev ocl-icd-lbopencl1 ocl-icd-opencl-dev opencl-headers
+ocl-icd-dev ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers
 ```
 and I also recommend to install
 ```
