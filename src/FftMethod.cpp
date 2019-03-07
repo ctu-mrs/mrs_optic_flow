@@ -746,7 +746,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, s
 
   char cvt[2][40];
   buildOptions = cv::format("-D LOCAL_SIZE=%d -D SEARCH_RADIUS=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s -D convertToDT=%s", dft_size,
-                            dft_size / 3, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
+                            50, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
                             dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str(), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, min_radix)),
                             cv::ocl::convertTypeStr(dft_depth, dft_depth, min_radix, cvt[0]));
   int      cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
