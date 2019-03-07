@@ -700,19 +700,19 @@ namespace mrs_optic_flow
 
         /* std::cout << cv::getBuildInformation() << std::endl; */
 
-        if (!cv::ocl::haveOpenCL()) {
+        if (useOCL_ && !cv::ocl::haveOpenCL()) {
           ROS_ERROR("NO OCL SUPPORT - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
           return;
         }
 
         cv::ocl::Context context;
-        if (!context.create(cv::ocl::Device::TYPE_GPU)) {
+        if (useOCL_ && !context.create(cv::ocl::Device::TYPE_GPU)) {
           ROS_ERROR(
               "Failed creating the context - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
           return;
         }
 
-        if ((context.ndevices()) == 0) {
+        if (useOCL_ && (context.ndevices()) == 0) {
           ROS_ERROR(
               "No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
           return;
@@ -1012,15 +1012,17 @@ namespace mrs_optic_flow
     /* if ((nrep > 100) ) */
     /*   return; */
 
-    if (!is_initialized || !got_odometry)
-      return;
-
-    if (!got_tfs) {
-      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for TFs"); 
+    if (!is_initialized) {
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for initialization"); 
       return;
     }
 
-    ROS_INFO("[OpticFlow]: callbackImage() start");
+    if (!got_odometry) {
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for odometry"); 
+      return;
+    }
+
+    /* ROS_INFO("[OpticFlow]: callbackImage() start"); */
 
     mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
 
@@ -1059,7 +1061,7 @@ namespace mrs_optic_flow
 
     processImage(image);
 
-    ROS_INFO("[OpticFlow]: callbackImage() end");
+    /* ROS_INFO("[OpticFlow]: callbackImage() end"); */
   }
 
   //}
@@ -1136,7 +1138,7 @@ namespace mrs_optic_flow
       return;
     }
 
-    ROS_INFO("[OpticFlow]: processImage() start");
+    /* ROS_INFO("[OpticFlow]: processImage() start"); */
 
     // we need camera info!
     if (!got_camera_info) {
@@ -1346,7 +1348,7 @@ namespace mrs_optic_flow
       }
     }
 
-    ROS_INFO("[OpticFlow]: processImage() end");
+    /* ROS_INFO("[OpticFlow]: processImage() end"); */
 
     return;
 

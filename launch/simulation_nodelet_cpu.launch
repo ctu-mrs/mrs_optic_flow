@@ -1,0 +1,65 @@
+<launch>
+
+  <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
+  <arg name="standalone" default="$(optenv STANDALONE false)" />
+  <arg name="profiler" default="$(optenv PROFILER false)" />
+
+  <arg unless="$(arg standalone)" name="nodelet" value="load"/>
+  <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
+  <arg unless="$(arg standalone)" name="nodelet_manager" value="$(arg uav_name)_vision_nodelet_manager"/>
+  <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
+
+  <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
+  <arg name="uav_frame" default="fcu_$(arg uav_name)" />
+  <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
+  <arg name="cam_yaw" default="1.57079632679" />
+
+    <node
+      name="optflow_cam_tf"
+      pkg="tf2_ros"
+      type="static_transform_publisher"
+      args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
+
+  <group ns="$(arg uav_name)">
+
+    <!-- Vision Nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
+      <param name="num_worker_threads" value="4" />
+    </node>
+
+    <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" >
+
+      <rosparam file="$(find mrs_optic_flow)/config/simulation.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
+      <param name="enable_profiler" value="$(arg profiler)" />
+
+      <param name="camera_frame" value="$(arg camera_frame)" />
+      <param name="uav_frame" value="$(arg uav_frame)" />
+      <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
+
+      <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+      <param name="useOCL" value="false" />
+
+      <!-- File with camera parameters - loaded when nothing found on Camera info -->
+      <!-- <rosparam file="$(find mrs_optic_flow)/config/bluefox_uav5_as_of_26-4.yaml" /> -->
+
+      <!-- Subscribers -->
+      <remap from="~odometry_in" to="odometry/orientation" />
+      <remap from="~camera_in" to="bluefox/image_raw" />
+      <remap from="~camera_info_in" to="bluefox/camera_info" />
+      <remap from="~uav_height_in" to="odometry/altitude" />
+      <remap from="~imu_in" to="mavros/imu/data" />
+
+      <!-- Publishers -->
+      <remap from="~velocity_out" to="optic_flow/velocity" />
+      <remap from="~velocity_raw_out" to="optic_flow/velocity_raw" />
+      <remap from="~velocity_stddev_out" to="optic_flow/velocity_stddev" />
+      <remap from="~tilt_correction_out" to="optic_flow/tilt_correction" />
+      <remap from="~allsac_chosen_out" to="optic_flow/allsac_chosen" />
+      <remap from="~profiler" to="profiler" />
+
+    </node>
+
+  </group>
+
+</launch>
