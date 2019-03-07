@@ -1330,7 +1330,7 @@ namespace mrs_optic_flow
 
       tf2::Matrix3x3(rot).getRPY(velocity.twist.twist.angular.x, velocity.twist.twist.angular.y, velocity.twist.twist.angular.z);
 
-      velocity.twist.covariance[0]  = pow(5 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[0]  = pow(50 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7]  = velocity.twist.covariance[0];
       velocity.twist.covariance[14] = velocity.twist.covariance[0] * 2;
 
