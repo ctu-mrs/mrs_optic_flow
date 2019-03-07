@@ -51,11 +51,11 @@
       <remap from="~imu_in" to="mavros/imu/data_raw" />
 
       <!-- Publishers -->
-      <remap from="~velocity_out" to="~velocity" />
-      <remap from="~velocity_raw_out" to="~velocity_raw" />
-      <remap from="~velocity_stddev_out" to="~velocity_stddev" />
-      <remap from="~tilt_correction_out" to="~tilt_correction" />
-      <remap from="~allsac_chosen_out" to="~allsac_chosen" />
+      <remap from="~velocity_out" to="optic_flow/velocity" />
+      <remap from="~velocity_raw_out" to="optic_flow/velocity_raw" />
+      <remap from="~velocity_stddev_out" to="optic_flow/velocity_stddev" />
+      <remap from="~tilt_correction_out" to="optic_flow/tilt_correction" />
+      <remap from="~allsac_chosen_out" to="optic_flow/allsac_chosen" />
       <remap from="~profiler" to="profiler" />
 
     </node>
