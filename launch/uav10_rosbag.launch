@@ -1,0 +1,70 @@
+<launch>
+
+  <arg name="uav_name" default="$(optenv UAV_NAME uav10)" />
+  <!-- <arg name="standalone" default="true" /> -->
+  <arg name="standalone" default="$(optenv STANDALONE false)" />
+  <arg name="profiler" default="$(optenv PROFILER false)" />
+
+  <arg unless="$(arg standalone)" name="nodelet" value="load"/>
+  <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
+  <arg unless="$(arg standalone)" name="nodelet_manager" value="$(arg uav_name)_vision_nodelet_manager"/>
+  <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
+
+  <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
+  <arg name="uav_frame" default="fcu_$(arg uav_name)" />
+  <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
+  <arg name="cam_yaw" default="-1.57079632679" />
+  <!-- <arg name="cam_yaw" default="0" /> -->
+
+  <!-- Autoexposure nodelet -->
+  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow.launch" />
+
+  <group ns="$(arg uav_name)">
+
+    <node pkg="image_transport" type="republish" name="republish_bluefox" output="screen" args="compressed in:=bluefox/image_raw raw out:=bluefox2/image_raw"  />
+
+    <node
+      name="optflow_cam_tf"
+      pkg="tf2_ros"
+      type="static_transform_publisher"
+      args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
+    <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
+
+    <!-- Optic flow nodelet -->
+    <node name="optic_flow2" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow" output="screen" respawn="true">
+
+      <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
+        <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
+
+          <rosparam file="$(find mrs_optic_flow)/config/uav10.yaml" />
+          <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
+          <param name="enable_profiler" value="$(arg profiler)" />
+
+          <param name="camera_frame" value="$(arg camera_frame)" />
+          <param name="uav_frame" value="$(arg uav_frame)" />
+          <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
+
+          <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+          <param name="useOCL" value="true" />
+
+          <!-- Subscribers -->
+          <!--remap from="~odometry_in" to="ground_truth" /-->
+          <remap from="~odometry_in" to="mavros/local_position/odom" />
+          <remap from="~camera_in" to="bluefox2/image_raw" />
+          <remap from="~camera_info_in" to="bluefox/camera_info" />
+          <remap from="~uav_height_in" to="odometry/altitude" />
+          <remap from="~imu_in" to="mavros/imu/data" />
+
+          <!-- Publishers -->
+          <remap from="~velocity_out" to="~velocity" />
+          <remap from="~velocity_raw_out" to="~velocity_raw" />
+          <remap from="~velocity_stddev_out" to="~velocity_stddev" />
+          <remap from="~tilt_correction_out" to="~tilt_correction" />
+          <remap from="~allsac_chosen_out" to="~allsac_chosen" />
+          <remap from="~profiler" to="profiler" />
+
+        </node>
+
+      </group>
+
+    </launch>

@@ -364,15 +364,30 @@ namespace mrs_optic_flow
     cv::Matx33d camMatrixLocal = camMatrix;
     camMatrixLocal(0, 2) -= ulCorner.x;
     std::vector<cv::Point2d> initialPts, shiftedPts, undistPtsA, undistPtsB;
-    int                      sqNum = frame_size_ / sample_point_size_;
+
+    int sqNum = frame_size_ / sample_point_size_;
+
     for (int j = 0; j < sqNum; j++) {
       for (int i = 0; i < sqNum; i++) {
+
+        if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
+
+          ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\"!!!");
+          continue;
+        }
+
         int xi = i * sample_point_size_ + (sample_point_size_ / 2);
         int yi = j * sample_point_size_ + (sample_point_size_ / 2);
         initialPts.push_back(cv::Point2d(xi, yi));
         shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
       }
     }
+
+    // TODO: this number should be parametrized and put to config
+    if (shiftedPts.size() < 8) {
+      return false; 
+    }
+
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
     cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
 
@@ -520,6 +535,10 @@ namespace mrs_optic_flow
       /*   o_tran = tf2::Vector3(0, 0, 0); */
       /*   return true; */
       /* } */
+
+      ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts);
+
+      ROS_INFO_STREAM("[OpticFlow]: homography: " << homography);
 
       return false;
 

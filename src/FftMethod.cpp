@@ -1537,7 +1537,6 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       /*   } */
       /* } */
 
-
       /* if (tilt_corr_enable) { */
       /*   distX = fabs( (xi + samplePointSize / 2) - midX); */
       /*   distY = fabs( (yi + samplePointSize / 2) - midY); */
