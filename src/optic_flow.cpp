@@ -438,6 +438,8 @@ namespace mrs_optic_flow
         quatRateOF    = tempTransform.getRotation();
 
         /* quatRateOFB = tf2::Quaternion((quatRateOF.getAxis()), quatRateOF.getAngle()/dur.toSec()); */
+
+        // TODO: dur can be =0, 
         quatRateOFB = tf2::Quaternion(tempTfC2B * (quatRateOF.getAxis()), quatRateOF.getAngle() / dur.toSec());
 
         /* tf2::Matrix3x3(quatRateOFB).getRPY(roll,pitch,yaw); */
@@ -478,11 +480,15 @@ namespace mrs_optic_flow
       /* std::cout << "Translations: " << tran[bestIndex] * uav_height_curr / dur.toSec() << std::endl; */
       /* std::cout << std::endl; */
 
+      // TODO: dur can be =0, 
+
       o_rot = tf2::Quaternion(bestQuatRateOF.getAxis(), bestQuatRateOF.getAngle() / dur.toSec());
 
       /* o_tran =
        * tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height/dur.toSec();
        */
+
+      // TODO: dur can be =0, 
 
       {
         std::scoped_lock lock(mutex_uav_height);
@@ -1628,6 +1634,8 @@ namespace mrs_optic_flow
         std_msgs::Float32 maxVel;
         {
           std::scoped_lock lock(mutex_uav_height);
+
+          // TODO: dur can be =0, 
 
           maxVel.data = scan_radius_ * uav_height_curr / (dur.toSec() * std::max(fx, fy));
         }
