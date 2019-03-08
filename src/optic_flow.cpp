@@ -285,7 +285,7 @@ namespace mrs_optic_flow
   void OpticFlow::TfThread() {
 
     if (!is_initialized) {
-      return; 
+      return;
     }
 
     ros::Rate transformRate(1.0);
@@ -383,9 +383,9 @@ namespace mrs_optic_flow
     cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3);
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
-    std::vector<cv::Mat>         rot, tran, normals;
-    int                          solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
-    std::vector<int>             filteredSolutions;
+    std::vector<cv::Mat> rot, tran, normals;
+    int                  solutions = cv::decomposeHomographyMat(homography, cv::Matx33d::eye(), rot, tran, normals);
+    std::vector<int>     filteredSolutions;
 
     tf2::Stamped<tf2::Transform> tempTfC2B, tempTfB2C;
     {
@@ -511,14 +511,20 @@ namespace mrs_optic_flow
 
     /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
     else if (solutions == 1) {
-      if (cv::norm(tran[0]) < 0.001) {
-        /* std::cout << "No motion detected" << std::endl; */
-        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
-        o_tran = tf2::Vector3(0, 0, 0);
-        return true;
-      }
+
+      // TODO: do something which all shifts are small, then return zeros
+
+      /* if (cv::norm(tran[0]) < 0.001) { */
+      /*   std::cout << "No motion detected" << std::endl; */
+      /*   o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0); */
+      /*   o_tran = tf2::Vector3(0, 0, 0); */
+      /*   return true; */
+      /* } */
+
+      return false;
+
     } else {
-      /* std::cout << "ERROR" << std::endl; */
+      std::cout << "ERROR" << std::endl;
     }
 
     return false;
@@ -1013,12 +1019,12 @@ namespace mrs_optic_flow
     /*   return; */
 
     if (!is_initialized) {
-      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for initialization"); 
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for initialization");
       return;
     }
 
     if (!got_odometry) {
-      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for odometry"); 
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for odometry");
       return;
     }
 
@@ -1313,6 +1319,9 @@ namespace mrs_optic_flow
 
     if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
 
+      ROS_INFO("[OpticFlow]: tran: %f %f", tran.x(), tran.y());
+      ROS_INFO("[OpticFlow]: rot: %f %f %f %f", rot.x(), rot.y(), rot.z(), rot.w());
+
       tran = tf2::Transform(detilt) * (tf2::Transform(tempTfC2B.getRotation()) * tran);
       /* std::cout << "Detilted: " << tran.x() << " " << tran.y() << " " << tran.z() << " " << std::endl; */
 
@@ -1339,6 +1348,10 @@ namespace mrs_optic_flow
       velocity.twist.covariance[21] = atan(0.25);  // I expect error of 0.5 rad/s.
       velocity.twist.covariance[28] = velocity.twist.covariance[21];
       velocity.twist.covariance[35] = velocity.twist.covariance[21];
+
+      if (fabs(tran.x()) <= 1e-5 || fabs(tran.y()) <= 1e-5 || fabs(tran.z()) <= 1e-5) {
+        ROS_ERROR("[OpticFlow]: OUTPUTTING ZEROS");
+      }
 
       try {
         publisher_velocity.publish(velocity);
