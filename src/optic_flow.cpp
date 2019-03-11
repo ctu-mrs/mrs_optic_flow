@@ -372,7 +372,7 @@ namespace mrs_optic_flow
 
         if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
 
-          ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\"!!!");
+          ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i,j);
           continue;
         }
 

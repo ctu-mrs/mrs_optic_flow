@@ -1229,7 +1229,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
     phaseCorrelate_ocl(usrc1, usrc2, peakLocs, Y, X);
     /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost); */
     for (int i = 0; i < ((int)(peakLocs.size())); i++) {
-      /* std::cout << "out " << i << " = " << peakLocs[i] << std::endl; */
+      std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
     }
   }
   for (int j = 0; j < Y; j++) {
@@ -1517,10 +1517,11 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       bool valid = true;
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
-        ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);
+        ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d",shift.x,shift.y, i, j);
         valid = false;
       }
       if ((isnan(shift.x)) || (isnan(shift.y))) {
+        ROS_WARN("[OpticFlow]: FFT - NaN optical flow response in window x %d y %d", i, j);
         valid = false;
       }
 
