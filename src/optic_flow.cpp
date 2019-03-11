@@ -360,6 +360,8 @@ namespace mrs_optic_flow
   /* getRT() //{ */
 
   bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran) {
+    if (dur.toSec() < 0.00001)
+      return false;
 
     cv::Matx33d camMatrixLocal = camMatrix;
     camMatrixLocal(0, 2) -= ulCorner.x;
@@ -367,6 +369,7 @@ namespace mrs_optic_flow
 
     int sqNum = frame_size_ / sample_point_size_;
 
+    bool allSmall = true;
     for (int j = 0; j < sqNum; j++) {
       for (int i = 0; i < sqNum; i++) {
 
@@ -380,7 +383,20 @@ namespace mrs_optic_flow
         int yi = j * sample_point_size_ + (sample_point_size_ / 2);
         initialPts.push_back(cv::Point2d(xi, yi));
         shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
+        if (cv::norm(shifts[i+sqNum*j]) > 0.1)
+          allSmall = false;
       }
+    }
+
+    if (allSmall){
+
+      /* ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts); */
+      /* ROS_INFO_STREAM("[OpticFlow]: homography: " << homography); */
+
+      std::cout << "No motion detected" << std::endl;
+      o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+      o_tran = tf2::Vector3(0, 0, 0);
+      return true;
     }
 
     // TODO: this number should be parametrized and put to config
@@ -396,7 +412,7 @@ namespace mrs_optic_flow
     /* for (int i=0;i<(int)(undistPtsA.size()); i++){ */
     /*   std::cout << "A - Orig: " << initialPts[i] << " Undist: " << camMatrixLocal*undistPtsA[i] << std::endl; */
     /*   std::cout << "B - Orig: " << shiftedPts[i] << " Undist: " << camMatrixLocal*undistPtsB[i] << std::endl; */
-    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3);
+    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 3);
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
     std::vector<cv::Mat> rot, tran, normals;
@@ -455,7 +471,6 @@ namespace mrs_optic_flow
 
         /* quatRateOFB = tf2::Quaternion((quatRateOF.getAxis()), quatRateOF.getAngle()/dur.toSec()); */
 
-        // TODO: dur can be =0, 
         quatRateOFB = tf2::Quaternion(tempTfC2B * (quatRateOF.getAxis()), quatRateOF.getAngle() / dur.toSec());
 
         /* tf2::Matrix3x3(quatRateOFB).getRPY(roll,pitch,yaw); */
@@ -496,7 +511,6 @@ namespace mrs_optic_flow
       /* std::cout << "Translations: " << tran[bestIndex] * uav_height_curr / dur.toSec() << std::endl; */
       /* std::cout << std::endl; */
 
-      // TODO: dur can be =0, 
 
       o_rot = tf2::Quaternion(bestQuatRateOF.getAxis(), bestQuatRateOF.getAngle() / dur.toSec());
 
@@ -504,7 +518,6 @@ namespace mrs_optic_flow
        * tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height/dur.toSec();
        */
 
-      // TODO: dur can be =0, 
 
       {
         std::scoped_lock lock(mutex_uav_height);
@@ -533,24 +546,8 @@ namespace mrs_optic_flow
 
     /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
     else if (solutions == 1) {
-
-      // TODO: do something which all shifts are small, then return zeros
-
-      ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts);
-
-      ROS_INFO_STREAM("[OpticFlow]: homography: " << homography);
-
-      if (cv::norm(tran[0]) < 0.001) {
-        std::cout << "No motion detected" << std::endl;
-        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
-        o_tran = tf2::Vector3(0, 0, 0);
-        return true;
-      }
-
-    } else {
       std::cout << "ERROR" << std::endl;
     }
-
     return false;
   }
 
@@ -1374,7 +1371,7 @@ namespace mrs_optic_flow
       velocity.twist.covariance[35] = velocity.twist.covariance[21];
 
       if (fabs(tran.x()) <= 1e-5 || fabs(tran.y()) <= 1e-5 || fabs(tran.z()) <= 1e-5) {
-        ROS_ERROR("[OpticFlow]: OUTPUTTING ZEROS");
+        ROS_WARN("[OpticFlow]: OUTPUTTING ZEROS");
       }
 
       try {

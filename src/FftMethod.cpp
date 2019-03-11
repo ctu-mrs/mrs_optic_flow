@@ -420,7 +420,7 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
       maxLoc[0] = (maxloc % block_count) - block_count / 2;
       maxLoc[1] = (maxloc / block_count) - block_count / 2;
 
-      if ((abs(maxLoc[0]) > block_count / 4) || (abs(maxLoc[1]) > block_count / 4)) {
+      if ((abs(maxLoc[0]) > block_count / 2) || (abs(maxLoc[1]) > block_count / 2)) {
         /* pcr.copyTo(storageB); */
         ROS_WARN("LARGE SHIFT DETECTED!: %d:%d - %d:%d", i, j, maxLoc[0], maxLoc[1]);
         output[i + j * Xfields] = cv::Point2f(std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN());
@@ -746,7 +746,7 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, s
 
   char cvt[2][40];
   buildOptions = cv::format("-D LOCAL_SIZE=%d -D SEARCH_RADIUS=%d -D kercn=%d -D FT=%s -D CT=%s%s -D RADIX_PROCESS=%s -D dstT=%s -D convertToDT=%s", dft_size,
-                            50, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
+                            55, min_radix, cv::ocl::typeToStr(dft_depth), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)),
                             dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str(), cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, min_radix)),
                             cv::ocl::convertTypeStr(dft_depth, dft_depth, min_radix, cvt[0]));
   int      cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
@@ -1228,9 +1228,9 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
   if (useNewKernel) {
     phaseCorrelate_ocl(usrc1, usrc2, peakLocs, Y, X);
     /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(showhost); */
-    for (int i = 0; i < ((int)(peakLocs.size())); i++) {
-      std::cout << "out " << i << " = " << peakLocs[i] << std::endl;
-    }
+    /* for (int i = 0; i < ((int)(peakLocs.size())); i++) { */
+    /*   std::cout << "out " << i << " = " << peakLocs[i] << std::endl; */
+    /* } */
   }
   for (int j = 0; j < Y; j++) {
     for (int i = 0; i < X; i++) {
@@ -1313,8 +1313,8 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
         /* showFMat(ML,"DATA"); */
         /* } */
       }
-      PCR.copyTo(storageA);
-        showFMat(storageA,"ocv_NEW");
+      /* PCR.copyTo(storageA); */
+      /*   showFMat(storageA,"ocv_NEW"); */
       /* IFFTC.copyTo(storageB); */
       /* showFMat(storageB,"ocv_NEW"); */
 
@@ -1360,6 +1360,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
   /* ROS_INFO("OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO); */
   return output;
 }
+
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
                      bool i_tilt_corr_enable, std::string* videoPath, int videoFPS, std::string i_cl_file_name, bool i_useOCL) {
   frameSize       = i_frameSize;

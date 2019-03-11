@@ -1338,9 +1338,11 @@ void refine(__global uchar * srcptr, int src_step, int src_offset, int cols, int
     __global float* dataIn = (__global float*)(srcptr + mad24(ymin,src_step, src_offset));
     for(int y = ymin; y <= ymax; y++) {
       for(int x = xmin; x <= xmax; x++) {
-        centroidX   += x*dataIn[x];
-        centroidY   += y*dataIn[x];
-        sumIntensity += dataIn[x];
+        if (dataIn[x]>0.0f){
+          centroidX   += x*dataIn[x];
+          centroidY   += y*dataIn[x];
+          sumIntensity += dataIn[x];
+        }
       /* printf("dataIn[x]: %f \n", dataIn[x]); */
       /* printf("&dataIn[x]: %d \n", &(dataIn[x]) - &(dataIn)); */
       }
