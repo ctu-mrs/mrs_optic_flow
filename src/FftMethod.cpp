@@ -1593,8 +1593,8 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   }
 
   /* cv::circle(imView, cv::Point2i(rot_center), 5, cv::Scalar(255),5); */
-  cv::line(imView, cv::Point2i(imView.size() / 2),
-           cv::Point2i(imView.size() / 2) + cv::Point2i(tan(tiltCorr_dynamic.x) * fx * 5, tan(tiltCorr_dynamic.y) * fy * 5), cv::Scalar(155), 5);
+  /* cv::line(imView, cv::Point2i(imView.size() / 2), */
+  /*          cv::Point2i(imView.size() / 2) + cv::Point2i(tan(tiltCorr_dynamic.x) * fx * 5, tan(tiltCorr_dynamic.y) * fy * 5), cv::Scalar(155), 5); */
 
   imPrev = imCurr.clone();
 

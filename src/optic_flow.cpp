@@ -388,6 +388,13 @@ namespace mrs_optic_flow
       }
     }
 
+
+    // TODO: this number should be parametrized and put to config
+    if (shiftedPts.size() < 8) {
+      ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning");
+      return false; 
+    }
+
     if (allSmall){
 
       /* ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts); */
@@ -399,12 +406,6 @@ namespace mrs_optic_flow
       return true;
     }
 
-    // TODO: this number should be parametrized and put to config
-    if (shiftedPts.size() < 8) {
-      ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning");
-      return false; 
-    }
-
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
     cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
 
@@ -412,7 +413,21 @@ namespace mrs_optic_flow
     /* for (int i=0;i<(int)(undistPtsA.size()); i++){ */
     /*   std::cout << "A - Orig: " << initialPts[i] << " Undist: " << camMatrixLocal*undistPtsA[i] << std::endl; */
     /*   std::cout << "B - Orig: " << shiftedPts[i] << " Undist: " << camMatrixLocal*undistPtsB[i] << std::endl; */
-    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 3);
+    /* cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3); */
+    cv::Mat mask;
+    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01,mask);
+
+    int remaining = 0;
+    for (int z=0;z<shiftedPts.size();z++)
+      if (mask.at<unsigned char>(z) == 1)
+        remaining++;
+
+    if (remaining < 8) {
+      ROS_ERROR("[OpticFlow]: After RANSAC refinement, not enough points remain, returning");
+      return false; 
+    }
+
+    /* ROS_INFO_STREAM("[OpticFlow]: mask: "<< mask); */
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
     std::vector<cv::Mat> rot, tran, normals;
@@ -513,6 +528,12 @@ namespace mrs_optic_flow
 
 
       o_rot = tf2::Quaternion(bestQuatRateOF.getAxis(), bestQuatRateOF.getAngle() / dur.toSec());
+      ROS_INFO("[OpticFlow]: o_rot: %f, %f, %f, %f ", o_rot.x(), o_rot.y(), o_rot.z(),o_rot.w() );
+
+        if (!std::isfinite(o_rot.x())) {
+          ROS_ERROR("[OpticFlow]: Duration is %f, leading to NaNs in estimated motion. Returning.", dur.toSec());
+          return false;
+        }
 
       /* o_tran =
        * tf2::Transform(bestQuatRateOF.inverse())*tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height/dur.toSec();
@@ -546,9 +567,22 @@ namespace mrs_optic_flow
 
     /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
     else if (solutions == 1) {
-      std::cout << "ERROR" << std::endl;
+
+      /* ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts); */
+      /* ROS_INFO_STREAM("[OpticFlow]: homography: " << homography); */
+
+      if (cv::norm(tran[0]) < 0.001) {
+        std::cout << "No motion detected" << std::endl;
+        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+        o_tran = tf2::Vector3(0, 0, 0);
+        return true;
+        //TODO - Change to value!!!!!!!!!!!!!!!!!!!!!!!!!
+      }
+
     }
+    std::cout << "ERROR" << std::endl;
     return false;
+
   }
 
   //}
@@ -1049,7 +1083,15 @@ namespace mrs_optic_flow
       return;
     }
 
-    /* ROS_INFO("[OpticFlow]: callbackImage() start"); */
+    if (!got_imu) {
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for imu");
+      return;
+    }
+
+    if (!std::isfinite(imu_roll) || !std::isfinite(imu_pitch)) {
+      ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Imu data contains NaNs...");
+      return;
+    }
 
     mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
 
@@ -1339,6 +1381,17 @@ namespace mrs_optic_flow
     /* std::cout << "Detilt: [" << odometry_roll << " " << odometry_pitch << " " << 0 << "]" << std::endl; */
 
     if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
+
+        if (!std::isfinite(rot.x())) {
+          ROS_INFO("[OpticFlow]: tran: %f %f", tran.x(), tran.y());
+          ROS_INFO("[OpticFlow]: rot: %f %f %f %f", rot.x(), rot.y(), rot.z(), rot.w());
+          ROS_INFO("[OpticFlow]: Nans in output, returning.");
+          return;
+        }
+
+      if ((tran.length()) > 4.0f){
+        ROS_INFO_STREAM("[OpticFlow]: LARGE SPEED: " << mrs_optic_flow_vectors);
+      }
 
       ROS_INFO("[OpticFlow]: tran: %f %f", tran.x(), tran.y());
       ROS_INFO("[OpticFlow]: rot: %f %f %f %f", rot.x(), rot.y(), rot.z(), rot.w());
