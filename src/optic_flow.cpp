@@ -415,7 +415,18 @@ namespace mrs_optic_flow
     /* cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3); */
     cv::Mat mask;
     cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01,mask);
-    ROS_INFO_STREAM("[OpticFlow]: mask: "<< mask);
+
+    int remaining = 0;
+    for (int z=0;z<shiftedPts.size();z++)
+      if (mask.at<unsigned char>(z) == 1)
+        remaining++;
+
+    if (remaining < 8) {
+      ROS_ERROR("[OpticFlow]: After RANSAC refinement, not enough points remain, returning");
+      return false; 
+    }
+
+    /* ROS_INFO_STREAM("[OpticFlow]: mask: "<< mask); */
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
     std::vector<cv::Mat> rot, tran, normals;
