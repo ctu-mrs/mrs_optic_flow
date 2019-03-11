@@ -412,7 +412,10 @@ namespace mrs_optic_flow
     /* for (int i=0;i<(int)(undistPtsA.size()); i++){ */
     /*   std::cout << "A - Orig: " << initialPts[i] << " Undist: " << camMatrixLocal*undistPtsA[i] << std::endl; */
     /*   std::cout << "B - Orig: " << shiftedPts[i] << " Undist: " << camMatrixLocal*undistPtsB[i] << std::endl; */
-    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 3);
+    /* cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, 0, 3); */
+    cv::Mat mask;
+    cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01,mask);
+    ROS_INFO_STREAM("[OpticFlow]: mask: "<< mask);
     /* std::cout << "CamMat: " << camMatrixLocal << std::endl; */
     /* std::cout << "NO HOMO: " << homography << std::endl; */
     std::vector<cv::Mat> rot, tran, normals;
@@ -546,9 +549,21 @@ namespace mrs_optic_flow
 
     /* else if ((cv::norm(tran[0]) < 0.01) && (cv::norm(tran[2]) < 0.01)){ */
     else if (solutions == 1) {
+
+      ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts);
+      ROS_INFO_STREAM("[OpticFlow]: homography: " << homography);
+
+      if (cv::norm(tran[0]) < 0.001) {
+        std::cout << "No motion detected" << std::endl;
+        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+        o_tran = tf2::Vector3(0, 0, 0);
+        return true;
+      }
+
       std::cout << "ERROR" << std::endl;
-    }
     return false;
+    }
+
   }
 
   //}
@@ -1339,6 +1354,10 @@ namespace mrs_optic_flow
     /* std::cout << "Detilt: [" << odometry_roll << " " << odometry_pitch << " " << 0 << "]" << std::endl; */
 
     if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
+
+      if ((tran.length()) > 4.0f){
+        ROS_INFO_STREAM("[OpticFlow]: LARGE SPEED: " << mrs_optic_flow_vectors);
+      }
 
       ROS_INFO("[OpticFlow]: tran: %f %f", tran.x(), tran.y());
       ROS_INFO("[OpticFlow]: rot: %f %f %f %f", rot.x(), rot.y(), rot.z(), rot.w());
