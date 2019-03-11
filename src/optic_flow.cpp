@@ -385,6 +385,7 @@ namespace mrs_optic_flow
 
     // TODO: this number should be parametrized and put to config
     if (shiftedPts.size() < 8) {
+      ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning");
       return false; 
     }
 
@@ -535,18 +536,16 @@ namespace mrs_optic_flow
 
       // TODO: do something which all shifts are small, then return zeros
 
-      /* if (cv::norm(tran[0]) < 0.001) { */
-      /*   std::cout << "No motion detected" << std::endl; */
-      /*   o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0); */
-      /*   o_tran = tf2::Vector3(0, 0, 0); */
-      /*   return true; */
-      /* } */
-
       ROS_INFO_STREAM("[OpticFlow]: shiftedPts: " << shiftedPts);
 
       ROS_INFO_STREAM("[OpticFlow]: homography: " << homography);
 
-      return false;
+      if (cv::norm(tran[0]) < 0.001) {
+        std::cout << "No motion detected" << std::endl;
+        o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+        o_tran = tf2::Vector3(0, 0, 0);
+        return true;
+      }
 
     } else {
       std::cout << "ERROR" << std::endl;
