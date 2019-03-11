@@ -1293,7 +1293,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
           H_C(cv::Rect(0, 0, samplePointSize, samplePointSize)).copyTo(storageB);
         }
         /* cv::Mat storageData; */
-        /* ML.copyTo(storageData); */
+        /* PCR.copyTo(storageData); */
         /* std::cout<< "Starting to vomit the output data array: " << std::endl; */
 
         /* for (int n=0; n<16*samplePointSize*2; n++){ */
@@ -1307,13 +1307,14 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
         /* cv::Mat diffmap = (storageB) - (storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize))); */
         /* showFMat(diffmap); */
         /* showFMat(storageB, "OLD"); */
+        /* showFMat(storageData, "PCR"); */
         /* showFMat(storageA(cv::Rect(i*samplePointSize,j*samplePointSize,samplePointSize,samplePointSize)),"NEW"); */
         /* showFMat(storageA,"FULL"); */
         /* showFMat(ML,"DATA"); */
         /* } */
       }
-      /* PCR.copyTo(storageA); */
-      /*   showFMat(storageA,"ocv_NEW"); */
+      PCR.copyTo(storageA);
+        showFMat(storageA,"ocv_NEW");
       /* IFFTC.copyTo(storageB); */
       /* showFMat(storageB,"ocv_NEW"); */
 

@@ -732,7 +732,7 @@ void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_
 
     if (y < nz)
     {
-      if ((y > ((LOCAL_SIZE/2)-SEARCH_RADIUS)) && (y < ((LOCAL_SIZE/2)+SEARCH_RADIUS))){
+      if ((y > (SEARCH_RADIUS)) && (y < (LOCAL_SIZE-SEARCH_RADIUS))){
         __global FT* dst = (__global FT*)(dst_ptr + mad24(mad24(Yvec,samplePointSize,(y<LOCAL_SIZE/2)?(y+LOCAL_SIZE/2):(y-LOCAL_SIZE/2)), dst_step, dst_offset));
 
         #pragma unroll
@@ -821,7 +821,7 @@ void ifft_multi_radix_rows(__global const uchar* src_ptr, int src_step, int src_
         for (int i=0; i<kercn; i++)
         {
           int shift = mad24(i,block_size,x);
-          if ((shift > (LOCAL_SIZE/2-SEARCH_RADIUS)) && (shift < (LOCAL_SIZE/2+SEARCH_RADIUS)))
+          if ((shift > (SEARCH_RADIUS)) && (shift < (LOCAL_SIZE-SEARCH_RADIUS)))
             dst[mad24(Xvec,samplePointSize,(shift<(LOCAL_SIZE/2))?(shift+(LOCAL_SIZE/2)):(shift-(LOCAL_SIZE/2)))] = 0.0f;
           else
             dst[mad24(Xvec,samplePointSize,(shift<(LOCAL_SIZE/2))?(shift+(LOCAL_SIZE/2)):(shift-(LOCAL_SIZE/2)))] = SCALE_VAL(smem[shift].x, scale);
@@ -1360,6 +1360,8 @@ void refine(__global uchar * srcptr, int src_step, int src_offset, int cols, int
       /* printf("lposXZ: %d, lposYZ: %d\n", lposXZ, lposYZ); */
     *(__global float *)(dstptr + lposXZ) = centroidX-mad24(Xvec,samplePointSize,(float)(cols>>1));
     *(__global float *)(dstptr + lposYZ) = centroidY-mad24(Yvec,samplePointSize,(float)(rows>>1));
+    /* *(__global float *)(dstptr + lposXZ) = (xc)-(cols>>1); */
+    /* *(__global float *)(dstptr + lposYZ) = (yc)-(rows>>1); */
 
 
   }
