@@ -427,7 +427,8 @@ namespace mrs_optic_flow
       }
     }
 
-    ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
+    if (debug_)
+      ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
 
 
     if (remaining < 8) {
