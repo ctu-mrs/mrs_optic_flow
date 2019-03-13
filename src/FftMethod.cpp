@@ -1,6 +1,9 @@
-#include "../include/mrs_optic_flow/FftMethod.h"
+#include <FftMethod.h>
 
-cv::Mat storageA, storageB, diffmap;
+cv::String buildOptions;
+cv::Mat    storageA, storageB, diffmap;
+
+/* showFMat() //{ */
 
 void showFMat(cv::InputOutputArray& M, const char* name = "ocv_debugshit") {
 
@@ -42,7 +45,12 @@ void showFMat(cv::InputOutputArray& M, const char* name = "ocv_debugshit") {
   imshow(name, catmat);
 }
 
+//}
+
+/* prep_ocl_kernel() //{ */
+
 cv::ocl::ProgramSource prep_ocl_kernel(const char* filename) {
+
   /* std::cout << "Loading OpenCL kernel file \" " << filename << std::endl; */
   std::ifstream ist(filename, std::ifstream::in);
   std::string   str((std::istreambuf_iterator<char>(ist)), std::istreambuf_iterator<char>());
@@ -53,7 +61,12 @@ cv::ocl::ProgramSource prep_ocl_kernel(const char* filename) {
   return cv::ocl::ProgramSource(str.c_str());
 }
 
+//}
+
+/* magSpectrums() //{ */
+
 static void magSpectrums(cv::InputArray _src, cv::OutputArray _dst) {
+
   cv::Mat src   = _src.getMat();
   int     depth = src.depth(), cn = src.channels(), type = src.type();
   int     rows = src.rows, cols = src.cols;
@@ -152,7 +165,12 @@ static void magSpectrums(cv::InputArray _src, cv::OutputArray _dst) {
   }
 }
 
+//}
+
+/* DFTFactorize() //{ */
+
 static int DFTFactorize(int n, int* factors) {
+
   int nf = 0, f, i, j;
 
   if (n <= 5) {
@@ -188,8 +206,12 @@ static int DFTFactorize(int n, int* factors) {
   return nf;
 }
 
+//}
+
+/* OCL_FftPlan::OCL_FftPlan() //{ */
 
 OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : dft_size(_size), dft_depth(_depth), status(true) {
+
   cl_file_name = i_cl_file_name;
 
   CV_Assert(dft_depth == CV_32F || dft_depth == CV_64F);
@@ -229,7 +251,12 @@ OCL_FftPlan::OCL_FftPlan(int _size, int _depth, std::string i_cl_file_name) : df
                  cv::ocl::typeToStr(CV_MAKE_TYPE(dft_depth, 2)), dft_depth == CV_64F ? " -D DOUBLE_SUPPORT" : "", radix_processing.c_str());
 }
 
+//}
+
+/* OCL_FftPlanClassic::prep_ocl_kernel() //{ */
+
 cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename) {
+
   /* std::cout << "Loading OpenCL kernel file \" " << filename << std::endl; */
   std::ifstream ist(filename, std::ifstream::in);
   std::string   str((std::istreambuf_iterator<char>(ist)), std::istreambuf_iterator<char>());
@@ -240,6 +267,9 @@ cv::ocl::ProgramSource OCL_FftPlanClassic::prep_ocl_kernel(const char* filename)
   return cv::ocl::ProgramSource(str.c_str());
 }
 
+//}
+
+/* OCL_FftPlan::enqueueTransform() //{ */
 
 bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, cv::InputOutputArray _fft1, cv::InputOutputArray _fft2,
                                    cv::InputOutputArray _fftr1, cv::InputOutputArray _fftr2, cv::InputOutputArray _mul, cv::InputOutputArray _ifftc,
@@ -249,7 +279,7 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
   if (!status)
     return false;
 
-  const cv::ocl::Device& dev = cv::ocl::Device::getDefault();
+  /* const cv::ocl::Device& dev = cv::ocl::Device::getDefault(); */
 
   cv::UMat src1  = _src1.getUMat();
   cv::UMat src2  = _src2.getUMat();
@@ -371,7 +401,7 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
 
   cv::Mat dst_host = dst.getMat(cv::ACCESS_READ);
 
-  float maxVal = -1;
+  /* float maxVal = -1; */
   int   maxLoc[2];
   float maxLocF[2];
 
@@ -413,7 +443,7 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
           maxval2 = maxptr2[k];
       }
 
-      maxVal = (double)maxval;
+      /* maxVal = (double)maxval; */
       /* std::cout << "MAXVAL: " << maxVal <<std::endl; */
       /* std::cout << "MAXLOC: " << maxloc <<std::endl; */
 
@@ -436,7 +466,12 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
   return partial;
 }
 
+//}
+
+/* OCL_FftPlan::ocl_getRadixes() //{ */
+
 void OCL_FftPlan::ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix) {
+
   int factors[34];
   int nf = DFTFactorize(cols, factors);
 
@@ -494,6 +529,10 @@ void OCL_FftPlan::ocl_getRadixes(int cols, std::vector<int>& radixes, std::vecto
     min_radix = cv::min(min_radix, block * radix);
   }
 }
+
+//}
+
+/* OCL_FftPlan::fillRadixTable() //{ */
 
 template <typename T>
 void OCL_FftPlan::fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixes) {
@@ -517,8 +556,12 @@ void OCL_FftPlan::fillRadixTable(cv::UMat twiddles, const std::vector<int>& radi
   }
 }
 
+//}
+
+/* FftMethod::ocl_getRadixes() //{ */
 
 void FftMethod::ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<int>& blocks, int& min_radix) {
+
   int factors[34];
   int nf = DFTFactorize(cols, factors);
 
@@ -577,6 +620,10 @@ void FftMethod::ocl_getRadixes(int cols, std::vector<int>& radixes, std::vector<
   }
 }
 
+//}
+
+/* FftMethod::fillRadixTable() //{ */
+
 template <typename T>
 void FftMethod::fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixes) {
   cv::Mat tw        = twiddles.getMat(cv::ACCESS_WRITE);
@@ -599,13 +646,21 @@ void FftMethod::fillRadixTable(cv::UMat twiddles, const std::vector<int>& radixe
   }
 }
 
+//}
+
+/* FftMethod::ocl_dft_rows() //{ */
 
 bool FftMethod::ocl_dft_rows(cv::InputArray _src, cv::OutputArray _dst, int nonzero_rows, int flags, int fftType) {
+
   int                         type = _src.type(), depth = CV_MAT_DEPTH(type);
   cv::Ptr<OCL_FftPlanClassic> plan = cacheClassic.getFftPlanClassic(_src.cols(), depth);
   /* std::cout << "HEEEY " << plan->buildOptions_deprecated << std::endl; */
   return plan->enqueueTransformClassic(_src, _dst, nonzero_rows, flags, fftType, true);
 }
+
+//}
+
+/* FftMethod::ocl_dft_cols() //{ */
 
 bool FftMethod::ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonzero_cols, int flags, int fftType) {
   int                         type = _src.type(), depth = CV_MAT_DEPTH(type);
@@ -613,7 +668,12 @@ bool FftMethod::ocl_dft_cols(cv::InputArray _src, cv::OutputArray _dst, int nonz
   return plan->enqueueTransformClassic(_src, _dst, nonzero_cols, flags, fftType, false);
 }
 
+//}
+
+/* FftMethod::ocl_dft() //{ */
+
 bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, int nonzero_rows) {
+
   int      type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
   cv::Size ssize         = _src.size();
   bool     doubleSupport = cv::ocl::Device::getDefault().doubleFPConfig() > 0;
@@ -697,13 +757,16 @@ bool FftMethod::ocl_dft(cv::InputArray _src, cv::OutputArray _dst, int flags, in
   return true;
 }
 
+//}
+
+/* FftMethod::phaseCorrelate_ocl() //{ */
 
 bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, std::vector<cv::Point2f>& out, int vec_rows, int vec_cols) {
 
   int flags = 0;
   flags |= cv::DFT_REAL_OUTPUT;
 
-  int nonzero_rows = samplePointSize;
+  /* int nonzero_rows = samplePointSize; */
 
   int dft_size  = samplePointSize;
   int type      = _src1.type();
@@ -718,10 +781,10 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, s
   ocl_getRadixes(dft_size, radixes, blocks, min_radix);
   int thread_count = dft_size / min_radix;
 
-  bool status;
+  /* bool status; */
 
   if (thread_count > (int)cv::ocl::Device::getDefault().maxWorkGroupSize()) {
-    status = false;
+    /* status = false; */
     return false;
   }
 
@@ -843,15 +906,33 @@ bool FftMethod::phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, s
   return false;
 }
 
+//}
+
+/* FftMethod::dft_special() //{ */
+
 void FftMethod::dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags) {
+
   ocl_dft(_src0, _dst, flags, 0);
 }
+
+//}
+
+/* FftMethod::idft_special() //{ */
+
 void FftMethod::idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags) {
+
   ocl_dft(_src0, _dst, flags | cv::DFT_INVERSE, 0);
 }
 
+//}
+
+/* FftMethod::ocl_mulSpectrums() //{ */
+
 bool FftMethod::ocl_mulSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputArray _dst, int flags, bool conjB) {
-  int      atype = _srcA.type(), btype = _srcB.type(), rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
+
+  int atype = _srcA.type();
+  /* int btype = _srcB.type(); */
+  int      rowsPerWI = cv::ocl::Device::getDefault().isIntel() ? 4 : 1;
   cv::Size asize = _srcA.size(), bsize = _srcB.size();
   CV_Assert(asize == bsize);
   /* CV_Assert(atype == CV_32FC2 && btype == CV_32FC2); */
@@ -875,7 +956,12 @@ bool FftMethod::ocl_mulSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv:
   return k.run(2, globalsize, NULL, false);
 }
 
+//}
+
+/* FftMethod::mulSpectrums_special() //{ */
+
 void FftMethod::mulSpectrums_special(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputArray _dst, int flags, bool conjB) {
+
   int type = _srcA.type();
 
   CV_Assert(type == _srcB.type() && _srcA.size() == _srcB.size());
@@ -884,7 +970,12 @@ void FftMethod::mulSpectrums_special(cv::InputArray _srcA, cv::InputArray _srcB,
   ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB);
 }
 
+//}
+
+/* void divSpectrums() //{ */
+
 static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputArray _dst, int flags, bool conjB) {
+
   cv::Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
   int     depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
   int     rows = srcA.rows, cols = srcA.cols;
@@ -1050,7 +1141,12 @@ static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputA
   }
 }
 
+//}
+
+/* void fftShift() //{ */
+
 static void fftShift(cv::InputOutputArray _out) {
+
   cv::Mat out = _out.getMat();
 
   if (out.rows == 1 && out.cols == 1) {
@@ -1117,6 +1213,11 @@ static void fftShift(cv::InputOutputArray _out) {
   merge(planes, out);
 }
 
+//}
+
+/* weightedCentroid() //{ */
+
+/*
 static cv::Point2d weightedCentroid(cv::InputArray _src, int fragmentSize, int Xvec, int Yvec, cv::Point peakLocation, cv::Size weightBoxSize,
                                     double* response) {
   cv::Mat src = _src.getMat();
@@ -1172,30 +1273,35 @@ static cv::Point2d weightedCentroid(cv::InputArray _src, int fragmentSize, int X
 
   return centroid;
 }
+*/
+
+//}
+
+/* FftMethod::phaseCorrelateField //{ */
 
 std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat& _src2, unsigned int X, unsigned int Y, double* response) {
+
   CV_Assert(_src1.type() == _src2.type());
   CV_Assert(_src1.type() == CV_32FC1 || _src1.type() == CV_64FC1);
   CV_Assert(_src1.size() == _src2.size());
 
   useNewKernel = true;
 
+  /* double elapsedTimeI, elapsedTime1, elapsedTime2, elapsedTime3, elapsedTime4, elapsedTime5, elapsedTime6, elapsedTimeO; */
+  /* elapsedTimeI = 0; */
+  /* elapsedTime1 = 0; */
+  /* elapsedTime2 = 0; */
+  /* elapsedTime3 = 0; */
+  /* elapsedTime4 = 0; */
+  /* elapsedTime5 = 0; */
+  /* elapsedTime6 = 0; */
+  /* elapsedTimeO = 0; */
 
-  clock_t begin, end, begin_overall;
-  double  elapsedTimeI, elapsedTime1, elapsedTime2, elapsedTime3, elapsedTime4, elapsedTime5, elapsedTime6, elapsedTimeO;
-  elapsedTimeI = 0;
-  elapsedTime1 = 0;
-  elapsedTime2 = 0;
-  elapsedTime3 = 0;
-  elapsedTime4 = 0;
-  elapsedTime5 = 0;
-  elapsedTime6 = 0;
-  elapsedTimeO = 0;
+  /* clock_t begin, end, begin_overall; */
+  /* begin         = std::clock(); */
+  /* begin_overall = std::clock(); */
 
-  begin         = std::clock();
-  begin_overall = std::clock();
   std::vector<cv::Point2d> output;
-
 
   _src1.copyTo(usrc1);
   _src2.copyTo(usrc2);
@@ -1204,13 +1310,11 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
   _src1.copyTo(src1);
   _src2.copyTo(src2);
 
-
   /* usrc1 = _src1.getUMat(cv::ACCESS_READ); */
   /* usrc2 = _src2.getUMat(cv::ACCESS_READ); */
 
   /* usrc1. */
   /* usrc2.setTo(_src2); */
-
 
   /* int M = cv::getOptimalDFTSize(samplePointSize); */
   /* int N = cv::getOptimalDFTSize(samplePointSize); */
@@ -1218,8 +1322,9 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
 
   cv::Rect roi;
 
-  end          = std::clock();
-  elapsedTimeI = double(end - begin) / CLOCKS_PER_SEC;
+  /* end          = std::clock(); */
+
+  /* elapsedTimeI = double(end - begin) / CLOCKS_PER_SEC; */
   /* ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI); */
 
   /* cv::Mat showhost; */
@@ -1232,10 +1337,10 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
     /*   std::cout << "out " << i << " = " << peakLocs[i] << std::endl; */
     /* } */
   }
-  for (int j = 0; j < Y; j++) {
-    for (int i = 0; i < X; i++) {
-      begin = std::clock();
+  for (unsigned int j = 0; j < Y; j++) {
+    for (unsigned int i = 0; i < X; i++) {
 
+      /* begin = std::clock(); */
 
       if (!useNewKernel) {
         /* if ((!useNewKernel) || ((j==(Y-2)) && (i==(X-1)))){ */
@@ -1321,7 +1426,6 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
       /* PCR(cv::Rect(0,0,samplePointSize,samplePointSize)).copyTo(storageA); */
       /*     showFMat(storageA,"NEW"); */
 
-
       // locate the highest peak
       /* minMaxLoc(C, NULL, NULL, NULL, &(peakLocs[i+j*sqNum])); */
 
@@ -1355,14 +1459,19 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
   /* ROS_INFO("Step 4: %f s, %f Hz", elapsedTime4 , 1.0 / elapsedTime4); */
   /* ROS_INFO("Step 5: %f s, %f Hz", elapsedTime5 , 1.0 / elapsedTime5); */
   /* ROS_INFO("Step 6: %f s, %f Hz", elapsedTime6 , 1.0 / elapsedTime6); */
-  end          = std::clock();
-  elapsedTimeO = double(end - begin_overall) / CLOCKS_PER_SEC;
+  /* end          = std::clock(); */
+  /* elapsedTimeO = double(end - begin_overall) / CLOCKS_PER_SEC; */
   /* ROS_INFO("OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO); */
   return output;
 }
 
+//}
+
+/* FftMethod::FftMethod() //{ */
+
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
                      bool i_tilt_corr_enable, std::string* videoPath, int videoFPS, std::string i_cl_file_name, bool i_useOCL) {
+
   frameSize       = i_frameSize;
   samplePointSize = i_samplePointSize;
   max_px_speed_sq = pow(max_px_speed_t, 2);
@@ -1400,7 +1509,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   if (tilt_corr_enable) {
     ROS_INFO("[OpticFlow]: FFT method - tilt correction enabled");
   }
-  const cv::ocl::Device& dev = cv::ocl::Device::getDefault();
+  /* const cv::ocl::Device& dev = cv::ocl::Device::getDefault(); */
 
   usrc1.create(frameSize, frameSize, CV_32FC1, cv::USAGE_ALLOCATE_DEVICE_MEMORY);
   usrc2.create(frameSize, frameSize, CV_32FC1, cv::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -1447,9 +1556,12 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   /* gotNth = false; */
 }
 
+//}
+
+/* FftMethod::FftMethod() //{ */
+
 std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center,
                                                  cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy) {
-
 
   if (running)
     return std::vector<cv::Point2d>();
@@ -1493,11 +1605,11 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
   // clear the vector with speeds
   speeds.clear();
 
-  double midX = imCurr.cols / 2;
-  double midY = imCurr.rows / 2;
+  /* double midX = imCurr.cols / 2; */
+  /* double midY = imCurr.rows / 2; */
 
-  double distX, distY;  // distance from middle
-  double corrX, corrY;  // yaw corrections
+  /* double distX, distY;  // distance from middle */
+  /* double corrX, corrY;  // yaw corrections */
 
   // calculate correlation for each window and store it if it doesn't exceed the limit
   if (useOCL)
@@ -1519,7 +1631,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       bool valid = true;
       if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
-        ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d",shift.x,shift.y, i, j);
+        ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d", shift.x, shift.y, i, j);
         valid = false;
       }
       if ((isnan(shift.x)) || (isnan(shift.y))) {
@@ -1629,3 +1741,5 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
 
   return speeds;
 }
+
+//}

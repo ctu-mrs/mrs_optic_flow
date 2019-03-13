@@ -4,7 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <image_transport/image_transport.h>
-#include "mrs_optic_flow/OpticFlowCalc.h"
+#include <OpticFlowCalc.h>
 #include <opencv2/core/core.hpp>
 #include <CL/cl.hpp>
 #include <opencv2/ocl/ocl.hpp>

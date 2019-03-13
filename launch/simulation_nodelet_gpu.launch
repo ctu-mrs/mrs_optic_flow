@@ -14,11 +14,11 @@
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
   <arg name="cam_yaw" default="1.57079632679" />
 
-    <node
-      name="optflow_cam_tf"
-      pkg="tf2_ros"
-      type="static_transform_publisher"
-      args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
+  <node
+    name="optflow_cam_tf"
+    pkg="tf2_ros"
+    type="static_transform_publisher"
+    args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
 
   <group ns="$(arg uav_name)">
 

@@ -19,6 +19,8 @@ video_fps: 30
 
 optic_flow:
 
+  shifted_pts_thr: 8
+
   max_processing_rate: 500
   method: 4
   scan_radius: 21
