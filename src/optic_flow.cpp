@@ -348,7 +348,6 @@ namespace mrs_optic_flow
       }
     }
 
-    // TODO: this number should be parametrized and put to config
     if (shiftedPts.size() < uint(shifted_pts_thr_)) {
       ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning");
       return false;
@@ -366,7 +365,7 @@ namespace mrs_optic_flow
     cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01, mask);
 
     bool allSmall  = true;
-    int  remaining = 0;
+    uint  remaining = 0;
     for (int z = 0; z < (int)(shiftedPts.size()); z++) {
       if (mask.at<unsigned char>(z) == 1) {
         remaining++;
@@ -380,7 +379,7 @@ namespace mrs_optic_flow
       ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
 
 
-    if (remaining < 8) {
+    if (remaining < uint(shifted_pts_thr_)) {
       ROS_ERROR("[OpticFlow]: After RANSAC refinement, not enough points remain, returning");
       return false;
     }
