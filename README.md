@@ -10,6 +10,9 @@ Make sure that the `gui` parameter is set to false if you are running this on a 
 
 If the optical flow works but the outputs lead to crashing, check if the stated camera orientation in launcher w.r.t the UAV frame is correct.
 
+Make sure that the lens is appropriate for the intended flight heights and speeds. A narrower angle of view is more suitable for high flights, as these provide beter precision, while for flying close to the ground you should opt for wide-angle lens to increase the maximum measurable speeds.
+The lens distortion typically makes the maximum speed smaller for edges of the image, but usually this will be accounted for by the multi-point processing.
+
 ### GPU accelerated processing
 The acceleration is implemented in OpenCL framework. Regardless of your GPU, install packages:
 ```
