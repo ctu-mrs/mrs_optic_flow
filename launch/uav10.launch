@@ -37,7 +37,7 @@
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
     <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
-      <param name="num_worker_threads" value="4" />
+      <param name="num_worker_threads" value="8" />
     </node>
 
     <!-- Bluefox2 nodelet -->
@@ -133,7 +133,7 @@
 
           <!-- Subscribers -->
           <!--remap from="~odometry_in" to="ground_truth" /-->
-          <remap from="~odometry_in" to="mavros/local_position/odom" />
+          <remap from="~odometry_in" to="odometry/orientation" />
           <remap from="~camera_in" to="bluefox/image_raw" />
           <remap from="~camera_info_in" to="bluefox/camera_info" />
           <remap from="~uav_height_in" to="odometry/altitude" />
