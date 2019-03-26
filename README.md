@@ -29,7 +29,10 @@ For generations greater than 8th (Broadwell) you have to install the NEO OpenCL 
 https://github.com/intel/compute-runtime/releases
 
 For older (3rd to 6th gen) you have to install the Beignet OpenCL drivers:
-https://github.com/intel/beignet
+~~https://github.com/intel/beignet~~
+```
+sudo apt install beignet
+```
 
 For generations in between, either may or may not work, try it starting with NEO drivers.
 

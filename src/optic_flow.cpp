@@ -1007,6 +1007,8 @@ namespace mrs_optic_flow
 
       got_tfs = true;
 
+      delete listener;
+
       tf_timer.stop();
     }
   }
@@ -1127,6 +1129,11 @@ namespace mrs_optic_flow
     /* imshow("cv_optic_flow",cv::Mat(100,100,CV_8UC1,cv::Scalar(0))); */
     nrep++;
 
+    if (first_image) begin = msg->header.stamp;
+    ros::Time nowTime = msg->header.stamp;
+    dur               = nowTime - begin;
+    begin             = nowTime;
+
     /* if ((nrep > 100) ) */
     /*   return; */
 
@@ -1155,12 +1162,13 @@ namespace mrs_optic_flow
     got_image = true;
 
 
-    if (!first_image && dur.toSec() < 1 / max_processing_rate_) {
-      if (debug_) {
-        ROS_INFO("[OpticFlow]: MAX frequency overrun (%f). Skipping...", dur.toSec());
+    if (!first_image)
+      if (dur.toSec() < 1 / max_processing_rate_) {
+        if (debug_) {
+          ROS_INFO("[OpticFlow]: MAX frequency overrun (%f). Skipping...", dur.toSec());
+        }
+        return;
       }
-      return;
-    }
 
     if (debug_) {
       ROS_INFO_THROTTLE(1.0, "[OpticFlow]: freq = %fHz", 1.0 / dur.toSec());
@@ -1183,9 +1191,6 @@ namespace mrs_optic_flow
     image = cv_bridge::toCvCopy(msg, enc::BGR8);
 
     processImage(image);
-    ros::Time nowTime = msg->header.stamp;
-    dur               = nowTime - begin;
-    begin             = nowTime;
 
     /* ROS_INFO("[OpticFlow]: callbackImage() end"); */
   }
@@ -1270,6 +1275,7 @@ namespace mrs_optic_flow
 
     // we need camera info!
     if (!got_camera_info) {
+      ROS_WARN_THROTTLE(1.0, "[OpticFlow]: waiting for camera info!");
       return;
     }
 
