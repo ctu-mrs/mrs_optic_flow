@@ -27,6 +27,6 @@
   <exec_depend>message_runtime</exec_depend>
 
   <export>
-    <nodelet plugin="${prefix}/optic_flow.xml" />
+    <nodelet plugin="${prefix}/plugins.xml" />
   </export>
 </package>

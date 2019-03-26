@@ -1,4 +1,4 @@
-#include "../include/mrs_optic_flow/scaleRotationEstimator.h"
+#include <scaleRotationEstimator.h>
 
 scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVideo, std::string *videoPath, int videoFPS) {
 
@@ -26,7 +26,7 @@ scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVi
   first = true;
 }
 
-cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool debug) {
+cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, [[maybe_unused]] bool debug) {
   if (first) {
     // old code
     ipl_ta = imCurr;
@@ -94,7 +94,6 @@ cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, bool 
   ipl_ta = imCurr;
   ipl_tb = tempIm;
   cvLogPolar(&ipl_ta, &ipl_tb, center, optimM, CV_INTER_LANCZOS4);
-
 
   tempIm.convertTo(tempIm_F32, CV_32FC1);
 

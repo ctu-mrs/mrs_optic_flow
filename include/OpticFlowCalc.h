@@ -8,12 +8,9 @@ class OpticFlowCalc {
 public:
   virtual std::vector<cv::Point2d> processImage([[maybe_unused]] cv::Mat imCurr, [[maybe_unused]] bool gui, [[maybe_unused]] bool debug,
                                                 [[maybe_unused]] cv::Point midPoint_t, [[maybe_unused]] double yaw_angle,
-                                                [[maybe_unused]] cv::Point2d rot_center,
-                                                [[maybe_unused]] cv::Point2d tiltCorr_dynamic,
-                                                [[maybe_unused]] std::vector<cv::Point2d> &output_vectors_raw,
-                                                [[maybe_unused]] double i_fx=300,
-                                                [[maybe_unused]] double i_fy=300) = 0;
-
+                                                [[maybe_unused]] cv::Point2d rot_center, [[maybe_unused]] cv::Point2d tiltCorr_dynamic,
+                                                [[maybe_unused]] std::vector<cv::Point2d> &output_vectors_raw, [[maybe_unused]] double i_fx = 300,
+                                                [[maybe_unused]] double i_fy = 300) = 0;
 
   void setImPrev(cv::Mat imPrev_t) {
     imPrev = imPrev_t;

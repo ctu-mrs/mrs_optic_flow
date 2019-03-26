@@ -1,4 +1,4 @@
-#include "../include/mrs_optic_flow/FastSpacedBMMethod_OCL.h"
+#include <FastSpacedBMMethod_OCL.h>
 #include <ostream>
 #include <dirent.h>
 

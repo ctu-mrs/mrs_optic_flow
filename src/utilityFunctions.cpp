@@ -1,4 +1,4 @@
-#include "../include/mrs_optic_flow/utilityFunctions.h"
+#include <utilityFunctions.h>
 #include <ros/ros.h>
 
 void rotate2d(double &x, double &y, double alpha) {
@@ -25,7 +25,7 @@ void rotate2d(cv::Point2d &pt, double alpha) {
 cv::Point2d pointMean(std::vector<cv::Point2d> pts) {
   double mx     = 0;
   double my     = 0;
-  int   numPts = 0;
+  int    numPts = 0;
   for (uint i = 0; i < pts.size(); i++) {
     if (!std::isnan(pts[i].x) && !std::isnan(pts[i].y)) {
       mx += pts[i].x;
@@ -141,25 +141,23 @@ double allsacMean(std::vector<double> pts, double thresholdRadius, int *chosen) 
   return bestIter;
 }
 
-std::vector<cv::Point2d> multiplyAllPts(std::vector<cv::Point2d> &v, double mulx, double muly, bool affect_input){
-  if (affect_input){
+std::vector<cv::Point2d> multiplyAllPts(std::vector<cv::Point2d> &v, double mulx, double muly, bool affect_input) {
+  if (affect_input) {
     for (uint i = 0; i < v.size(); i++) {
       v[i].x *= mulx;
       v[i].y *= muly;
     }
     return v;
-  }
-  else{
+  } else {
     std::vector<cv::Point2d> output;
-    cv::Point2d currVal;
+    cv::Point2d              currVal;
     for (uint i = 0; i < v.size(); i++) {
-      currVal.x=v[i].x*mulx;
-      currVal.y=v[i].y*muly;
+      currVal.x = v[i].x * mulx;
+      currVal.y = v[i].y * muly;
       output.push_back(currVal);
     }
     return output;
   }
-
 }
 
 void multiplyAllPts(std::vector<double> &v, double mul) {
@@ -221,8 +219,8 @@ std::vector<cv::Point2d> getOnlyInAbsBound(std::vector<cv::Point2d> v, double up
 
   std::vector<cv::Point2d> ret;
 
-  double                    upSq = up * up;
-  double                    n;
+  double upSq = up * up;
+  double n;
 
   for (int i = 0; i < int(v.size()); i++) {
     n = getNormSq(v[i]);
@@ -267,8 +265,8 @@ std::vector<double> removeNanPoints(std::vector<double> v) {
 std::vector<cv::Point2d> getOnlyInRadiusFromExpected(cv::Point2d expected, std::vector<cv::Point2d> v, double rad) {
 
   std::vector<cv::Point2d> ret;
-  double                    radSq = rad * rad;
-  double                    n;
+  double                   radSq = rad * rad;
+  double                   n;
 
   for (int i = 0; i < int(v.size()); i++) {
 
@@ -295,7 +293,7 @@ StatData analyzeSpeeds(ros::Time fromTime, std::vector<SpeedBox> speeds) {
 
   double sum   = 0;
   double sumsq = 0;
-  uint  num   = 0;
+  uint   num   = 0;
 
   double dif;
 

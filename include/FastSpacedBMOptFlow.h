@@ -1,5 +1,6 @@
-#ifndef FASTBMOF_H_
-#define FASTBMOF_H_
+#ifndef FASTSPACEDBMOPTFLOW_H
+#define FASTSPACEDBMOPTFLOW_H
+
 #include <opencv2/core/core.hpp>
 
 void FastSpacedBMOptFlow(cv::InputArray _imPrev, cv::InputArray _imCurr, cv::OutputArray _imOutX, cv::OutputArray _imOutY, int blockSize, int blockStep,
@@ -8,4 +9,4 @@ void FastSpacedBMOptFlow(cv::InputArray _imPrev, cv::InputArray _imCurr, cv::Out
 
 void ResetCudaDevice();
 
-#endif  // FASTBMOF_H_
+#endif  // FASTSPACEDBMOPTFLOW_H

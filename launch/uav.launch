@@ -7,7 +7,7 @@
   <arg name="profiler" default="$(optenv PROFILER false)" />
 
   <!-- Bluefox2  -->
-  <arg name="device" default="$(env BLUEFOX)" />
+  <arg name="device" default="$(env BLUEFOX_OF)" />
   <arg name="rate" default="60" />
   <arg name="plugin" default="true"/>
   <arg name="manager" default="$(arg uav_name)_vision_nodelet_manager" />
@@ -25,7 +25,7 @@
   </group>
 
   <!-- Autoexposure nodelet -->
-  <include file="$(find auto_exposure)/launch/uav.launch" />
+  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow.launch" />
 
   <group ns="$(arg uav_name)">
     <!-- Bluefox2 nodelet -->
@@ -34,7 +34,7 @@
     <arg name="camera_name" default="bluefox" />
     <arg name="camera" default="$(arg camera_name)" />
     <arg name="frame_id" default="$(arg camera)" />
-    <arg name="calib_url" default="file://$(find mrs_main)/config/camera_calibrations/mv_$(arg device)_radtan.yaml" />
+    <arg name="calib_url" default="file://$(find mrs_general)/config/camera_calibrations/mv_$(arg device)_radtan.yaml" />
     <arg name="fps" default="$(arg rate)" />
     <arg name="color" default="false"/>
     <arg name="idpf" default="0" />
@@ -102,7 +102,7 @@
     </include>
 
     <!-- Optic flow nodelet -->
-    <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="load mrs_optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load mrs_optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
 
       <rosparam file="$(find mrs_optic_flow)/config/uav.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />

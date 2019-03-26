@@ -57,7 +57,7 @@
     <arg name="theora_optimize_for" default="0"  />
 
     <!-- Optic flow nodelet -->
-    <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="load mrs_optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="load mrs_optic_flow/OpticFlow $(arg manager)" output="screen" respawn="true">
 
       <rosparam file="$(find mrs_optic_flow)/config/uav.yaml" />
       <param name="enable_profiler" value="$(arg profiler)" />

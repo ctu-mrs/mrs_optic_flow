@@ -1,10 +1,8 @@
 #ifndef BLOCKMETHOD_H
 #define BLOCKMETHOD_H
 
-//#include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
-//#include <opencv2/core/core.hpp>
-#include "mrs_optic_flow/OpticFlowCalc.h"
+#include <OpticFlowCalc.h>
 
 class BlockMethod : public OpticFlowCalc {
 private:
