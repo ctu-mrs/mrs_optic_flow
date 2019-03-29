@@ -27,9 +27,24 @@ for testing if your GPU even shows up as an OpenCL device.
 #### Intel GPUs
 For generations greater than 8th (Broadwell) you have to install the NEO OpenCL drivers:
 https://github.com/intel/compute-runtime/releases
+For latest version at the time of writing, use:
+```
+mkdir neo
+cd neo
+wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-gmmlib_18.4.1_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-core_19.11.1622_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-opencl_19.11.1622_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-opencl_19.11.12599_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-ocloc_19.11.12599_amd64.deb
+sudo dpkg -i *.deb
+```
 
 For older (3rd to 6th gen) you have to install the Beignet OpenCL drivers:
-https://github.com/intel/beignet
+~~https://github.com/intel/beignet~~
+In Ubuntu 18.04, you can use:
+```
+sudo apt install beignet
+```
 
 For generations in between, either may or may not work, try it starting with NEO drivers.
 
