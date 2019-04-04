@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="uav_name" default="$(optenv UAV_NAME uav5)" />
+  <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
   <!-- <arg name="standalone" default="true" /> -->
   <arg name="standalone" default="$(optenv STANDALONE false)" />
   <arg name="profiler" default="$(optenv PROFILER false)" />
@@ -36,7 +36,7 @@
       args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
       <param name="num_worker_threads" value="8" />
     </node>
 
