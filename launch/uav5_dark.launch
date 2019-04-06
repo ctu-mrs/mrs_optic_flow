@@ -25,7 +25,7 @@
   <!-- <arg name="cam_yaw" default="0" /> -->
 
   <!-- Autoexposure nodelet -->
-  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow.launch" />
+  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_dark.launch" />
 
   <group ns="$(arg uav_name)">
 
