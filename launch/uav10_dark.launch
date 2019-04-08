@@ -25,7 +25,7 @@
   <!-- <arg name="cam_yaw" default="0" /> -->
 
   <!-- Autoexposure nodelet -->
-  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_dark.launch" />
+  <!-- <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_dark.launch" /> -->
 
   <group ns="$(arg uav_name)">
 
@@ -50,13 +50,13 @@
     <arg name="fps" default="$(arg cam_rate)" />
     <arg name="color" default="false"/>
     <arg name="idpf" default="0" />
-    <arg name="aec" default="false" />
+    <arg name="aec" default="true" />
     <!-- sunny -->
     <!-- <arg name="expose_us" default="75" /> -->
-    <arg name="expose_us" default="400" /> <!-- dusk -->
-    <arg name="agc" default="false" />
+    <arg name="expose_us" default="1000" /> <!-- dusk -->
+    <arg name="agc" default="true" />
     <arg name="boost" value="false"/>
-    <arg name="gain_db" default="0.0" />
+    <arg name="gain_db" default="32.0" />
     <arg name="cbm" default="0" />
     <arg name="ctm" default="1" />
     <arg name="dcfm" default="0" />
