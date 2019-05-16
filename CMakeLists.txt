@@ -30,7 +30,7 @@ find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs geometry_msgs message_runtime
+  CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs geometry_msgs
   DEPENDS Eigen
   LIBRARIES OpticFlow
   )

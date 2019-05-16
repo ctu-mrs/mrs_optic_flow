@@ -23,10 +23,8 @@
   <depend>tf2</depend>
   <depend>mrs_lib</depend>
 
-  <build_depend>message_generation</build_depend>
-  <exec_depend>message_runtime</exec_depend>
-
   <export>
     <nodelet plugin="${prefix}/plugins.xml" />
   </export>
+
 </package>

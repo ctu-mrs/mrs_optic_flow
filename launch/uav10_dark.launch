@@ -1,7 +1,6 @@
-
 <launch>
 
-  <arg name="uav_name" default="$(optenv UAV_NAME uav10)" />
+  <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
   <!-- <arg name="standalone" default="true" /> -->
   <arg name="standalone" default="$(optenv STANDALONE false)" />
   <arg name="profiler" default="$(optenv PROFILER false)" />
@@ -26,7 +25,7 @@
   <!-- <arg name="cam_yaw" default="0" /> -->
 
   <!-- Autoexposure nodelet -->
-  <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_outdoor.launch" />
+  <!-- <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_dark.launch" /> -->
 
   <group ns="$(arg uav_name)">
 
@@ -37,8 +36,8 @@
       args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" >
-      <param name="num_worker_threads" value="4" />
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+      <param name="num_worker_threads" value="8" />
     </node>
 
     <!-- Bluefox2 nodelet -->
@@ -47,17 +46,18 @@
     <arg name="camera_name" default="bluefox" />
     <arg name="camera" default="$(arg camera_name)" />
     <arg name="frame_id" default="$(arg camera)" />
-    <arg name="calib_url" default="file://$(find mrs_general)/config/camera_calibrations/mv_$(arg cam_device)_f21_old.yaml" />
+    <arg name="calib_url" default="file://$(find mrs_general)/config/camera_calibrations/mv_$(arg cam_device).yaml" />
     <arg name="fps" default="$(arg cam_rate)" />
     <arg name="color" default="false"/>
     <arg name="idpf" default="0" />
-    <arg name="aec" default="false" />
+    <arg name="aec" default="true" />
+    <arg name="expose_upper_limit_us" default="7500"/>
     <!-- sunny -->
     <!-- <arg name="expose_us" default="75" /> -->
-    <arg name="expose_us" default="400" /> <!-- dusk -->
-    <arg name="agc" default="false" />
+    <arg name="expose_us" default="1000" /> <!-- dusk -->
+    <arg name="agc" default="true" />
     <arg name="boost" value="false"/>
-    <arg name="gain_db" default="0.0" />
+    <arg name="gain_db" default="32.0" />
     <arg name="cbm" default="0" />
     <arg name="ctm" default="1" />
     <arg name="dcfm" default="0" />
@@ -88,6 +88,7 @@
       <arg name="fps" value="$(arg fps)"/>
       <arg name="color" value="$(arg color)"/>
       <arg name="aec" value="$(arg aec)"/>
+      <arg name="expose_upper_limit_us" value="$(arg expose_upper_limit_us)"/>
       <arg name="cbm" value="$(arg cbm)"/>
       <arg name="ctm" value="$(arg ctm)"/>
       <arg name="dcfm" value="$(arg dcfm)"/>
@@ -121,7 +122,7 @@
       <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
         <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
 
-          <rosparam file="$(find mrs_optic_flow)/config/uav10_sim.yaml" />
+          <rosparam file="$(find mrs_optic_flow)/config/uav10.yaml" />
           <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
           <param name="enable_profiler" value="$(arg profiler)" />
 
@@ -134,7 +135,7 @@
 
           <!-- Subscribers -->
           <!--remap from="~odometry_in" to="ground_truth" /-->
-          <remap from="~odometry_in" to="mavros/local_position/odom" />
+          <remap from="~odometry_in" to="odometry/orientation" />
           <remap from="~camera_in" to="bluefox/image_raw" />
           <remap from="~camera_info_in" to="bluefox/camera_info" />
           <remap from="~uav_height_in" to="odometry/altitude" />
