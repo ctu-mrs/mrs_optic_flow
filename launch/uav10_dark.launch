@@ -117,7 +117,7 @@
     </include>
 
     <!-- Optic flow nodelet -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep 5; $0 $@'">
 
       <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
         <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
