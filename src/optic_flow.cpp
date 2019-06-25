@@ -1055,6 +1055,8 @@ namespace mrs_optic_flow
     if (!is_initialized)
       return;
 
+    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: getting IMU");
+
     mrs_lib::Routine routine_callback_imu = profiler->createRoutine("callbackImu");
 
     // angular rate source is imu aka gyro
@@ -1498,6 +1500,7 @@ namespace mrs_optic_flow
         }
 
       try {
+        ROS_INFO_THROTTLE(1.0, "[OpticFlow]: publishing velocity");
         publisher_velocity.publish(velocity);
       }
       catch (...) {
