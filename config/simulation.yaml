@@ -1,5 +1,3 @@
-camera_yaw_offset: 0 # 0 means top edge of image is towards the front of the UAV. Consider re-implementing using tf. TODO
-
 gui: true
 debug: false
 silent_debug: false
@@ -56,6 +54,7 @@ mrs_optic_flow:
     # y_velocity_correction_ratio: 0.973
 
 constraints:
+
   max_pixel_speed: 80
 
   max_horizontal_speed: 5.0

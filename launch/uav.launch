@@ -21,11 +21,10 @@
   <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
-  <arg name="cam_yaw" default="-1.57079632679" />
-  <!-- <arg name="cam_yaw" default="0" /> -->
 
-  <!-- Autoexposure nodelet -->
-  <!-- <include file="$(find mrs_auto_exposure)/launch/uav_optic_flow_outdoor.launch" /> -->
+  <!-- This is the cam yaw that works -->
+  <!-- TODO: pls fix other yaw angles -->
+  <arg name="cam_yaw" default="-1.57079632679" />
 
   <group ns="$(arg uav_name)">
 
@@ -36,7 +35,7 @@
       args="0 0 -0.1 $(arg cam_yaw) 0.00000000000 -3.14159265359 $(arg uav_frame) $(arg camera_frame) "/>
     <!--Usage: static_transform_publisher x y z yaw pitch roll frame_id child_frame_id  period(milliseconds)-->
 
-    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen">
+    <node pkg="nodelet" type="nodelet" name="$(arg uav_name)_vision_nodelet_manager" args="manager" output="screen" launch-prefix="debug_roslaunch">
       <param name="num_worker_threads" value="8" />
     </node>
 
@@ -50,7 +49,7 @@
     <arg name="fps" default="$(arg cam_rate)" />
     <arg name="color" default="false"/>
     <arg name="idpf" default="0" />
-    <arg name="aec" default="true" />
+    <arg name="aec" default="false" />
     <arg name="expose_upper_limit_us" default="7500"/>
     <!-- sunny -->
     <!-- <arg name="expose_us" default="75" /> -->
@@ -122,7 +121,7 @@
       <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen" launch-prefix="debug_roslaunch"> -->
         <!-- <node name="mrs_optic_flow" pkg="nodelet" type="nodelet" args="standalone mrs_optic_flow/OpticFlow " output="screen"> -->
 
-          <rosparam file="$(find mrs_optic_flow)/config/uav10.yaml" />
+          <rosparam file="$(find mrs_optic_flow)/config/uav.yaml" />
           <rosparam file="$(find mrs_optic_flow)/config/bluefox_simulation.yaml" />
           <param name="enable_profiler" value="$(arg profiler)" />
 
@@ -134,7 +133,6 @@
           <param name="useOCL" value="true" />
 
           <!-- Subscribers -->
-          <!--remap from="~odometry_in" to="ground_truth" /-->
           <remap from="~odometry_in" to="odometry/orientation" />
           <remap from="~camera_in" to="bluefox/image_raw" />
           <remap from="~camera_info_in" to="bluefox/camera_info" />

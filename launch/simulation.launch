@@ -12,7 +12,7 @@
   <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
-  <arg name="cam_yaw" default="-1.57" />
+  <arg name="cam_yaw" default="1.57" />
 
   <group ns="$(arg uav_name)">
 
@@ -42,8 +42,7 @@
       <param name="useOCL" value="true" />
 
       <!-- Subscribers -->
-      <!--remap from="~odometry_in" to="ground_truth" /-->
-      <remap from="~odometry_in" to="mavros/local_position/odom" />
+      <remap from="~odometry_in" to="odometry/orientation" />
       <remap from="~camera_in" to="bluefox/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />

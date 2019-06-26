@@ -1561,7 +1561,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 /* FftMethod::FftMethod() //{ */
 
 std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center,
-                                                 cv::Point2d tiltCorr_dynamic, std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy) {
+                                                 std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy) {
 
   if (running)
     return std::vector<cv::Point2d>();
@@ -1638,48 +1638,6 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
         ROS_WARN("[OpticFlow]: FFT - NaN optical flow response in window x %d y %d", i, j);
         valid = false;
       }
-
-      /* if (raw_enable) { */
-      /*   // push without correction first */
-      /*   if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) || */
-      /*       absd(shift.y) > ((double)samplePointSize / 2)) { */
-      /*     ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j); */
-      /*     speeds[j*sqNum+i] = cv::Point2d(nan(""), nan("")); */
-      /*   } else { */
-      /*     // ROS_WARN("[OpticFlow]: Hacks going on in raw...");  // hack for Gazebo Mobius */
-      /*     // speeds.push_back(cv::Point2f(-shift.x,-shift.y)); */
-      /*     speeds[j*sqNum+i] = cv::Point2d(shift.x, shift.y); */
-      /*   } */
-      /* } */
-
-      /* if (tilt_corr_enable) { */
-      /*   distX = fabs( (xi + samplePointSize / 2) - midX); */
-      /*   distY = fabs( (yi + samplePointSize / 2) - midY); */
-
-      /*   /1* double spDist = sqrt(pow(fx,2)+pow(xi,2)+pow((fx/fy)*yi,2)); *1/ */
-      /*   cv::Point2d tiltCorrDynamicCurrSample; */
-      /*   tiltCorrDynamicCurrSample.x = tan(atan(distX/fx)+tiltCorr_dynamic.x)*fx-distX; */
-      /*   tiltCorrDynamicCurrSample.y = tan(atan(distY/fy)+tiltCorr_dynamic.y)*fy-distY; */
-      /*   shift = shift + tiltCorrDynamicCurrSample; */
-      /* } */
-
-      /* if (rot_corr_enable) { */
-      /*   // rotation correction */
-      /*   distX = (xi + samplePointSize / 2) - rot_center.x; */
-      /*   distY = (yi + samplePointSize / 2) - rot_center.y; */
-
-      /*   corrX = (distX*cos(yaw_angle) -distY*sin(yaw_angle))-distX; */
-      /*   corrY = (distX*sin(yaw_angle) +distY*cos(yaw_angle))-distY; */
-
-      /*   shift.x = shift.x + corrX; */
-      /*   shift.y = shift.y + corrY; */
-      /* } */
-
-      // ROS_INFO("[OpticFlow]: i %d j %d -> xi:%d yi:%d, velo: %f %f px",i,j,xi,yi,shift.x,shift.y);
-
-      // ROS_WARN("[OpticFlow]: Hacks going on..."); // hack for Gazebo Mobius
-      // shift.x = - shift.x;
-      // shift.y = - shift.y;
 
       if (!valid) {
         ROS_WARN("[OpticFlow]: FFT - invalid correlation in window x %d y %d", i, j);

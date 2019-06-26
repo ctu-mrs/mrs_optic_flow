@@ -1,16 +1,16 @@
-camera_yaw_offset: -1.57
-
 gui: false
 debug: false
 silent_debug: false
 
 ang_rate_source: "imu" # "imu" / "odometry"
+# ang_rate_source: "odometry" # "imu" / "odometry"
+# ang_rate_source: "odometry_diff" # "imu" / "odometry"
 raw_output: true # should publish raw data?
 
-scale_rotation: false # ??
-scale_rot_magnitude: 49.9 # ??
+scale_rotation: false # Whether optical flow should be used to also estimate the vertical speed and yaw rate.
+scale_rot_magnitude: 49.9 # For retrieval of vert. speed and yaw rate based on polar-rectangular tranformation of the image and phase correlation of these.
 scale_rot_output: "velocity"
-d3d_method: "" # ??
+d3d_method: "" # Method for estimating full R3xI1 motion (XYZ + Yaw) - options are logpol and advanced, but do not use these, they are bad. I will make a good one called pnp soon.
 
 store_video: false
 video_path: "/dev/null"
@@ -27,14 +27,16 @@ mrs_optic_flow:
   frame_size: 480
   sample_point_size: 120
   filter_method: "allsac"
+  # filter_method: "allsac"
 
   apply_abs_bouding: true
-  apply_rel_bouding: false
+  apply_rel_bouding: false #were there problems with this?
 
-  scale_factor: 1.0
+  scale_factor: 1.0 # 2 means 1/4 the image area
 
   rotation_correction: true
   tilt_correction: true
+  minimum_tilt_correction: 0.5 # rad - to suppress fidgeting at high altitudes due to IMU noise. Value should correspond ~to the standard dev. of the imu noise.
 
   ransac:
     num_of_chosen: 2
@@ -42,11 +44,17 @@ mrs_optic_flow:
     threshold_rad: 1.0
 
   filtering:
-    last_speeds_size: 60
-    analyze_duration: 1.0 # ??
+    # last_speeds_size: 60 - Deprecated
+    analyze_duration: 1.0 # How long a sample (in seconds) should be analyzed for statistical data on precision estimates - for a posteriori filtering
 
+  calibration:
+    # both_velocity_correction_ratio: 1.0
+    both_velocity_correction_ratio: 0.973
+    # x_velocity_correction_ratio: 0.973
+    # y_velocity_correction_ratio: 0.973
 
 constraints:
+
   max_pixel_speed: 80
 
   max_horizontal_speed: 5.0

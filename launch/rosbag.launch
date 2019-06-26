@@ -87,7 +87,7 @@
       <param name="useOCL" value="true" />
 
       <!-- Subscribers -->
-      <remap from="~odometry_in" to="odometry/odom_main" />
+      <remap from="~odometry_in" to="odometry/orientation" />
       <remap from="~camera_in" to="bluefox2/image_raw" />
       <remap from="~camera_info_in" to="bluefox/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
