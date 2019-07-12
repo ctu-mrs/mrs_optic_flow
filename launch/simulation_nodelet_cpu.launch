@@ -12,7 +12,7 @@
   <arg name="camera_frame" default="optflow_cam_$(arg uav_name)" />
   <arg name="uav_frame" default="fcu_$(arg uav_name)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg uav_name)" />
-  <arg name="cam_yaw" default="1.57079632679" />
+  <arg name="cam_yaw" default="-1.57079632679" />
 
   <node
     name="optflow_cam_tf"
