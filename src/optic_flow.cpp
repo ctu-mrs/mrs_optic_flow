@@ -135,12 +135,17 @@ private:
   void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackDepthInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackDepth(const sensor_msgs::ImageConstPtr& msg);
 
   int nrep;
 
 private:
-  void processImage(const cv_bridge::CvImagePtr image);
+  void processImage(const cv_bridge::CvImageConstPtr image);
+  bool compensateDepth(std::vector<cv::Point2d> &shifts, std::vector<double> depths);
   bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
+  bool got_depth_;
+  std::vector<double> depths_;
 
   void       tfTimer(const ros::TimerEvent& event);
   ros::Timer tf_timer;
@@ -170,6 +175,8 @@ private:
   ros::Subscriber subscriber_image;
   ros::Subscriber subscriber_uav_height;
   ros::Subscriber subscriber_camera_info;
+  ros::Subscriber subscriber_depth_;
+  ros::Subscriber subscriber_depth_info_;
   ros::Subscriber subscriber_odometry;
   ros::Subscriber subscriber_imu;
 
@@ -180,6 +187,7 @@ private:
   ros::Publisher publisher_chosen_allsac;
 
   bool got_camera_info = false;
+  bool got_depth_info_ = false;
   bool got_image       = false;
   bool got_height      = false;
   bool got_imu         = false;
@@ -204,6 +212,9 @@ private:
   cv::Point3d     angular_rate_curr;
   std::mutex      mutex_angular_rate;
   std::mutex      mutex_static_tilt;
+
+
+  cv::Rect  cropping_rectangle_;
 
 private:
   tf2::Quaternion odometry_orientation;
@@ -273,6 +284,10 @@ private:
   double  k1, k2, p1, p2, k3;
   cv::Mat camMatrix, distCoeffs;
 
+  double  d_cx, d_cy, d_fx, d_fy, d_s;
+  double  d_k1, d_k2, d_p1, d_p2, d_k3;
+  cv::Mat d_camMatrix, d_distCoeffs;
+
   int    ransac_num_of_chosen_;
   int    ransac_num_of_iter_;
   double RansacThresholdRadSq;
@@ -281,6 +296,8 @@ private:
 
   std::string fft_cl_file_;
   bool        useOCL_;
+  
+  bool _need_odometry_;
 
   std::string filter_method_;
 
@@ -295,6 +312,8 @@ private:
   bool apply_abs_bounding_;
   bool apply_rel_bouding_;
 
+  bool _apply_depth_compensation_;
+
   float speed_noise;
 
   std::vector<SpeedBox> lastSpeeds;
@@ -308,6 +327,15 @@ private:
   bool        is_initialized = false;
   std::string uav_name;
 };
+
+//}
+
+/* compensateDepth() //{ */
+
+bool OpticFlow::compensateDepth(std::vector<cv::Point2d> &shifts, std::vector<double> depths) {
+  for (unsigned i=0; i<(unsigned)(shifts.size()); i++)
+    shifts[i] *= ((depths[i])/1000.0);
+}
 
 //}
 
@@ -420,6 +448,8 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
   /* std::cout << std::endl; */
 
   int             bestIndex   = -1;
+  if (!_need_odometry_)
+    bestIndex = 0;
   double          bestAngDiff = M_PI;
   tf2::Quaternion bestQuatRateOF;
 
@@ -491,12 +521,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
      */
     /* o_tran = tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec(); */
 
-    {
-      std::scoped_lock lock(mutex_uav_height);
-
-      o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(tran[bestIndex].at<double>(0), tran[bestIndex].at<double>(1), tran[bestIndex].at<double>(2)) *
-               uav_height / dur.toSec();
-    }
+      o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(tran[bestIndex].at<double>(0), tran[bestIndex].at<double>(1), tran[bestIndex].at<double>(2)) / dur.toSec();
 
     return true;
 
@@ -619,6 +644,8 @@ void OpticFlow::onInit() {
   param_loader.load_param("FftCLFile", fft_cl_file_);
   param_loader.load_param("useOCL", useOCL_);
 
+  param_loader.load_param("need_odometry", _need_odometry_, bool(true));
+
   param_loader.load_param("mrs_optic_flow/scale_factor", scale_factor_);
 
   param_loader.load_param("mrs_optic_flow/shifted_pts_thr", shifted_pts_thr_);
@@ -680,6 +707,8 @@ void OpticFlow::onInit() {
   param_loader.load_param("camera_matrix/data", fallback_camera_data);
   param_loader.load_param("distortion_coefficients/data", fallback_distortion_coeffs);
 
+  // | ------------ parameters of depth compensation ------------ |
+  param_loader.load_param("apply_depth_compensation", _apply_depth_compensation_, bool(false));
 
   // --------------------------------------------------------------
   // |                    end of loading params                   |
@@ -828,6 +857,11 @@ void OpticFlow::onInit() {
       ROS_ERROR("[OpticFlow]: Wrong parameter ang_rate_source_ - possible choices: imu, odometry, odometry_diff. Entered: %s", ang_rate_source_.c_str());
       ros::shutdown();
     }
+  }
+
+  if (_apply_depth_compensation_){
+    subscriber_depth_info_ = nh_.subscribe("depth_info_in", 1, &OpticFlow::callbackDepthInfo, this, ros::TransportHints().tcpNoDelay());
+    subscriber_depth_ = nh_.subscribe("depth_in", 1, &OpticFlow::callbackDepth, this, ros::TransportHints().tcpNoDelay());
   }
 
   // | ----------------------- tf listener ---------------------- |
@@ -1110,6 +1144,51 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
 //}
 
+/* //{ callbackDepth() */
+
+void OpticFlow::callbackDepth(const sensor_msgs::ImageConstPtr& msg) {
+  if (!got_depth_info_){
+    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Depth camera info not yet obtained...");
+    return;
+  }
+
+  cv_bridge::CvImageConstPtr image;
+  image = cv_bridge::toCvShare(msg);
+  int sqNum = frame_size_ / sample_point_size_;
+  depths_.clear();
+  depths_.resize(sqNum * sqNum);
+  int xi,yi;
+  for (int j = 0; j < sqNum; j++) {
+    for (int i = 0; i < sqNum; i++) {
+      xi = i * sample_point_size_;
+      yi = j * sample_point_size_;
+      int cnt = 0;
+      int sum = 0;
+      
+      for (int l=0;l<sample_point_size_;l++){
+        for (int k=0;k<sample_point_size_;k++){
+          unsigned short int val = image->image.at<unsigned short int>(cv::Point2i( xi+k , yi+l ));
+          if (!(val==0)){
+            sum+=val;
+            cnt++;
+          }
+        }
+      }
+
+      if (!(cnt==0))
+        depths_[i + j * sqNum] = (double)sum/(double)cnt;
+      else
+        depths_[i + j * sqNum] = 0.0;
+
+    }
+  }
+
+  got_depth_ = true;
+
+}
+
+//}
+
 /* //{ callbackImage() */
 
 void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
@@ -1134,14 +1213,21 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     return;
   }
 
-  if (!got_odometry) {
-    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for odometry");
-    return;
-  }
+  if (_need_odometry_)
+    if (!got_odometry) {
+      ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for odometry");
+      return;
+    }
 
-  if (!got_imu) {
+  if (_need_odometry_)
+    if (!got_imu) {
     ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for imu");
     return;
+    }
+  else {
+    imu_roll = 0;
+    imu_pitch = 0;
+    imu_yaw = 0;
   }
 
   if (!std::isfinite(imu_roll) || !std::isfinite(imu_pitch)) {
@@ -1166,7 +1252,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     ROS_INFO_THROTTLE(1.0, "[OpticFlow]: freq = %fHz", 1.0 / dur.toSec());
   }
 
-  cv_bridge::CvImagePtr image;
+  cv_bridge::CvImageConstPtr image;
 
   if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
     {
@@ -1180,7 +1266,11 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     }
     tilt_prev = tilt_curr;
   }
-  image = cv_bridge::toCvCopy(msg, enc::BGR8);
+
+  if (sensor_msgs::image_encodings::isColor(msg->encoding))
+    image = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGR8);
+  else
+    image = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::MONO8);
 
   processImage(image);
 
@@ -1248,6 +1338,66 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 }
 
 //}
+//
+/* callbackDepthInfo() //{ */
+
+void OpticFlow::callbackDepthInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
+
+  if (!is_initialized)
+    return;
+
+  if (got_depth_info_) {
+    return;
+  }
+
+  mrs_lib::Routine routine_depth_info = profiler->createRoutine("callbackDepthInfo");
+
+  // TODO: deal with binning
+  if (msg->binning_x != 0) {
+    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: TODO: deal with binning when loading camera parameters.");
+  }
+
+  // check if the matricies have any data
+  if (msg->K.size() < 6 || msg->D.size() < 5) {
+
+    ROS_ERROR_THROTTLE(1.0, "[OpticFlow]: Depth camera info has wrong calibration matricies.");
+
+  } else {
+
+    d_fx = msg->K.at(0);
+    d_fy = msg->K.at(4);
+    d_cx = msg->K.at(2);
+    d_cy = msg->K.at(5);
+
+    d_k1 = msg->D.at(0);
+    d_k2 = msg->D.at(1);
+    d_p1 = msg->D.at(2);
+    d_p2 = msg->D.at(3);
+    d_k3 = msg->D.at(4);
+
+    d_camMatrix                  = cv::Mat(3, 3, CV_64F, cv::Scalar(0));
+    d_distCoeffs                 = cv::Mat(1, 5, CV_64F, cv::Scalar(0));
+    d_camMatrix.at<double>(0, 0) = fx;
+    d_camMatrix.at<double>(1, 1) = fy;
+    d_camMatrix.at<double>(0, 2) = cx;
+    d_camMatrix.at<double>(1, 2) = cy;
+    d_camMatrix.at<double>(2, 2) = 1;
+    d_distCoeffs.at<double>(0)   = k1;
+    d_distCoeffs.at<double>(1)   = k2;
+    d_distCoeffs.at<double>(2)   = p1;
+    d_distCoeffs.at<double>(3)   = p2;
+    d_distCoeffs.at<double>(4)   = k3;
+    got_depth_info_            = true;
+
+    // maybe mutex this later
+
+    if (debug_) {
+      ROS_INFO("[OpticFlow]: depth camera params: %f %f %f %f %f %f %f %f %f", d_fx, d_fy, d_cx, d_cy, d_k1, d_k2, d_p1, d_p2, d_k3);
+    }
+  }
+}
+
+//}
 
 // --------------------------------------------------------------
 // |                          routines                          |
@@ -1255,7 +1405,7 @@ void OpticFlow::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
 /* processImage() //{ */
 
-void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
+void OpticFlow::processImage(const cv_bridge::CvImageConstPtr image) {
 
   // let's wait for two images
   if (first_image) {
@@ -1272,15 +1422,17 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   }
 
   // we need to know the UAV height
-  if (!got_height) {
-    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: waiting for uav height!");
-    return;
-  }
+  if (_need_odometry_)
+    if (!got_height) {
+      ROS_WARN_THROTTLE(1.0, "[OpticFlow]: waiting for uav height!");
+      return;
+    }
 
-  if (!got_odometry) {
-    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: waiting for odometry!");
-    return;
-  }
+  if (_need_odometry_)
+    if (!got_odometry) {
+      ROS_WARN_THROTTLE(1.0, "[OpticFlow]: waiting for odometry!");
+      return;
+    }
 
   double uav_height_curr;
   {
@@ -1317,12 +1469,12 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   int yi             = image_center_y - (frame_size_ / 2);
 
   // rectification
-  cv::Rect    cropping_rectangle = cv::Rect(xi, yi, frame_size_, frame_size_);
+  cv::Rect    cropping_rectangle_ = cv::Rect(xi, yi, frame_size_, frame_size_);
   cv::Point2i mid_point          = cv::Point2i((frame_size_ / 2), (frame_size_ / 2));
 
   //  convert to grayscale
   /* if (first_image) */
-  cv::cvtColor(image_scaled(cropping_rectangle), imCurr, CV_RGB2GRAY);
+  cv::cvtColor(image_scaled(cropping_rectangle_), imCurr, CV_RGB2GRAY);
 
   // | ----------------- angular rate correction ---------------- |
 
@@ -1412,7 +1564,26 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // if we got any data from the image
   // tran := translational speed
+  if (_apply_depth_compensation_)
+    if (got_depth_){
+      compensateDepth(mrs_optic_flow_vectors,depths_);
+      if (debug_)
+        for (double depth : depths_)
+          ROS_INFO_STREAM("Depth: " << depth);
+        for (cv::Point2d flowvec : mrs_optic_flow_vectors)
+          ROS_INFO_STREAM("Modified vector: " << flowvec);
+    }
+    else{
+      ROS_INFO("[OpticFlow]: Depth compensation requested, but no depth image was obtained yet...");
+      return;
+    }
   if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
+
+    if (!got_depth_)
+    {
+      std::scoped_lock lock(mutex_uav_height);
+      tran *= uav_height;
+    }
 
     if (!std::isfinite(rot.x()) || !std::isfinite(rot.y()) || !std::isfinite(rot.z()) || !std::isfinite(rot.w()) || !std::isfinite(tran.x()) ||
         !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {

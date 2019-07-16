@@ -1,4 +1,4 @@
-gui: false
+gui: true
 debug: false
 silent_debug: false
 
