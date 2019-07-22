@@ -78,6 +78,16 @@ tf2::Matrix3x3 cvMat33ToTf2Mat33(cv::Mat& input) {
 }
 
 //}
+//
+/* cvRvecToTf2Mat33() //{ */
+
+tf2::Matrix3x3 cvRvecToTf2Mat33(cv::Mat& input) {
+  cv::Mat rotmat;
+  cv::Rodrigues(input,rotmat);
+  return cvMat33ToTf2Mat33(rotmat);
+}
+
+//}
 
 /* rotX() //{ */
 
@@ -144,6 +154,7 @@ private:
   void processImage(const cv_bridge::CvImageConstPtr image);
   bool compensateDepth(std::vector<cv::Point2d> &shifts, std::vector<double> depths);
   bool getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
+  bool getRTDepth(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
   bool got_depth_;
   std::vector<double> depths_;
 
@@ -339,6 +350,120 @@ bool OpticFlow::compensateDepth(std::vector<cv::Point2d> &shifts, std::vector<do
 
 //}
 
+/* getRTDepth() //{ */
+
+bool OpticFlow::getRTDepth(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran) {
+  if (!std::isfinite(1.0 / dur.toSec())) {
+    ROS_ERROR("[OpticFlow]:   Duration is %f. Returning.", dur.toSec());
+    return false;
+  }
+
+  cv::Matx33d camMatrixLocal = camMatrix;
+  camMatrixLocal(0, 2) -= ulCorner.x;
+  std::vector<cv::Point2d> initialPts, shiftedPts, shiftsPassed,undistPtsB;
+  std::vector<double> depths_passed;
+
+  std::vector<cv::Point3d> objectPoints;
+
+  int sqNum = frame_size_ / sample_point_size_;
+
+  for (int j = 0; j < sqNum; j++) {
+    for (int i = 0; i < sqNum; i++) {
+
+      if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
+
+        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i, j);
+        continue;
+      }
+      if (depths_[i + sqNum * j]==0) {
+
+        ROS_ERROR("Depht at \"shifts[i + sqNum * j] is zero\" - i = %d; j = %d!!!", i, j);
+        continue;
+      }
+
+      int xi = i * sample_point_size_ + (sample_point_size_ / 2);
+      int yi = j * sample_point_size_ + (sample_point_size_ / 2);
+      initialPts.push_back(cv::Point2d(xi, yi));
+      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
+      shiftsPassed.push_back(shifts[i + sqNum * j]);
+      depths_passed.push_back(depths_[i + sqNum * j]);
+      /* ROS_INFO_STREAM("shiftedPts:" << shiftedPts.back()); */
+    }
+  }
+
+  if (shiftedPts.size() < uint(shifted_pts_thr_)) {
+    ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning");
+    return false;
+  }
+
+  ROS_INFO_STREAM("camMatrixLocal: " << camMatrixLocal << "; distCoeffs: " << distCoeffs);
+  cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
+  for (int i=0;i<(int)initialPts.size();i++) {
+    /* ROS_INFO_STREAM("undistPtsB: " << undistPtsB[i]); */
+      objectPoints.push_back(
+          (
+           /* camMatrixLocal.inv() */
+           /* * */
+           cv::Point3d(undistPtsB[i].x,undistPtsB[i].y,1)
+          )
+          *
+          (depths_passed[i]/1000.0)
+         );
+    } 
+  
+  cv::Mat tvec, rvec;
+  cv::Mat inliers;
+  /* ROS_INFO("Here A"); */ 
+  ROS_INFO_STREAM("Input count: " << (int)(initialPts.size()) << " : " << (int)(objectPoints.size()));
+  cv::solvePnPRansac(	objectPoints, initialPts, camMatrixLocal, distCoeffs, rvec, tvec,	false, 100, 16*0.25, 0.99, inliers, cv::SOLVEPNP_ITERATIVE );	
+  /* ROS_INFO("Here B"); */ 
+  bool allSmall  = true;
+  uint remaining = (uint)(inliers.rows);
+  for (int z = 0; z < (int)(shiftedPts.size()); z++) {
+      if (cv::norm(shiftsPassed[z]) > 0.01)
+        allSmall = false;
+  }
+
+    ROS_INFO_STREAM("[OpticFlow]: inliers" << inliers);
+    ROS_INFO_STREAM("[OpticFlow]: tvec" << tvec);
+    ROS_INFO_STREAM("[OpticFlow]: rvec" << rvec);
+  /* if (debug_){ */
+  if (true){
+    ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
+    for (int i=0;i<(int)(objectPoints.size());i++)
+      ROS_INFO_STREAM("[OpticFlow]: point " << i << ": " << objectPoints[i]);
+  }
+
+
+  if (remaining < uint(shifted_pts_thr_)) {
+    ROS_ERROR("[OpticFlow]: After RANSAC refinement, not enough points remain, returning");
+    return false;
+  }
+
+  if (allSmall) {
+
+    ROS_INFO("[OpticFlow]: No motion detected.");
+    o_rot  = tf2::Quaternion(tf2::Vector3(0, 0, 1), 0);
+    o_tran = tf2::Vector3(0, 0, 0);
+    return true;
+  }
+  else{
+    tf2::Transform tempTransform = tf2::Transform(cvRvecToTf2Mat33(rvec));
+    o_rot    = tempTransform.getRotation();
+    o_rot = tf2::Quaternion(o_rot.getAxis(), o_rot.getAngle() / dur.toSec());
+    o_tran = tf2::Vector3(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2)) / dur.toSec();
+    return true;
+  }
+
+
+
+
+
+  return false;
+}
+
+//}
+
 /* getRT() //{ */
 
 bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran) {
@@ -358,7 +483,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
 
       if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
 
-        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i, j);
+        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j]\" - i = %d; j = %d!!!", i, j);
         continue;
       }
 
@@ -1566,19 +1691,25 @@ void OpticFlow::processImage(const cv_bridge::CvImageConstPtr image) {
   // tran := translational speed
   if (_apply_depth_compensation_)
     if (got_depth_){
-      compensateDepth(mrs_optic_flow_vectors,depths_);
+      /* compensateDepth(mrs_optic_flow_vectors,depths_); */
       if (debug_)
         for (double depth : depths_)
           ROS_INFO_STREAM("Depth: " << depth);
-        for (cv::Point2d flowvec : mrs_optic_flow_vectors)
-          ROS_INFO_STREAM("Modified vector: " << flowvec);
+        /* for (cv::Point2d flowvec : mrs_optic_flow_vectors) */
+        /*   ROS_INFO_STREAM("Modified vector: " << flowvec); */
     }
     else{
       ROS_INFO("[OpticFlow]: Depth compensation requested, but no depth image was obtained yet...");
       return;
     }
-  if (getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran)) {
+  
+  bool gotRT;
+  if (got_depth_)
+    gotRT = getRTDepth(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran);
+      else
+    gotRT = getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran);
 
+  if (gotRT) {
     if (!got_depth_)
     {
       std::scoped_lock lock(mutex_uav_height);
