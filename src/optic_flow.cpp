@@ -14,6 +14,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <image_transport/image_transport.h>
 #include <mrs_msgs/Float64Stamped.h>
@@ -285,8 +286,7 @@ private:
   int frame_size_;
   int sample_point_size_;
 
-  int sample_point_count_;
-  int sample_point_count_sqrt_;
+  int sq_num_;
 
   double calibration_coeff_x_;
   double calibration_coeff_y_;
@@ -365,28 +365,26 @@ bool OpticFlow::getRTDepth(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner
 
   std::vector<cv::Point3d> objectPoints;
 
-  int sqNum = frame_size_ / sample_point_size_;
+  for (int j = 0; j < sq_num_; j++) {
+    for (int i = 0; i < sq_num_; i++) {
 
-  for (int j = 0; j < sqNum; j++) {
-    for (int i = 0; i < sqNum; i++) {
+      if (!std::isfinite(shifts[i + sq_num_ * j].x) || !std::isfinite(shifts[i + sq_num_ * j].y)) {
 
-      if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
-
-        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i, j);
+        ROS_ERROR("NaN detected in variable \"shifts[i + sq_num_ * j])\" - i = %d; j = %d!!!", i, j);
         continue;
       }
-      if (depths_[i + sqNum * j]==0) {
+      if (depths_[i + sq_num_ * j]==0) {
 
-        ROS_ERROR("Depht at \"shifts[i + sqNum * j] is zero\" - i = %d; j = %d!!!", i, j);
+        ROS_ERROR("Depht at \"shifts[i + sq_num_ * j] is zero\" - i = %d; j = %d!!!", i, j);
         continue;
       }
 
       int xi = i * sample_point_size_ + (sample_point_size_ / 2);
       int yi = j * sample_point_size_ + (sample_point_size_ / 2);
       initialPts.push_back(cv::Point2d(xi, yi));
-      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
-      shiftsPassed.push_back(shifts[i + sqNum * j]);
-      depths_passed.push_back(depths_[i + sqNum * j]);
+      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sq_num_ * j]);
+      shiftsPassed.push_back(shifts[i + sq_num_ * j]);
+      depths_passed.push_back(depths_[i + sq_num_ * j]);
       /* ROS_INFO_STREAM("shiftedPts:" << shiftedPts.back()); */
     }
   }
@@ -415,7 +413,7 @@ bool OpticFlow::getRTDepth(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner
   cv::Mat inliers;
   /* ROS_INFO("Here A"); */ 
   ROS_INFO_STREAM("Input count: " << (int)(initialPts.size()) << " : " << (int)(objectPoints.size()));
-  cv::solvePnPRansac(	objectPoints, initialPts, camMatrixLocal, distCoeffs, rvec, tvec,	false, 100, 16*0.25, 0.99, inliers, cv::SOLVEPNP_ITERATIVE );	
+  cv::solvePnPRansac(	objectPoints, initialPts, camMatrixLocal, distCoeffs, rvec, tvec,	false, 100, 16*0.10, 0.99, inliers, cv::SOLVEPNP_ITERATIVE );	
   /* ROS_INFO("Here B"); */ 
   bool allSmall  = true;
   uint remaining = (uint)(inliers.rows);
@@ -476,22 +474,20 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
   camMatrixLocal(0, 2) -= ulCorner.x;
   std::vector<cv::Point2d> initialPts, shiftedPts, shiftsPassed, undistPtsA, undistPtsB;
 
-  int sqNum = frame_size_ / sample_point_size_;
+  for (int j = 0; j < sq_num_; j++) {
+    for (int i = 0; i < sq_num_; i++) {
 
-  for (int j = 0; j < sqNum; j++) {
-    for (int i = 0; i < sqNum; i++) {
+      if (!std::isfinite(shifts[i + sq_num_ * j].x) || !std::isfinite(shifts[i + sq_num_ * j].y)) {
 
-      if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
-
-        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j]\" - i = %d; j = %d!!!", i, j);
+        ROS_ERROR("NaN detected in variable \"shifts[i + sq_num_ * j]\" - i = %d; j = %d!!!", i, j);
         continue;
       }
 
       int xi = i * sample_point_size_ + (sample_point_size_ / 2);
       int yi = j * sample_point_size_ + (sample_point_size_ / 2);
       initialPts.push_back(cv::Point2d(xi, yi));
-      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum * j]);
-      shiftsPassed.push_back(shifts[i + sqNum * j]);
+      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sq_num_ * j]);
+      shiftsPassed.push_back(shifts[i + sq_num_ * j]);
     }
   }
 
@@ -789,8 +785,8 @@ void OpticFlow::onInit() {
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     sample_point_size_ = sample_point_size_ / scale_factor_;
   }
-  sample_point_count_sqrt_ = frame_size_ / sample_point_size_;
-  sample_point_count_      = sample_point_count_sqrt_ * sample_point_count_sqrt_;
+  sq_num_ = frame_size_ / sample_point_size_;
+  /* sample_point_count_      = sq_num_ * sq_num_; */
   param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
   param_loader.load_param("mrs_optic_flow/apply_abs_bouding", apply_abs_bounding_);
   param_loader.load_param("mrs_optic_flow/apply_rel_bouding", apply_rel_bouding_);
@@ -842,6 +838,7 @@ void OpticFlow::onInit() {
 
   if (gui_) {
     cv::namedWindow("ocv_optic_flow", cv::WINDOW_FREERATIO);
+    cv::namedWindow("ocv_depth_bins", cv::WINDOW_FREERATIO);
     /* cv::namedWindow("ocv_debugshit", cv::WINDOW_FREERATIO); */
     /* cv::namedWindow("OLD", cv::WINDOW_FREERATIO); */
     /* cv::namedWindow("ocv_NEW", cv::WINDOW_FREERATIO); */
@@ -1279,31 +1276,38 @@ void OpticFlow::callbackDepth(const sensor_msgs::ImageConstPtr& msg) {
 
   cv_bridge::CvImageConstPtr image;
   image = cv_bridge::toCvShare(msg);
-  int sqNum = frame_size_ / sample_point_size_;
   depths_.clear();
-  depths_.resize(sqNum * sqNum);
+  depths_.resize(sq_num_ * sq_num_);
   int xi,yi;
-  for (int j = 0; j < sqNum; j++) {
-    for (int i = 0; i < sqNum; i++) {
+  for (int j = 0; j < sq_num_; j++) {
+    for (int i = 0; i < sq_num_; i++) {
       xi = i * sample_point_size_;
       yi = j * sample_point_size_;
-      int cnt = 0;
-      int sum = 0;
+      std::vector<int> values;
+      /* int cnt = 0; */
+      /* int sum = 0; */
       
       for (int l=0;l<sample_point_size_;l++){
         for (int k=0;k<sample_point_size_;k++){
           unsigned short int val = image->image.at<unsigned short int>(cv::Point2i( xi+k , yi+l ));
           if (!(val==0)){
-            sum+=val;
-            cnt++;
+            values.push_back(val);
+            /* sum+=val; */
+            /* cnt++; */
           }
         }
       }
 
-      if (!(cnt==0))
-        depths_[i + j * sqNum] = (double)sum/(double)cnt;
+
+      if (!((values.size()==0))){
+        nth_element(values.begin(), values.begin()+values.size()/2, values.end());
+        int val_median = values.at(values.size()/2);
+        depths_[i + j * sq_num_] = (double)val_median;
+        /* depths_[i + j * sq_num_] = (double)sum/(double)cnt; */
+      
+      }
       else
-        depths_[i + j * sqNum] = 0.0;
+        depths_[i + j * sq_num_] = 0.0;
 
     }
   }
@@ -1703,9 +1707,17 @@ void OpticFlow::processImage(const cv_bridge::CvImageConstPtr image) {
       return;
     }
   
+  cv::Mat depthView(480,480,CV_8UC1);
   bool gotRT;
-  if (got_depth_)
+  if (got_depth_){
     gotRT = getRTDepth(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran);
+    for (int j = 0; j < sq_num_; j++) { for (int i = 0; i < sq_num_; i++) {
+      depthView(cv::Rect(i*sample_point_size_,j*sample_point_size_,sample_point_size_,sample_point_size_)) = cv::Scalar(depths_[i + sq_num_ * j]/20);
+    }}
+    cv::imshow("ocv_depth_bins",depthView);
+
+
+  }
       else
     gotRT = getRT(mrs_optic_flow_vectors, cv::Point2d(xi, yi), rot, tran);
 
