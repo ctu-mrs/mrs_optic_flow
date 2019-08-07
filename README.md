@@ -48,6 +48,13 @@ sudo apt install beignet
 
 For generations in between, either may or may not work, try it starting with NEO drivers.
 
+#### Setting up lightdm (mandatory)
+
+Make sure that lightdm is the default login manager. Choose option "lightdm" while running:
+```bash
+sudo dpkg-reconfigure lightdm
+```
+
 The lightdm has to be started for the GPU to show as a OpenCL device. For this to be the case, include in `/etc/lightdm/` a file `lightdm.conf`, with the contents:
 ```
 [SeatDefaults]
