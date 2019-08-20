@@ -61,6 +61,8 @@ The lightdm has to be started for the GPU to show as a OpenCL device. For this t
 autologin-user=mrs
 autologin-user-timeout=0
 ```
+In newer releases of Ubuntu, it may be necessary to remove `unity-greeter`, which prevents the autologin.
+
 
 Additionally, if these steps were not sufficient, check if headless video is enabled (or available) in BIOS.
 
