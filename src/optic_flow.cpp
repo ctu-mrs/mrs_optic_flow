@@ -410,10 +410,12 @@ bool OpticFlow::getRTDepth(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner
     } 
   
   cv::Mat tvec, rvec;
+  tvec = cv::Mat::zeros(3,1,CV_64F);
+  rvec = tvec;
   cv::Mat inliers;
   /* ROS_INFO("Here A"); */ 
   ROS_INFO_STREAM("Input count: " << (int)(initialPts.size()) << " : " << (int)(objectPoints.size()));
-  cv::solvePnPRansac(	objectPoints, initialPts, camMatrixLocal, distCoeffs, rvec, tvec,	false, 100, 16*0.10, 0.99, inliers, cv::SOLVEPNP_ITERATIVE );	
+  cv::solvePnPRansac(	objectPoints, initialPts, camMatrixLocal, distCoeffs, rvec, tvec,	true, 100, 16*0.10, 0.99, inliers, cv::SOLVEPNP_ITERATIVE );	
   /* ROS_INFO("Here B"); */ 
   bool allSmall  = true;
   uint remaining = (uint)(inliers.rows);
