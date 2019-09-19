@@ -1143,6 +1143,10 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for imu");
     return;
   }
+  if ((!got_c2b) || (!got_b2c)) {
+    ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for transform Base - Camera");
+    return;
+  }
 
   if (!std::isfinite(imu_roll) || !std::isfinite(imu_pitch)) {
     ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Imu data contains NaNs...");
