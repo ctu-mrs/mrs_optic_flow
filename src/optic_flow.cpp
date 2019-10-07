@@ -1086,7 +1086,6 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
   /* tf2::quaternionMsgToTF(msg->pose.pose.orientation, bt); */
 
-
   if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
     {
       std::scoped_lock lock(mutex_angular_rate);
@@ -1143,6 +1142,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
     ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for imu");
     return;
   }
+
   if ((!got_c2b) || (!got_b2c)) {
     ROS_INFO_THROTTLE(1.0, "[OpticFlow]: waiting for transform Base - Camera");
     return;
@@ -1156,7 +1156,6 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   mrs_lib::Routine routine_callback_image = profiler->createRoutine("callbackImage");
 
   got_image = true;
-
 
   if (!first_image)
     if (dur.toSec() < 1 / max_processing_rate_) {
