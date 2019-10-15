@@ -24,7 +24,8 @@
   <group ns="$(arg UAV_NAME)">
 
     <!-- Optic flow nodelet -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="$(arg launch_prefix)">
+    <!-- The delay in the launch prefix is important, without it the camera driver does not load sometimes! -->
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="$(arg launch_prefix)" launch-prefix="bash -c 'sleep 5; $0 $@'">
 
       <rosparam file="$(find mrs_optic_flow)/config/default.yaml" />
       <rosparam file="$(find mrs_optic_flow)/config/$(arg RUN_TYPE).yaml" />
