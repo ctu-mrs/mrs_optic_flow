@@ -17,7 +17,7 @@
   <arg     if="$(arg debug)" name="launch_prefix" value="debug_roslaunch" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
 
-  <arg name="camera_frame" default="bluefox_optical_frame_$(arg UAV_NAME)" />
+  <arg name="camera_frame" default="optflow_cam_$(arg UAV_NAME)" />
   <arg name="uav_frame" default="fcu_$(arg UAV_NAME)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg UAV_NAME)" />
 
@@ -43,8 +43,8 @@
 
         <!-- Subscribers -->
       <remap from="~odometry_in" to="odometry/orientation" />
-      <remap from="~camera_in" to="bluefox/image_raw" />
-      <remap from="~camera_info_in" to="bluefox/camera_info" />
+      <remap from="~camera_in" to="bluefox_optflow/image_raw" />
+      <remap from="~camera_info_in" to="bluefox_optflow/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
       <remap from="~imu_in" to="mavros/imu/data" />
 
