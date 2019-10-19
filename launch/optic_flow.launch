@@ -17,7 +17,7 @@
   <arg     if="$(arg debug)" name="launch_prefix" value="debug_roslaunch" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
 
-  <arg name="camera_frame" default="optflow_cam_$(arg UAV_NAME)" />
+  <arg name="camera_frame" default="bluefox_optflow_frame_$(arg UAV_NAME)" />
   <arg name="uav_frame" default="fcu_$(arg UAV_NAME)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg UAV_NAME)" />
 
