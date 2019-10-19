@@ -21,18 +21,20 @@
   <arg name="uav_frame" default="fcu_$(arg UAV_NAME)" />
   <arg name="uav_untilted_frame" default="fcu_untilted_$(arg UAV_NAME)" />
 
+  <arg     if="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox" />
+  <arg unless="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox_optflow" />
+
   <group ns="$(arg UAV_NAME)">
 
     <!-- Optic flow nodelet -->
     <!-- The delay in the launch prefix is important, without it the camera driver does not load sometimes! -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep 5; $0 $@'">  
-      <!-- <launch-prefix="$(arg launch_prefix)" > -->
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep 5; $0 $@'">
 
       <rosparam file="$(find mrs_optic_flow)/config/default.yaml" />
       <rosparam file="$(find mrs_optic_flow)/config/$(arg RUN_TYPE).yaml" />
 
         <!-- Get rid of this -->
-      <rosparam file="$(find mrs_optic_flow)/config/old/bluefox_simulation.yaml" />
+      <rosparam file="$(find mrs_optic_flow)/config/fallback_calibration.yaml" />
 
       <param name="enable_profiler" value="$(arg PROFILER)" />
 
@@ -45,8 +47,8 @@
 
         <!-- Subscribers -->
       <remap from="~odometry_in" to="odometry/orientation" />
-      <remap from="~camera_in" to="bluefox_optflow/image_raw" />
-      <remap from="~camera_info_in" to="bluefox_optflow/camera_info" />
+      <remap from="~camera_in" to="$(arg camera_topic)/image_raw" />
+      <remap from="~camera_info_in" to="$(arg camera_topic)/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
       <remap from="~imu_in" to="mavros/imu/data" />
 
