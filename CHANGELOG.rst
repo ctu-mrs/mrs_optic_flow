@@ -2,8 +2,8 @@
 Changelog for package mrs_optic_flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.3 (2019-10-25)
+------------------
 * updated camera frame
 * updated launch file, removed old configs and launch files
 * Fixing a duplicate attribute error
