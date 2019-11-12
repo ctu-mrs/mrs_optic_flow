@@ -18,8 +18,8 @@
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
 
   <arg name="camera_frame" default="bluefox_optflow_frame_$(arg UAV_NAME)" />
-  <arg name="uav_frame" default="fcu_$(arg UAV_NAME)" />
-  <arg name="uav_untilted_frame" default="fcu_untilted_$(arg UAV_NAME)" />
+  <arg name="uav_frame" default="$(arg UAV_NAME)/fcu" />
+  <arg name="uav_untilted_frame" default="$(arg UAV_NAME)/fcu_untilted" />
 
   <arg     if="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox" />
   <arg unless="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox_optflow" />
