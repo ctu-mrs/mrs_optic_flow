@@ -21,9 +21,6 @@
   <arg name="uav_frame" default="$(arg UAV_NAME)/fcu" />
   <arg name="uav_untilted_frame" default="$(arg UAV_NAME)/fcu_untilted" />
 
-  <arg     if="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox" />
-  <arg unless="$(eval arg('RUN_TYPE') == 'simulation')" name="camera_topic" value="bluefox_optflow" />
-
   <group ns="$(arg UAV_NAME)">
 
     <!-- Optic flow nodelet -->
@@ -47,8 +44,8 @@
 
         <!-- Subscribers -->
       <remap from="~odometry_in" to="odometry/orientation" />
-      <remap from="~camera_in" to="$(arg camera_topic)/image_raw" />
-      <remap from="~camera_info_in" to="$(arg camera_topic)/camera_info" />
+      <remap from="~camera_in" to="bluefox_optflow/image_raw" />
+      <remap from="~camera_info_in" to="bluefox_optflow/camera_info" />
       <remap from="~uav_height_in" to="odometry/altitude" />
       <remap from="~imu_in" to="mavros/imu/data" />
 
