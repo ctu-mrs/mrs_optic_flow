@@ -1401,9 +1401,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
     std::scoped_lock lock(mutex_static_tilt);
 
-    /* detilt.setRPY(imu_roll,imu_pitch,0); */
+    // Velocities in the detilted body frame
+    detilt.setRPY(imu_roll,imu_pitch,0);
     /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
-    detilt.setRPY(imu_roll, imu_pitch, odometry_yaw);
+    // Velocities in the detilted global frame
+    /* detilt.setRPY(imu_roll, imu_pitch, odometry_yaw); */
     /* detilt.setRPY(imu_roll,imu_pitch,0); */
     /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
     /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << " " << imu_yaw << std::endl; */
