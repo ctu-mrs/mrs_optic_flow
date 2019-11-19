@@ -358,7 +358,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
   cv::Mat mask;
   cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01, mask);
 
-  bool allSmall  = true;
+  bool allSmall  = false;
   uint remaining = 0;
   for (int z = 0; z < (int)(shiftedPts.size()); z++) {
     if (mask.at<unsigned char>(z) == 1) {
@@ -369,7 +369,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
     }
   }
 
-  if (debug_)
+  /* if (debug_) */
     ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
 
 
@@ -420,6 +420,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
   /* std::cout << std::endl; */
 
   int             bestIndex   = -1;
+  bool bestInverseSolution;
   double          bestAngDiff = M_PI;
   tf2::Quaternion bestQuatRateOF;
 
@@ -432,7 +433,9 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
     /* std::cout << normals[i] << std::endl; */
     /* std::cout << normals[i].at<double>(2) << std::endl; */
 
-    if (normals[i].at<double>(2) <= DBL_EPSILON) {
+    /* if (normals[i].at<double>(2) <= DBL_EPSILON) { */
+    bool inverseSolution = false;
+    if (true) {
 
       tempTransform = tf2::Transform(cvMat33ToTf2Mat33(rot[i]));
       quatRateOF    = tempTransform.getRotation();
@@ -443,19 +446,38 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
       double angDiff;
       {
         std::scoped_lock lock(mutex_angular_rate);
-        angDiff = quatRateOFB.angle(angular_rate_tf);
+        double angDiffPlus, angDiffMinus;
+        angDiffPlus = quatRateOFB.angle(angular_rate_tf);
+        angDiffMinus = quatRateOFB.angle(angular_rate_tf.inverse());
+        if (angDiffPlus < angDiffMinus){
+          angDiff = angDiffPlus;
+        }
+        else{
+          angDiff = angDiffMinus;
+        }
+
+        if (normals[i].at<double>(2) < 0)
+          inverseSolution = false;
+        else
+          inverseSolution = true;
+
       }
-      /* std::cout << angDiff << std::endl; */
+      std::cout << angDiff << std::endl;
 
       if (bestAngDiff > angDiff) {
         bestAngDiff    = angDiff;
         bestIndex      = i;
+        bestInverseSolution = inverseSolution;
         bestQuatRateOF = quatRateOF;
       }
     }
   }
 
+
   if ((bestIndex != -1) && (solutions > 1)) {
+
+    std::cout << normals[bestIndex] << std::endl;
+    std::cout << normals[bestIndex].at<double>(2) << std::endl;
 
     if (cv::determinant(rot[bestIndex]) < 0) {
       /* std::cout << "Invalid rotation found" << std::endl; */
@@ -464,6 +486,10 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
       ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Angle difference greater than pi/4, skipping.");
       return false;
     }
+
+    /* if (bestInverseSolution) { */
+    /*   bestQuatRateOF = bestQuatRateOF.inverse(); */
+    /* } */
 
     /* std::cout << "ANGLE: " << bestAngDiff << std::endl; */
     tf2::Matrix3x3(bestQuatRateOF).getRPY(roll, pitch, yaw);
@@ -494,7 +520,8 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
     {
       std::scoped_lock lock(mutex_uav_height);
 
-      o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(tran[bestIndex].at<double>(0), tran[bestIndex].at<double>(1), tran[bestIndex].at<double>(2)) *
+      double invUnit = (bestInverseSolution?-1.0:1.0);
+      o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(invUnit*tran[bestIndex].at<double>(0), invUnit*tran[bestIndex].at<double>(1), invUnit*tran[bestIndex].at<double>(2)) *
                uav_height / dur.toSec();
     }
 
@@ -1447,7 +1474,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     rot = tf2::Quaternion(tempTfC2B * (rot.getAxis()), rot.getAngle());
 
     velocity.header.frame_id = uav_untilted_frame_;
-    velocity.header.stamp    = ros::Time::now();
+    velocity.header.stamp    = image->header.stamp;
 
     velocity.twist.twist.linear.x = tran.x();
     velocity.twist.twist.linear.y = tran.y();
