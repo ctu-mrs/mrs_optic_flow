@@ -369,7 +369,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
     }
   }
 
-  /* if (debug_) */
+  if (debug_)
     ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
 
 
@@ -462,7 +462,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
           inverseSolution = true;
 
       }
-      std::cout << angDiff << std::endl;
+      /* std::cout << angDiff << std::endl; */
 
       if (bestAngDiff > angDiff) {
         bestAngDiff    = angDiff;
@@ -476,8 +476,8 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
 
   if ((bestIndex != -1) && (solutions > 1)) {
 
-    std::cout << normals[bestIndex] << std::endl;
-    std::cout << normals[bestIndex].at<double>(2) << std::endl;
+    /* std::cout << normals[bestIndex] << std::endl; */
+    /* std::cout << normals[bestIndex].at<double>(2) << std::endl; */
 
     if (cv::determinant(rot[bestIndex]) < 0) {
       /* std::cout << "Invalid rotation found" << std::endl; */
@@ -1148,6 +1148,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
   if (first_image)
     begin = msg->header.stamp;
+
   ros::Time nowTime = msg->header.stamp;
   dur               = nowTime - begin;
   begin             = nowTime;
@@ -1177,6 +1178,17 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
   if (!std::isfinite(imu_roll) || !std::isfinite(imu_pitch)) {
     ROS_WARN_THROTTLE(1.0, "[OpticFlow]: Imu data contains NaNs...");
+    return;
+  }
+
+
+  if (dur.toSec() < 0.0 && !first_image) {
+    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: time delta negative: %f", dur.toSec());
+    return;
+  }
+
+  if (fabs(dur.toSec()) < 0.001 && !first_image) {
+    ROS_WARN_THROTTLE(1.0, "[OpticFlow]: time delta too small: %f", dur.toSec());
     return;
   }
 
@@ -1213,6 +1225,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   image = cv_bridge::toCvCopy(msg, enc::BGR8);
 
   processImage(image);
+
 
   /* ROS_INFO("[OpticFlow]: callbackImage() end"); */
 }
@@ -1430,9 +1443,9 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
     // Velocities in the detilted body frame
     detilt.setRPY(imu_roll,imu_pitch,0);
-    /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
     // Velocities in the detilted global frame
     /* detilt.setRPY(imu_roll, imu_pitch, odometry_yaw); */
+    /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
     /* detilt.setRPY(imu_roll,imu_pitch,0); */
     /* detilt.setRPY(odometry_roll,odometry_pitch,odometry_yaw); */
     /* std::cout << "RP IMU: " << imu_roll << " " << imu_pitch << " " << imu_yaw << std::endl; */
