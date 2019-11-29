@@ -452,7 +452,7 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
 
       if ((abs(maxLoc[0]) > block_count / 2) || (abs(maxLoc[1]) > block_count / 2)) {
         /* pcr.copyTo(storageB); */
-        ROS_WARN("LARGE SHIFT DETECTED!: %d:%d - %d:%d", i, j, maxLoc[0], maxLoc[1]);
+        ROS_WARN("[OpticFlow]: LARGE SHIFT DETECTED!: %d:%d - %d:%d", i, j, maxLoc[0], maxLoc[1]);
         output[i + j * Xfields] = cv::Point2f(std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN());
       } else
         output[i + j * Xfields] = cv::Point2f(maxLocF[0], maxLocF[1]);
@@ -1318,14 +1318,14 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
 
   /* int M = cv::getOptimalDFTSize(samplePointSize); */
   /* int N = cv::getOptimalDFTSize(samplePointSize); */
-  /* ROS_INFO("M: %d",M); */
+  /* ROS_INFO("[OpticFlow]: M: %d",M); */
 
   cv::Rect roi;
 
   /* end          = std::clock(); */
 
   /* elapsedTimeI = double(end - begin) / CLOCKS_PER_SEC; */
-  /* ROS_INFO("INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI); */
+  /* ROS_INFO("[OpticFlow]: INITIALIZATION: %f s, %f Hz", elapsedTimeI , 1.0 / elapsedTimeI); */
 
   /* cv::Mat showhost; */
   std::vector<cv::Point2f> peakLocs;
@@ -1443,7 +1443,7 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
 
       /* end         = std::clock(); */
       /* elapsedTime = double(end - begin) / CLOCKS_PER_SEC; */
-      /* ROS_INFO("Step 4: %f s, %f Hz", elapsedTime , 1.0 / elapsedTime); */
+      /* ROS_INFO("[OpticFlow]: Step 4: %f s, %f Hz", elapsedTime , 1.0 / elapsedTime); */
       /* begin = std::clock(); */
 
       // adjust shift relative to image center...
@@ -1453,15 +1453,15 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateField(cv::Mat& _src1, cv::Mat&
       /* output.push_back(cv::Point(0,0)); */
     }
   }
-  /* ROS_INFO("Step 1: %f s, %f Hz", elapsedTime1 , 1.0 / elapsedTime1); */
-  /* ROS_INFO("Step 2: %f s, %f Hz", elapsedTime2 , 1.0 / elapsedTime2); */
-  /* ROS_INFO("Step 3: %f s, %f Hz", elapsedTime3 , 1.0 / elapsedTime3); */
-  /* ROS_INFO("Step 4: %f s, %f Hz", elapsedTime4 , 1.0 / elapsedTime4); */
-  /* ROS_INFO("Step 5: %f s, %f Hz", elapsedTime5 , 1.0 / elapsedTime5); */
-  /* ROS_INFO("Step 6: %f s, %f Hz", elapsedTime6 , 1.0 / elapsedTime6); */
+  /* ROS_INFO("[OpticFlow]: Step 1: %f s, %f Hz", elapsedTime1 , 1.0 / elapsedTime1); */
+  /* ROS_INFO("[OpticFlow]: Step 2: %f s, %f Hz", elapsedTime2 , 1.0 / elapsedTime2); */
+  /* ROS_INFO("[OpticFlow]: Step 3: %f s, %f Hz", elapsedTime3 , 1.0 / elapsedTime3); */
+  /* ROS_INFO("[OpticFlow]: Step 4: %f s, %f Hz", elapsedTime4 , 1.0 / elapsedTime4); */
+  /* ROS_INFO("[OpticFlow]: Step 5: %f s, %f Hz", elapsedTime5 , 1.0 / elapsedTime5); */
+  /* ROS_INFO("[OpticFlow]: Step 6: %f s, %f Hz", elapsedTime6 , 1.0 / elapsedTime6); */
   /* end          = std::clock(); */
   /* elapsedTimeO = double(end - begin_overall) / CLOCKS_PER_SEC; */
-  /* ROS_INFO("OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO); */
+  /* ROS_INFO("[OpticFlow]: OVERALL: %f s, %f Hz", elapsedTimeO , 1.0 / elapsedTimeO); */
   return output;
 }
 
@@ -1567,7 +1567,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
     return std::vector<cv::Point2d>();
   running = true;
 
-  /* ROS_INFO("FX:%f, FY%f",i_fx,i_fy); */
+  /* ROS_INFO("[OpticFlow]: FX:%f, FY%f",i_fx,i_fy); */
 
   fx = i_fx;
   fy = i_fy;

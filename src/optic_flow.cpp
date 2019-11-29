@@ -330,7 +330,7 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
 
       if (!std::isfinite(shifts[i + sqNum * j].x) || !std::isfinite(shifts[i + sqNum * j].y)) {
 
-        ROS_ERROR("NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i, j);
+        ROS_ERROR("[OpticFlow]: NaN detected in variable \"shifts[i + sqNum * j])\" - i = %d; j = %d!!!", i, j);
         continue;
       }
 
@@ -419,8 +419,8 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
   tf2::Transform tempTransform;
   /* std::cout << std::endl; */
 
-  int             bestIndex   = -1;
-  bool bestInverseSolution;
+  int             bestIndex = -1;
+  bool            bestInverseSolution;
   double          bestAngDiff = M_PI;
   tf2::Quaternion bestQuatRateOF;
 
@@ -446,13 +446,12 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
       double angDiff;
       {
         std::scoped_lock lock(mutex_angular_rate);
-        double angDiffPlus, angDiffMinus;
-        angDiffPlus = quatRateOFB.angle(angular_rate_tf);
+        double           angDiffPlus, angDiffMinus;
+        angDiffPlus  = quatRateOFB.angle(angular_rate_tf);
         angDiffMinus = quatRateOFB.angle(angular_rate_tf.inverse());
-        if (angDiffPlus < angDiffMinus){
+        if (angDiffPlus < angDiffMinus) {
           angDiff = angDiffPlus;
-        }
-        else{
+        } else {
           angDiff = angDiffMinus;
         }
 
@@ -460,15 +459,14 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
           inverseSolution = false;
         else
           inverseSolution = true;
-
       }
       /* std::cout << angDiff << std::endl; */
 
       if (bestAngDiff > angDiff) {
-        bestAngDiff    = angDiff;
-        bestIndex      = i;
+        bestAngDiff         = angDiff;
+        bestIndex           = i;
         bestInverseSolution = inverseSolution;
-        bestQuatRateOF = quatRateOF;
+        bestQuatRateOF      = quatRateOF;
       }
     }
   }
@@ -520,8 +518,9 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, cv::Point2d ulCorner, tf2
     {
       std::scoped_lock lock(mutex_uav_height);
 
-      double invUnit = (bestInverseSolution?-1.0:1.0);
-      o_tran = tf2::Transform(bestQuatRateOF) * tf2::Vector3(invUnit*tran[bestIndex].at<double>(0), invUnit*tran[bestIndex].at<double>(1), invUnit*tran[bestIndex].at<double>(2)) *
+      double invUnit = (bestInverseSolution ? -1.0 : 1.0);
+      o_tran         = tf2::Transform(bestQuatRateOF) *
+               tf2::Vector3(invUnit * tran[bestIndex].at<double>(0), invUnit * tran[bestIndex].at<double>(1), invUnit * tran[bestIndex].at<double>(2)) *
                uav_height / dur.toSec();
     }
 
@@ -747,7 +746,7 @@ void OpticFlow::onInit() {
   // | -------------------- choose the method ------------------- |
   switch (method_) {
     case 3: {
-      ROS_ERROR("Method 3 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
+      ROS_ERROR("[OpticFlow]: Method 3 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
       /* processClass = new BlockMethod(frame_size_, sample_point_size_, scan_radius_, scanDiameter, scanCount, step_size_); */
       break;
     }
@@ -756,7 +755,8 @@ void OpticFlow::onInit() {
       /* std::cout << cv::getBuildInformation() << std::endl; */
 
       if (useOCL_ && !cv::ocl::haveOpenCL()) {
-        ROS_ERROR("NO OCL SUPPORT - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+        ROS_ERROR(
+            "[OpticFlow]: NO OCL SUPPORT - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
         return;
       }
 
@@ -768,23 +768,25 @@ void OpticFlow::onInit() {
       }
 
       if (useOCL_ && (context.ndevices()) == 0) {
-        ROS_ERROR("No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to false.");
+        ROS_ERROR(
+            "[OpticFlow]: No OpenCL devices found - cannot run with GPU acceleration. Consider running the CPU implementation by setting useOCL parameter to "
+            "false.");
         return;
       }
 
-      ROS_INFO(" GPU devices are detected.");  // This bit provides an overview of the OpenCL devices you have in your computer
+      ROS_INFO("[OpticFlow]:  GPU devices are detected.");  // This bit provides an overview of the OpenCL devices you have in your computer
       for (int i = 0; i < int(context.ndevices()); i++) {
         cv::ocl::Device device = context.device(i);
-        ROS_INFO("name:              %s", device.name().c_str());
+        ROS_INFO("[OpticFlow]: name:              %s", device.name().c_str());
         if (device.available())
-          ROS_INFO("available!");
+          ROS_INFO("[OpticFlow]: available!");
         else
-          ROS_INFO("unavailable");
+          ROS_INFO("[OpticFlow]: unavailable");
         if (device.imageSupport())
-          ROS_INFO("image support!");
+          ROS_INFO("[OpticFlow]: image support!");
         else
-          ROS_INFO("no image support");
-        ROS_INFO("OpenCL_C_Version:  %s", device.OpenCL_C_Version().c_str());
+          ROS_INFO("[OpticFlow]: no image support");
+        ROS_INFO("[OpticFlow]: OpenCL_C_Version:  %s", device.OpenCL_C_Version().c_str());
       }
 
       cv::ocl::Device(context.device(0));  // Here is where you change which GPU to use (e.g. 0 or 1)
@@ -797,7 +799,7 @@ void OpticFlow::onInit() {
     }
 
     case 5: {
-      ROS_ERROR("Method 5 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
+      ROS_ERROR("[OpticFlow]: Method 5 is currently ON ICE. Use method 4, or get someone to fix the BlockMatching method");
       /* processClass = new FastSpacedBMMethod(sample_point_size_, scan_radius_, step_size_, cx, cy, fx, fy, k1, k2, k3, p1, p2, store_video_, &video_path_);
        */
       break;
@@ -985,7 +987,7 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
     got_c2b = true;
   }
   catch (tf2::TransformException ex) {
-    ROS_ERROR("TF: %s", ex.what());
+    ROS_ERROR("[OpticFlow]: TF: %s", ex.what());
     ros::Duration(1.0).sleep();
     return;
   }
@@ -1010,7 +1012,7 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
     got_b2c = true;
   }
   catch (tf2::TransformException ex) {
-    ROS_ERROR("TF: %s", ex.what());
+    ROS_ERROR("[OpticFlow]: TF: %s", ex.what());
     ros::Duration(1.0).sleep();
     return;
   }
@@ -1428,8 +1430,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   {
     std::scoped_lock lock(mutex_process);
 
-    mrs_optic_flow_vectors =
-        processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
+    mrs_optic_flow_vectors = processClass->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
   }
   tf2::Quaternion                           rot;
   tf2::Vector3                              tran;
@@ -1442,7 +1443,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     std::scoped_lock lock(mutex_static_tilt);
 
     // Velocities in the detilted body frame
-    detilt.setRPY(imu_roll,imu_pitch,0);
+    detilt.setRPY(imu_roll, imu_pitch, 0);
     // Velocities in the detilted global frame
     /* detilt.setRPY(imu_roll, imu_pitch, odometry_yaw); */
     /* detilt.setRPY(imu_roll,imu_pitch,imu_yaw); */
@@ -1513,7 +1514,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       publisher_velocity.publish(velocity);
     }
     catch (...) {
-      ROS_ERROR("Exception caught during publishing topic %s.", publisher_velocity.getTopic().c_str());
+      ROS_ERROR("[OpticFlow]: Exception caught during publishing topic %s.", publisher_velocity.getTopic().c_str());
     }
   }
 }
