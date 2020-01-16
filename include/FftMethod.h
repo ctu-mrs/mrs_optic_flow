@@ -379,7 +379,7 @@ private:
   cv::ocl::Queue mainQueue;
 
   int frameSize;
-  int samplePointSize;
+  int samplePointSize, samplePointSize_lr;
 
   int    imCenterX, imCenterY;  // center of original image
   int    xi, yi;                // frame corner coordinates
@@ -387,7 +387,9 @@ private:
 
   std::vector<cv::Point2d> speeds;
 
-  int sqNum;
+  int sqNum, sqNum_lr;
+
+  int max_px_speed_lr, max_px_speed_sq_lr;
 
   cv::Point2d shift;
   cv::Point2d shift_raw;
@@ -397,9 +399,6 @@ private:
   bool gotNth;
   int  Nreps;
   bool running;
-  bool raw_enable;
-  bool rot_corr_enable;
-  bool tilt_corr_enable;
 
   bool storeVideo;
 
@@ -417,7 +416,11 @@ private:
 
   bool phaseCorrelate_ocl(cv::InputArray _src1, cv::InputArray _src2, std::vector<cv::Point2f>& out, int vec_rows, int vec_cols);
 
+  bool phaseCorrelate_lr_ocl(cv::InputArray _src1, cv::InputArray _src2, std::vector<cv::Point2f>& out, int vec_rows, int vec_cols);
+
   std::vector<cv::Point2d> phaseCorrelateField(cv::Mat& _src1, cv::Mat& _src2, unsigned int X, unsigned int Y, CV_OUT double* response = 0);
+
+  std::vector<cv::Point2d> phaseCorrelateFieldLongRange(cv::Mat& _src1, cv::Mat& _src2, unsigned int X, unsigned int Y, CV_OUT double* response = 0);
 
   void dft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags);
   void idft_special(cv::InputArray _src0, cv::OutputArray _dst, int flags = 0);
@@ -433,6 +436,8 @@ public:
 
   std::vector<cv::Point2d> processImage(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center,
                                         std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy);
+  std::vector<cv::Point2d> processImageLongRange(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center,
+                                                 std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy);
 };
 
 #endif  // FFTMETHOD_H

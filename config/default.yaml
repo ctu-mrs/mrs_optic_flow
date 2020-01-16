@@ -10,7 +10,6 @@ raw_output: true # should publish raw data?
 scale_rotation: false # Whether optical flow should be used to also estimate the vertical speed and yaw rate.
 scale_rot_magnitude: 49.9 # For retrieval of vert. speed and yaw rate based on polar-rectangular tranformation of the image and phase correlation of these.
 scale_rot_output: "velocity"
-d3d_method: "" # Method for estimating full R3xI1 motion (XYZ + Yaw) - options are logpol and advanced, but do not use these, they are bad. I will make a good one called pnp soon.
 
 store_video: false
 video_path: "/dev/null"
@@ -37,6 +36,8 @@ mrs_optic_flow:
   rotation_correction: true
   tilt_correction: true
   minimum_tilt_correction: 0.5 # rad - to suppress fidgeting at high altitudes due to IMU noise. Value should correspond ~to the standard dev. of the imu noise.
+
+  takeoff_height: 1.0 # Takoff can be too diaonal - for successfull tracking we might need more range, so a different mode is used until we are sufficiently high above ground
 
   ransac:
     num_of_chosen: 2

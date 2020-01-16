@@ -4,6 +4,8 @@
 
 // Copyright (C) 2014, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+#define DEBUG false
 
 #define SQRT_2 0.707106781188f
 #define sin_120 0.866025403784f
@@ -1305,6 +1307,8 @@ void minmaxloc(__global const uchar * srcptr, int src_step, int src_offset, int 
           *(__global uint *)(dstptr + lposlZ) = *(__global uint *)(dstptr + lposl);
         }
       }
+      if (DEBUG)
+        printf("A: lposlZ: %d, value: %d\n", lposlZ, *(__global uint *)(dstptr + lposlZ));
     }
 }
 
@@ -1318,18 +1322,21 @@ void refine(__global uchar * srcptr, int src_step, int src_offset, int cols, int
     int fullstep = align(mad24(groupnum,(int)(sizeof(uint)),valstep));
     int lposvZ = mad24(index, fullstep, 0);
     int lposlZ = mad24(index, fullstep, valstep);
-      /* printf("lposlZ B: %d\n", lposlZ); */
     int indexMax = *(__global uint *)(dstptr + lposlZ);
+    if (DEBUG)
+      printf("B: lposlZ: %d, indexMax: %d\n", lposlZ, indexMax);
     int xc = indexMax % cols;
     int yc = indexMax / cols;
-      /* printf("xc: %d, yc: %d\n", xc,yc); */
+    if (DEBUG)
+      printf("xc: %d, yc: %d\n", xc,yc);
     float valMax = *(__global float *)(dstptr + lposvZ);
       /* printf("valMax: %f\n", valMax); */
     int xmin = mad24(Xvec,samplePointSize,(((xc-radius)>=0)?xc-radius:0));
     int xmax = mad24(Xvec,samplePointSize,(((xc+radius)<cols)?xc+radius:cols-1));
     int ymin = mad24(Yvec,samplePointSize,(((yc-radius)>=0)?yc-radius:0));
     int ymax = mad24(Yvec,samplePointSize,(((yc+radius)<rows)?yc+radius:rows-1));
-      /* printf("xmin: %d, xmax: %d, ymin: %d, ymax: %d\n", xmin, xmax, ymin, ymax); */
+    if (DEBUG)
+      printf("xmin: %d, xmax: %d, ymin: %d, ymax: %d\n", xmin, xmax, ymin, ymax);
 
     float centroidX = 0.0f;
     float centroidY = 0.0f;
@@ -1350,11 +1357,13 @@ void refine(__global uchar * srcptr, int src_step, int src_offset, int cols, int
     }
       /* printf("CX: %f, CY: %f, SI: %f \n", centroidX, centroidY, sumIntensity); */
 
+    /* printf("X: %f, Y: %f\n", centroidX, centroidY); */
 
     centroidX /= sumIntensity;
     centroidY /= sumIntensity;
 
-    /* printf("X: %f, Y: %f\n", centroidX, centroidY); */
+    if (DEBUG)
+      printf("X: %f, Y: %f\n", centroidX, centroidY);
 
     int lposXZ = mad24(index, fullstep, mul24((int)(sizeof(float)),1));
     int lposYZ = mad24(index, fullstep, mul24((int)(sizeof(float)),2));

@@ -30,9 +30,6 @@
       <rosparam file="$(find mrs_optic_flow)/config/default.yaml" />
       <rosparam file="$(find mrs_optic_flow)/config/$(arg RUN_TYPE).yaml" />
 
-        <!-- Get rid of this -->
-      <rosparam file="$(find mrs_optic_flow)/config/fallback_calibration.yaml" />
-
       <param name="enable_profiler" value="$(arg PROFILER)" />
 
       <param name="camera_frame" value="$(arg camera_frame)" />
@@ -51,6 +48,7 @@
 
         <!-- Publishers -->
       <remap from="~velocity_out" to="~velocity" />
+      <remap from="~velocity_out_longrange" to="~velocity_longrange" />
       <remap from="~velocity_raw_out" to="~velocity_raw" />
       <remap from="~velocity_stddev_out" to="~velocity_stddev" />
       <remap from="~tilt_correction_out" to="~tilt_correction" />
