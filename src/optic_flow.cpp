@@ -344,8 +344,12 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
 
 /* get2DT() //{ */
   bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran){
+    if (shifts.size()<1){
+      ROS_ERROR("[OpticFlow]: No points given, returning");
+      return false;
+      }
     if (!std::isfinite(1.0 / dur.toSec())) {
-      ROS_ERROR("[OpticFlow]:   Duration is %f. Returning.", dur.toSec());
+      ROS_ERROR("[OpticFlow]: Duration is %f. Returning.", dur.toSec());
       return false;
     }
 
@@ -359,7 +363,6 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
       for (int i = 0; i < sqNum_lr; i++) {
 
         if (!std::isfinite(shifts[i + sqNum_lr * j].x) || !std::isfinite(shifts[i + sqNum_lr * j].y)) {
-
           ROS_ERROR("[OpticFlow]: NaN detected in variable \"shifts[i + sqNum_lr * j])\" - i = %d; j = %d!!!", i, j);
           continue;
         }
@@ -372,6 +375,11 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
       }
     }
 
+    if (shiftedPts.size()<3){
+      ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
+      return false;
+    }
+
     /* if (shiftedPts.size() < uint(shifted_pts_thr_)) { */
     /*   ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning"); */
     /*   return false; */
@@ -380,7 +388,7 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
     ROS_INFO("Here A");
     ROS_INFO_STREAM("count: " << initialPts.size());
     for (auto pt : initialPts)
-      ROS_INFO_STREAM(pt << " " );
+      /* ROS_INFO_STREAM(initialPts.isContinuous() << " " << intialPts.type() << " " << initialPts.depth() << " " <<  initialPts.channels() << " " << intialPts.cols << " " << initialPts.rows ); */
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
     ROS_INFO("Here B");
     cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
