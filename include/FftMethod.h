@@ -13,6 +13,7 @@
 #include <fstream>
 #include <string.h>
 #include <mutex>
+#include <thread>
 
 #include <OpticFlowCalc.h>
 #include <utilityFunctions.h>

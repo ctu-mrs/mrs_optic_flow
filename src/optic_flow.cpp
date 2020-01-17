@@ -60,6 +60,7 @@ using namespace std;
 namespace enc = sensor_msgs::image_encodings;
 
 #define STRING_EQUAL 0
+#define LONG_RANGE_RATIO 4
 
 namespace mrs_optic_flow
 {
@@ -375,9 +376,16 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
       }
     }
 
-    if (shiftedPts.size()<3){
-      ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
-      return false;
+    if (LONG_RANGE_RATIO == 2){
+      if (shiftedPts.size()<3){
+        ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
+        return false;
+      }
+    } else if (LONG_RANGE_RATIO == 4){
+      if (shiftedPts.size()<1){
+        ROS_ERROR("[OpticFlow]: Valid point not found, returning");
+        return false;
+      }
     }
 
     /* if (shiftedPts.size() < uint(shifted_pts_thr_)) { */
@@ -385,35 +393,47 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
     /*   return false; */
     /* } */
 
-    ROS_INFO("Here A");
-    ROS_INFO_STREAM("count: " << initialPts.size());
+    /* ROS_INFO("Here A"); */
+    /* ROS_INFO_STREAM("count: " << initialPts.size()); */
     for (auto pt : initialPts)
       /* ROS_INFO_STREAM(initialPts.isContinuous() << " " << intialPts.type() << " " << initialPts.depth() << " " <<  initialPts.channels() << " " << intialPts.cols << " " << initialPts.rows ); */
     cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
-    ROS_INFO("Here B");
+    /* ROS_INFO("Here B"); */
     cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
-    ROS_INFO("Here C");
+    /* ROS_INFO("Here C"); */
 
     std::vector<cv::Point2d> undistShifts;;
     for (size_t i=0; i<shiftedPts.size(); i++){
       undistShifts.push_back(shiftedPts[i]-initialPts[i]);
     }
 
-    std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD);
+    cv::Point2d avgShift;
+      
+    if (LONG_RANGE_RATIO == 2){
+      std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD);
 
-    if (inliers.size()<3){
-      ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning");
-      return false;
+      if (inliers.size()<3){
+        ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning");
+        return false;
+      }
+
+      avgShift = cv::Point2d(0.0,0.0);
+      for (size_t i=0; i<inliers.size(); i++){
+        avgShift += undistShifts[inliers[i]];
+      }
+      avgShift = avgShift/(double)(inliers.size());
+    } else if (LONG_RANGE_RATIO == 4) {
+      avgShift = undistShifts[0];
     }
+    
+    double multiplier;
+    if (LONG_RANGE_RATIO == 4)
+      multiplier = 4;
+    else if (LONG_RANGE_RATIO == 2)
+      multiplier = 2;
 
-    cv::Point2d avgShift(0.0,0.0);
-    for (size_t i=0; i<inliers.size(); i++){
-      avgShift += undistShifts[inliers[i]];
-    }
-    avgShift = avgShift/(double)(inliers.size());
-
-    o_tran.setX(avgShift.x*(height/camMatrixLocal(0,0)));
-    o_tran.setY(avgShift.y*(height/camMatrixLocal(1,1)));
+    o_tran.setX(avgShift.x*(height/camMatrixLocal(0,0)*multiplier));
+    o_tran.setY(avgShift.y*(height/camMatrixLocal(1,1)*multiplier));
     o_tran.setZ(0.0);
 
     o_tran = o_tran/dur.toSec();
@@ -1445,8 +1465,8 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     uav_height_curr = uav_height;
   }
 
-  /* bool long_range_mode = uav_height_curr < _takeoff_height_; */
-  bool long_range_mode = true;
+  bool long_range_mode = uav_height_curr < _takeoff_height_;
+  /* bool long_range_mode = true; */
 
   if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
     {

@@ -1,5 +1,7 @@
 #include <FftMethod.h>
 
+#define LONG_RANGE_RATIO 4
+
 cv::String buildOptions;
 cv::Mat    storageA, storageB, diffmap;
 
@@ -395,6 +397,9 @@ bool OCL_FftPlan::enqueueTransform(cv::InputArray _src1, cv::InputArray _src2, c
 
   bool partial = k_phase_corr.run(2, globalsize, localsize, true, mainQueue);
 
+  /* ros::Duration(0.0000001).sleep(); */
+  /* usleep(100000); */
+  /* std::this_thread::sleep_for(std::chrono::milliseconds(1)); */
   /* return false; */
 
   /* showFMat(fft1); */
@@ -1677,9 +1682,9 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 
   frameSize       = i_frameSize;
   samplePointSize = i_samplePointSize;
-  samplePointSize_lr = 2*i_samplePointSize;
+  samplePointSize_lr = 1*i_samplePointSize;
   max_px_speed_sq = pow(max_px_speed_t, 2);
-  max_px_speed_lr = 2*max_px_speed_t;
+  max_px_speed_lr = 1*max_px_speed_t;
   max_px_speed_sq_lr = pow(max_px_speed_lr,2);;
 
   cl_file_name = i_cl_file_name;
@@ -1706,7 +1711,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 
 
   sqNum            = frameSize / samplePointSize;
-  sqNum_lr         = frameSize / samplePointSize_lr;
+  sqNum_lr         = sqNum/LONG_RANGE_RATIO;
 
 
   usrc1.create(frameSize, frameSize, CV_32FC1, cv::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -1905,10 +1910,6 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
 
 
   // save image for GUI
-  if (gui || storeVideo) {
-    imView = imCurr.clone();
-  }
-
   // copy first to second
   if (first) {
     imCurr.copyTo(imPrev);
@@ -1920,12 +1921,21 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
 
   ROS_INFO("[OpticFlow]: Using long range mode");
 
-  imCurr.convertTo(imCurrF, CV_32FC1);
-  imPrev.convertTo(imPrevF, CV_32FC1);
+  cv::Mat imCurrD, imPrevD;
+  cv::resize(imCurr,imCurrD,cv::Size(),1.0/LONG_RANGE_RATIO,1.0/LONG_RANGE_RATIO);
+  cv::resize(imPrev,imPrevD,cv::Size(),1.0/LONG_RANGE_RATIO,1.0/LONG_RANGE_RATIO);
+
+  if (gui || storeVideo) {
+    imView = imCurrD.clone();
+  }
+
+
+  imCurrD.convertTo(imCurrF, CV_32FC1);
+  imPrevD.convertTo(imPrevF, CV_32FC1);
   speeds.clear();
 
   if (useOCL){
-    ROS_WARN("TODO!");
+    /* ROS_WARN("TODO!"); */
     speeds = phaseCorrelateFieldLongRange(imCurrF, imPrevF, sqNum_lr, sqNum_lr);
   }
   else
