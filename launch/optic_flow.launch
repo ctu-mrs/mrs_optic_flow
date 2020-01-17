@@ -40,6 +40,7 @@
       <param name="useOCL" value="true" />
 
         <!-- Subscribers -->
+      <remap from="~tracker_status_in" to="control_manager/diagnostics" />
       <remap from="~odometry_in" to="odometry/orientation" />
       <remap from="~camera_in" to="bluefox_optflow/image_raw" />
       <remap from="~camera_info_in" to="bluefox_optflow/camera_info" />

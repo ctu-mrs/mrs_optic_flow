@@ -17,6 +17,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <image_transport/image_transport.h>
 #include <mrs_msgs/Float64Stamped.h>
+#include <mrs_msgs/ControlManagerDiagnostics.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/TwistStamped.h>
@@ -138,6 +139,7 @@ private:
   void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr &msg);
 
   int nrep;
 
@@ -146,11 +148,16 @@ private:
   bool getRT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
   bool get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran);
 
+  bool isUavLandoff();
+
   void       tfTimer(const ros::TimerEvent& event);
   ros::Timer tf_timer;
   bool       got_c2b = false;
   bool       got_b2c = false;
   bool       got_tfs = false;
+
+  bool       got_tracker_status = false;
+  mrs_msgs::TrackerStatus tracker_status;
 
 private:
   ros::Timer cam_init_timer;
@@ -174,6 +181,7 @@ private:
   ros::Subscriber subscriber_image;
   ros::Subscriber subscriber_uav_height;
   ros::Subscriber subscriber_camera_info;
+  ros::Subscriber subscriber_tracker_status_;
   ros::Subscriber subscriber_odometry;
   ros::Subscriber subscriber_imu;
 
@@ -195,6 +203,8 @@ private:
 private:
   double     uav_height;
   std::mutex mutex_uav_height;
+
+  std::mutex mutex_tracker_status;
 
   std::mutex mutex_process;
 
@@ -339,6 +349,31 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
       inliers = inliers_tentative;
   }
   return inliers;
+}
+
+//}
+
+/* //{ isUavLandoff() */
+
+bool OpticFlow::isUavLandoff() {
+
+  std::scoped_lock lock(mutex_tracker_status);
+
+  if (got_tracker_status) {
+
+    if (std::string(tracker_status.tracker).compare("LandoffTracker") == STRING_EQUAL) {
+
+      return true;
+    } else {
+
+      return false;
+    }
+
+  } else {
+
+    ROS_WARN_THROTTLE(1.0, "[Odometry]: Tracker status not available");
+    return false;
+  }
 }
 
 //}
@@ -973,6 +1008,7 @@ void OpticFlow::onInit() {
   // |                         subscribers                        |
   // --------------------------------------------------------------
 
+  subscriber_tracker_status_ = nh_.subscribe("tracker_status_in", 1, &OpticFlow::callbackTrackerStatus, this, ros::TransportHints().tcpNoDelay());
   subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
   subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
   ROS_INFO("[OpticFlow]: Image subscriber topic name is %s", subscriber_image.getTopic().c_str());
@@ -1167,6 +1203,22 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
 // --------------------------------------------------------------
 // |                          callbacks                         |
 // --------------------------------------------------------------
+
+/* //{ callbackTrackerStatus() */
+
+void OpticFlow::callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr &msg) {
+
+  if (!is_initialized)
+    return;
+
+  mrs_lib::Routine profiler_routine = profiler->createRoutine("callbackTrackerStatus");
+
+  std::scoped_lock lock(mutex_tracker_status);
+
+  tracker_status     = msg->tracker_status;
+  got_tracker_status = true;
+}
+//}
 
 /* callbackHeight() //{ */
 
@@ -1465,7 +1517,8 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     uav_height_curr = uav_height;
   }
 
-  bool long_range_mode = uav_height_curr < _takeoff_height_;
+  bool long_range_mode = isUavLandoff();
+  /* bool long_range_mode = uav_height_curr < _takeoff_height_; */
   /* bool long_range_mode = true; */
 
   if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
