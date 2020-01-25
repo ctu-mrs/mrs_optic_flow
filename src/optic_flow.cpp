@@ -301,6 +301,8 @@ private:
   std::string fft_cl_file_;
   bool        useOCL_;
 
+  std::string long_range_mode_string;
+
   std::string filter_method_;
 
   bool                    rotation_correction_, raw_enabled_;
@@ -804,6 +806,8 @@ void OpticFlow::onInit() {
   int videoFPS = param_loader.load_param2<int>("video_fps");
 
   // | -------------------- optic flow params ------------------- |
+  param_loader.load_param("long_range_mode", long_range_mode_string);
+
   param_loader.load_param("FftCLFile", fft_cl_file_);
   param_loader.load_param("useOCL", useOCL_);
 
@@ -1517,9 +1521,18 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     uav_height_curr = uav_height;
   }
 
-  /* bool long_range_mode = isUavLandoff(); */
-  /* bool long_range_mode = uav_height_curr < _takeoff_height_; */
-  bool long_range_mode = true;
+  bool long_range_mode;
+  if ( long_range_mode_string == "always_on")
+    long_range_mode = true;
+  else if ( long_range_mode_string == "always_off")
+    long_range_mode = false;
+  else if (long_range_mode_string == "takeoff_based" )
+    long_range_mode = isUavLandoff();
+  else if (long_range_mode_string == "height_based")
+    long_range_mode = uav_height_curr < _takeoff_height_;
+  else
+    long_range_mode = false;
+
 
   if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
     {
