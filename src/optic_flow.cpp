@@ -1517,9 +1517,9 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     uav_height_curr = uav_height;
   }
 
-  bool long_range_mode = isUavLandoff();
+  /* bool long_range_mode = isUavLandoff(); */
   /* bool long_range_mode = uav_height_curr < _takeoff_height_; */
-  /* bool long_range_mode = true; */
+  bool long_range_mode = true;
 
   if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
     {
