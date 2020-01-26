@@ -139,7 +139,7 @@ private:
   void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
-  void callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr &msg);
+  void callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg);
 
   int nrep;
 
@@ -156,7 +156,7 @@ private:
   bool       got_b2c = false;
   bool       got_tfs = false;
 
-  bool       got_tracker_status = false;
+  bool                    got_tracker_status = false;
   mrs_msgs::TrackerStatus tracker_status;
 
 private:
@@ -244,8 +244,8 @@ private:
 
   double vam;
 
-  ros::Time      begin;
-  ros::Duration  dur;
+  ros::Time     begin;
+  ros::Duration dur;
   /* OpticFlowCalc* processClass; */
   FftMethod* fftProcessor;
 
@@ -334,17 +334,18 @@ private:
 
 /* getInlisers() //{ */
 
-std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double threshold){
+std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double threshold) {
 
   std::vector<unsigned int> inliers;
   std::vector<unsigned int> inliers_tentative;
-  for (unsigned int i = 0; i< (int)(shifts.size()); i++){
+  for (unsigned int i = 0; i < (int)(shifts.size()); i++) {
     inliers_tentative.clear();
     inliers_tentative.push_back(i);
-    for (unsigned int j = 0; j< (int)(shifts.size()); j++){
-      if (i == j) continue;
+    for (unsigned int j = 0; j < (int)(shifts.size()); j++) {
+      if (i == j)
+        continue;
 
-      if (cv::norm(shifts[i]-shifts[j]) < threshold)
+      if (cv::norm(shifts[i] - shifts[j]) < threshold)
         inliers_tentative.push_back(j);
     }
     if (inliers.size() < inliers_tentative.size())
@@ -381,103 +382,105 @@ bool OpticFlow::isUavLandoff() {
 //}
 
 /* get2DT() //{ */
-  bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran){
-    if (shifts.size()<1){
-      ROS_ERROR("[OpticFlow]: No points given, returning");
-      return false;
-      }
-    if (!std::isfinite(1.0 / dur.toSec())) {
-      ROS_ERROR("[OpticFlow]: Duration is %f. Returning.", dur.toSec());
-      return false;
-    }
-
-    cv::Matx33d camMatrixLocal = camMatrix;
-    camMatrixLocal(0, 2) -= ulCorner.x;
-    std::vector<cv::Point2d> initialPts, shiftedPts, shiftsPassed, undistPtsA, undistPtsB;
-
-    int sqNum_lr = frame_size_ / sample_point_size_lr;
-
-    for (int j = 0; j < sqNum_lr; j++) {
-      for (int i = 0; i < sqNum_lr; i++) {
-
-        if (!std::isfinite(shifts[i + sqNum_lr * j].x) || !std::isfinite(shifts[i + sqNum_lr * j].y)) {
-          ROS_ERROR("[OpticFlow]: NaN detected in variable \"shifts[i + sqNum_lr * j])\" - i = %d; j = %d!!!", i, j);
-          continue;
-        }
-
-        int xi = i * sample_point_size_lr + (sample_point_size_lr / 2);
-        int yi = j * sample_point_size_lr + (sample_point_size_lr / 2);
-        initialPts.push_back(cv::Point2d(xi, yi));
-        shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum_lr * j]);
-        shiftsPassed.push_back(shifts[i + sqNum_lr * j]);
-      }
-    }
-
-    if (LONG_RANGE_RATIO == 2){
-      if (shiftedPts.size()<3){
-        ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
-        return false;
-      }
-    } else if (LONG_RANGE_RATIO == 4){
-      if (shiftedPts.size()<1){
-        ROS_ERROR("[OpticFlow]: Valid point not found, returning");
-        return false;
-      }
-    }
-
-    /* if (shiftedPts.size() < uint(shifted_pts_thr_)) { */
-    /*   ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning"); */
-    /*   return false; */
-    /* } */
-
-    /* ROS_INFO("Here A"); */
-    /* ROS_INFO_STREAM("count: " << initialPts.size()); */
-    for (auto pt : initialPts)
-      /* ROS_INFO_STREAM(initialPts.isContinuous() << " " << intialPts.type() << " " << initialPts.depth() << " " <<  initialPts.channels() << " " << intialPts.cols << " " << initialPts.rows ); */
-    cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
-    /* ROS_INFO("Here B"); */
-    cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
-    /* ROS_INFO("Here C"); */
-
-    std::vector<cv::Point2d> undistShifts;;
-    for (size_t i=0; i<shiftedPts.size(); i++){
-      undistShifts.push_back(shiftedPts[i]-initialPts[i]);
-    }
-
-    cv::Point2d avgShift;
-      
-    if (LONG_RANGE_RATIO == 2){
-      std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD);
-
-      if (inliers.size()<3){
-        ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning");
-        return false;
-      }
-
-      avgShift = cv::Point2d(0.0,0.0);
-      for (size_t i=0; i<inliers.size(); i++){
-        avgShift += undistShifts[inliers[i]];
-      }
-      avgShift = avgShift/(double)(inliers.size());
-    } else if (LONG_RANGE_RATIO == 4) {
-      avgShift = undistShifts[0];
-    }
-    
-    double multiplier;
-    if (LONG_RANGE_RATIO == 4)
-      multiplier = 4;
-    else if (LONG_RANGE_RATIO == 2)
-      multiplier = 2;
-
-    o_tran.setX(avgShift.x*(height/camMatrixLocal(0,0)*multiplier));
-    o_tran.setY(avgShift.y*(height/camMatrixLocal(1,1)*multiplier));
-    o_tran.setZ(0.0);
-
-    o_tran = o_tran/dur.toSec();
-
-    return true;
+bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran) {
+  if (shifts.size() < 1) {
+    ROS_ERROR("[OpticFlow]: No points given, returning");
+    return false;
   }
-  //}
+  if (!std::isfinite(1.0 / dur.toSec())) {
+    ROS_ERROR("[OpticFlow]: Duration is %f. Returning.", dur.toSec());
+    return false;
+  }
+
+  cv::Matx33d camMatrixLocal = camMatrix;
+  camMatrixLocal(0, 2) -= ulCorner.x;
+  std::vector<cv::Point2d> initialPts, shiftedPts, shiftsPassed, undistPtsA, undistPtsB;
+
+  int sqNum_lr = frame_size_ / sample_point_size_lr;
+
+  for (int j = 0; j < sqNum_lr; j++) {
+    for (int i = 0; i < sqNum_lr; i++) {
+
+      if (!std::isfinite(shifts[i + sqNum_lr * j].x) || !std::isfinite(shifts[i + sqNum_lr * j].y)) {
+        ROS_ERROR("[OpticFlow]: NaN detected in variable \"shifts[i + sqNum_lr * j])\" - i = %d; j = %d!!!", i, j);
+        continue;
+      }
+
+      int xi = i * sample_point_size_lr + (sample_point_size_lr / 2);
+      int yi = j * sample_point_size_lr + (sample_point_size_lr / 2);
+      initialPts.push_back(cv::Point2d(xi, yi));
+      shiftedPts.push_back(cv::Point2d(xi, yi) + shifts[i + sqNum_lr * j]);
+      shiftsPassed.push_back(shifts[i + sqNum_lr * j]);
+    }
+  }
+
+  if (LONG_RANGE_RATIO == 2) {
+    if (shiftedPts.size() < 3) {
+      ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
+      return false;
+    }
+  } else if (LONG_RANGE_RATIO == 4) {
+    if (shiftedPts.size() < 1) {
+      ROS_ERROR("[OpticFlow]: Valid point not found, returning");
+      return false;
+    }
+  }
+
+  /* if (shiftedPts.size() < uint(shifted_pts_thr_)) { */
+  /*   ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning"); */
+  /*   return false; */
+  /* } */
+
+  /* ROS_INFO("Here A"); */
+  /* ROS_INFO_STREAM("count: " << initialPts.size()); */
+  for (auto pt : initialPts)
+    /* ROS_INFO_STREAM(initialPts.isContinuous() << " " << intialPts.type() << " " << initialPts.depth() << " " <<  initialPts.channels() << " " <<
+     * intialPts.cols << " " << initialPts.rows ); */
+    cv::undistortPoints(initialPts, undistPtsA, camMatrixLocal, distCoeffs);
+  /* ROS_INFO("Here B"); */
+  cv::undistortPoints(shiftedPts, undistPtsB, camMatrixLocal, distCoeffs);
+  /* ROS_INFO("Here C"); */
+
+  std::vector<cv::Point2d> undistShifts;
+  ;
+  for (size_t i = 0; i < shiftedPts.size(); i++) {
+    undistShifts.push_back(shiftedPts[i] - initialPts[i]);
+  }
+
+  cv::Point2d avgShift;
+
+  if (LONG_RANGE_RATIO == 2) {
+    std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD);
+
+    if (inliers.size() < 3) {
+      ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning");
+      return false;
+    }
+
+    avgShift = cv::Point2d(0.0, 0.0);
+    for (size_t i = 0; i < inliers.size(); i++) {
+      avgShift += undistShifts[inliers[i]];
+    }
+    avgShift = avgShift / (double)(inliers.size());
+  } else if (LONG_RANGE_RATIO == 4) {
+    avgShift = undistShifts[0];
+  }
+
+  double multiplier;
+  if (LONG_RANGE_RATIO == 4)
+    multiplier = 4;
+  else if (LONG_RANGE_RATIO == 2)
+    multiplier = 2;
+
+  o_tran.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
+  o_tran.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
+  o_tran.setZ(0.0);
+
+  o_tran = o_tran / dur.toSec();
+
+  return true;
+}
+//}
 
 
 /* getRT() //{ */
@@ -684,10 +687,10 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, double height, cv::Point2
      */
     /* o_tran = tf2::Vector3(tran[bestIndex].at<double>(0),tran[bestIndex].at<double>(1),tran[bestIndex].at<double>(2))*uav_height_curr/dur.toSec(); */
 
-      double invUnit = (bestInverseSolution ? -1.0 : 1.0);
-      o_tran         = tf2::Transform(bestQuatRateOF) *
-               tf2::Vector3(invUnit * tran[bestIndex].at<double>(0), invUnit * tran[bestIndex].at<double>(1), invUnit * tran[bestIndex].at<double>(2)) *
-               height / dur.toSec();
+    double invUnit = (bestInverseSolution ? -1.0 : 1.0);
+    o_tran         = tf2::Transform(bestQuatRateOF) *
+             tf2::Vector3(invUnit * tran[bestIndex].at<double>(0), invUnit * tran[bestIndex].at<double>(1), invUnit * tran[bestIndex].at<double>(2)) * height /
+             dur.toSec();
 
     return true;
 
@@ -806,7 +809,7 @@ void OpticFlow::onInit() {
   int videoFPS = param_loader.load_param2<int>("video_fps");
 
   // | -------------------- optic flow params ------------------- |
-  param_loader.load_param("long_range_mode", long_range_mode_string);
+  param_loader.load_param("mrs_optic_flow/long_range_mode", long_range_mode_string);
 
   param_loader.load_param("FftCLFile", fft_cl_file_);
   param_loader.load_param("useOCL", useOCL_);
@@ -831,7 +834,7 @@ void OpticFlow::onInit() {
   if (fabs(scale_factor_ - 1.0) > 0.01) {
     sample_point_size_ = sample_point_size_ / scale_factor_;
   }
-  sample_point_size_lr = sample_point_size_*2;
+  sample_point_size_lr     = sample_point_size_ * 2;
   sample_point_count_sqrt_ = frame_size_ / sample_point_size_;
   sample_point_count_      = sample_point_count_sqrt_ * sample_point_count_sqrt_;
   param_loader.load_param("mrs_optic_flow/filter_method", filter_method_);
@@ -890,7 +893,8 @@ void OpticFlow::onInit() {
   }
 
   /* if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) { */
-  /*   ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor"); */
+  /*   ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
+   */
   /*   ros::shutdown(); */
   /* } */
 
@@ -1013,8 +1017,8 @@ void OpticFlow::onInit() {
   // --------------------------------------------------------------
 
   subscriber_tracker_status_ = nh_.subscribe("tracker_status_in", 1, &OpticFlow::callbackTrackerStatus, this, ros::TransportHints().tcpNoDelay());
-  subscriber_camera_info = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
-  subscriber_image       = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
+  subscriber_camera_info     = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
+  subscriber_image           = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
   ROS_INFO("[OpticFlow]: Image subscriber topic name is %s", subscriber_image.getTopic().c_str());
   subscriber_uav_height = nh_.subscribe("uav_height_in", 1, &OpticFlow::callbackHeight, this, ros::TransportHints().tcpNoDelay());
   subscriber_odometry   = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
@@ -1210,7 +1214,7 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
 
 /* //{ callbackTrackerStatus() */
 
-void OpticFlow::callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr &msg) {
+void OpticFlow::callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
 
   if (!is_initialized)
     return;
@@ -1522,11 +1526,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   }
 
   bool long_range_mode;
-  if ( long_range_mode_string == "always_on")
+  if (long_range_mode_string == "always_on")
     long_range_mode = true;
-  else if ( long_range_mode_string == "always_off")
+  else if (long_range_mode_string == "always_off")
     long_range_mode = false;
-  else if (long_range_mode_string == "takeoff_based" )
+  else if (long_range_mode_string == "takeoff_based")
     long_range_mode = isUavLandoff();
   else if (long_range_mode_string == "height_based")
     long_range_mode = uav_height_curr < _takeoff_height_;
@@ -1632,9 +1636,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     std::scoped_lock lock(mutex_process);
 
     if (!long_range_mode)
-      mrs_optic_flow_vectors = fftProcessor->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
+      mrs_optic_flow_vectors =
+          fftProcessor->processImage(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
     else
-      mrs_optic_flow_vectors = fftProcessor->processImageLongRange(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
+      mrs_optic_flow_vectors =
+          fftProcessor->processImageLongRange(imCurr, gui_, debug_, mid_point, temp_angle_diff, cv::Point(0, 0), mrs_optic_flow_vectors_raw, fx, fy);
   }
   tf2::Quaternion                           rot;
   tf2::Vector3                              tran;
@@ -1662,7 +1668,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
   // if we got any data from the image
   // tran := translational speed
-  if (!long_range_mode){
+  if (!long_range_mode) {
     if (getRT(mrs_optic_flow_vectors, uav_height_curr, cv::Point2d(xi, yi), rot, tran)) {
 
       if (!std::isfinite(rot.x()) || !std::isfinite(rot.y()) || !std::isfinite(rot.z()) || !std::isfinite(rot.w()) || !std::isfinite(tran.x()) ||
@@ -1722,12 +1728,11 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
         ROS_ERROR("[OpticFlow]: Exception caught during publishing topic %s.", publisher_velocity.getTopic().c_str());
       }
     }
-  }
-  else{
+  } else {
     if (get2DT(mrs_optic_flow_vectors, uav_height_curr, cv::Point2d(xi, yi), tran)) {
       ROS_INFO_STREAM("vecs: " << mrs_optic_flow_vectors);
 
-      if ( !std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
+      if (!std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
         ROS_INFO("[OpticFlow]: tran: %f %f", tran.x(), tran.y());
         ROS_INFO("[OpticFlow]: Nans in output, returning.");
         return;
@@ -1746,9 +1751,9 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       velocity.header.frame_id = uav_untilted_frame_;
       velocity.header.stamp    = image->header.stamp;
 
-      velocity.twist.twist.linear.x = tran.x();
-      velocity.twist.twist.linear.y = tran.y();
-      velocity.twist.twist.linear.z = 0;
+      velocity.twist.twist.linear.x  = tran.x();
+      velocity.twist.twist.linear.y  = tran.y();
+      velocity.twist.twist.linear.z  = 0;
       velocity.twist.twist.angular.x = 0;
       velocity.twist.twist.angular.y = 0;
       velocity.twist.twist.angular.z = 0;
@@ -1768,16 +1773,15 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
         }
 
       try {
-        ROS_INFO( "[OpticFlow]: long range mode: publishing velocity");
+        ROS_INFO("[OpticFlow]: long range mode: publishing velocity");
         /* ROS_INFO_THROTTLE(1.0, "[OpticFlow]: long range mode: publishing velocity"); */
-        ROS_INFO_STREAM( "[OpticFlow]: " << velocity.twist.twist.linear.x << " : " << velocity.twist.twist.linear.y);
-        ROS_INFO_STREAM( "[OpticFlow]: " << uav_height_curr << " : " << camMatrix.at<double>(0,0) << " : " << camMatrix.at<double>(1,1));
+        ROS_INFO_STREAM("[OpticFlow]: " << velocity.twist.twist.linear.x << " : " << velocity.twist.twist.linear.y);
+        ROS_INFO_STREAM("[OpticFlow]: " << uav_height_curr << " : " << camMatrix.at<double>(0, 0) << " : " << camMatrix.at<double>(1, 1));
         publisher_velocity_longrange.publish(velocity);
       }
       catch (...) {
         ROS_ERROR("[OpticFlow]: Exception caught during publishing topic %s.", publisher_velocity_longrange.getTopic().c_str());
       }
-
     }
   }
 }

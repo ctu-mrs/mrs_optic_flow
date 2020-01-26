@@ -17,7 +17,7 @@ video_fps: 30
 
 mrs_optic_flow:
 
-  long_range_mode: "always_on" # always_off height_based takeoff_based
+  long_range_mode: "always_off" # {always_off, always_on, height_based, takeoff_based}
   takeoff_height: 1.0 # Takoff can be too diaonal - for successfull tracking we might need more range, so a different mode is used until we are sufficiently high above ground
 
   shifted_pts_thr: 8
