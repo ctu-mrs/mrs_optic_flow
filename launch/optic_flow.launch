@@ -34,6 +34,7 @@
       <param name="enable_profiler" value="$(arg PROFILER)" />
 
       <param name="camera_frame" value="$(arg camera_frame)" />
+      <param name="camera_link_frame" value="$(arg camera_link_frame)" />
       <param name="uav_frame" value="$(arg uav_frame)" />
       <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
