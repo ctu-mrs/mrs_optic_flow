@@ -476,7 +476,7 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   o_tran.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
   o_tran.setZ(0.0);
 
-  o_tran = o_tran / dur.toSec();
+  o_tran = -o_tran / dur.toSec();
 
   return true;
 }
