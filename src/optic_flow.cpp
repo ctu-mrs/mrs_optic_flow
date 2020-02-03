@@ -1753,10 +1753,10 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
       velocity.twist.twist.linear.x  = tran.x();
       velocity.twist.twist.linear.y  = tran.y();
-      velocity.twist.twist.linear.z  = 0;
-      velocity.twist.twist.angular.x = 0;
-      velocity.twist.twist.angular.y = 0;
-      velocity.twist.twist.angular.z = 0;
+      velocity.twist.twist.linear.z  = std::nan("");
+      velocity.twist.twist.angular.x = std::nan("");;
+      velocity.twist.twist.angular.y = std::nan("");;
+      velocity.twist.twist.angular.z = std::nan("");;
 
       velocity.twist.covariance[0]  = pow(50 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7]  = velocity.twist.covariance[0];
