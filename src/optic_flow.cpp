@@ -148,7 +148,7 @@ private:
 private:
   void processImage(const cv_bridge::CvImagePtr image);
   bool getRT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
-  bool get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran);
+  bool get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff);
 
   bool isUavLandoff();
 
@@ -191,6 +191,7 @@ private:
 
   ros::Publisher publisher_velocity;
   ros::Publisher publisher_velocity_longrange;
+  ros::Publisher publisher_velocity_longrange_diff;
   ros::Publisher publisher_velocity_std;
   ros::Publisher publisher_points_raw;
   ros::Publisher publisher_max_allowed_velocity;
@@ -388,7 +389,7 @@ bool OpticFlow::isUavLandoff() {
 //}
 
 /* get2DT() //{ */
-bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran) {
+bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff) {
   if (shifts.size() < 1) {
     ROS_ERROR("[OpticFlow]: No points given, returning");
     return false;
@@ -496,6 +497,18 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   o_tran.setZ(0.0);
 
   o_tran = -o_tran / dur.toSec();
+
+  tf2::Vector3 o_tran_corr;
+
+  avgShift.x += x_corr_cam;
+  avgShift.y += y_corr_cam;
+  o_tran_corr.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
+  o_tran_corr.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
+  o_tran_corr.setZ(0.0);
+
+  o_tran_corr = -o_tran_corr / dur.toSec();
+
+  o_tran_diff = o_tran_corr - o_tran;
 
   return true;
 }
@@ -1025,6 +1038,7 @@ void OpticFlow::onInit() {
   publisher_chosen_allsac        = nh_.advertise<std_msgs::Int32>("allsac_chosen_out", 1);
   publisher_velocity             = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out", 1);
   publisher_velocity_longrange   = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange", 1);
+  publisher_velocity_longrange_diff   = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange_diff", 1);
   publisher_velocity_std         = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev_out", 1);
   publisher_max_allowed_velocity = nh_.advertise<std_msgs::Float32>("max_velocity_out", 1);
 
@@ -1770,7 +1784,8 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       }
     }
   } else {
-    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), cv::Point2d(xi, yi), tran)) {
+    tf2::Vector3 tran_diff;
+    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), cv::Point2d(xi, yi), tran, tran_diff)) {
       ROS_INFO_STREAM("vecs: " << mrs_optic_flow_vectors);
 
       if (!std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
@@ -1819,6 +1834,36 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
         ROS_INFO_STREAM("[OpticFlow]: " << velocity.twist.twist.linear.x << " : " << velocity.twist.twist.linear.y);
         ROS_INFO_STREAM("[OpticFlow]: " << uav_height_curr << " : " << camMatrix.at<double>(0, 0) << " : " << camMatrix.at<double>(1, 1));
         publisher_velocity_longrange.publish(velocity);
+      }
+      catch (...) {
+        ROS_ERROR("[OpticFlow]: Exception caught during publishing topic %s.", publisher_velocity_longrange.getTopic().c_str());
+      }
+
+      tran_diff = (tf2::Transform(tempTfC2B.getRotation()) * tran_diff);
+
+      velocity.header.frame_id = uav_frame_;
+      velocity.header.stamp    = image->header.stamp;
+
+      velocity.twist.twist.linear.x  = tran_diff.x();
+      velocity.twist.twist.linear.y  = tran_diff.y();
+      velocity.twist.twist.linear.z  = std::nan("");
+      velocity.twist.twist.angular.x = std::nan("");;
+      velocity.twist.twist.angular.y = std::nan("");;
+      velocity.twist.twist.angular.z = std::nan("");;
+
+      velocity.twist.covariance[0]  = pow(50 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
+      velocity.twist.covariance[7]  = velocity.twist.covariance[0];
+      velocity.twist.covariance[14] = 666;
+
+      velocity.twist.covariance[21] = 666;  // I expect error of 0.5 rad/s.
+      velocity.twist.covariance[28] = 666;
+      velocity.twist.covariance[35] = 666;
+      try {
+        ROS_INFO("[OpticFlow]: long range mode: publishing velocity");
+        /* ROS_INFO_THROTTLE(1.0, "[OpticFlow]: long range mode: publishing velocity"); */
+        ROS_INFO_STREAM("[OpticFlow]: " << velocity.twist.twist.linear.x << " : " << velocity.twist.twist.linear.y);
+        ROS_INFO_STREAM("[OpticFlow]: " << uav_height_curr << " : " << camMatrix.at<double>(0, 0) << " : " << camMatrix.at<double>(1, 1));
+        publisher_velocity_longrange_diff.publish(velocity);
       }
       catch (...) {
         ROS_ERROR("[OpticFlow]: Exception caught during publishing topic %s.", publisher_velocity_longrange.getTopic().c_str());
