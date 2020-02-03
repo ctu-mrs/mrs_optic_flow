@@ -490,8 +490,8 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
     y_corr_cam = sin(yaw_corr)*t_corr;
   }
   ROS_INFO_STREAM("[OpticFlow]: cam_yaw: " << cam_yaw << " x_corr_cam: " << x_corr_cam << " y_corr_cam: " << y_corr_cam);
-  /* avgShift.x += x_corr_cam; */
-  /* avgShift.y += y_corr_cam; */
+  avgShift.x += x_corr_cam;
+  avgShift.y += y_corr_cam;
   o_tran.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
   o_tran.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
   o_tran.setZ(0.0);
