@@ -61,7 +61,7 @@ using namespace std;
 namespace enc = sensor_msgs::image_encodings;
 
 #define STRING_EQUAL 0
-#define LONG_RANGE_RATIO 4
+#define LONG_RANGE_RATIO 2
 
 #define filter_ratio 1.0
 
@@ -421,17 +421,21 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
     }
   }
 
-  if (LONG_RANGE_RATIO == 2) {
-    if (shiftedPts.size() < 3) {
-      ROS_ERROR("[OpticFlow]: Not enough valid points found, returning");
-      return false;
-    }
-  } else if (LONG_RANGE_RATIO == 4) {
+  /* if (LONG_RANGE_RATIO == 2) { */
+  /*   if (shiftedPts.size() < 3) { */
+  /*     ROS_ERROR("[OpticFlow]: Not enough valid points found, returning"); */
+  /*     return false; */
+  /*   } */
+  /* } else if (LONG_RANGE_RATIO == 4) { */
+  /*   if (shiftedPts.size() < 1) { */
+  /*     ROS_ERROR("[OpticFlow]: Valid point not found, returning"); */
+  /*     return false; */
+  /*   } */
+  /* } */
     if (shiftedPts.size() < 1) {
       ROS_ERROR("[OpticFlow]: Valid point not found, returning");
       return false;
     }
-  }
 
   /* if (shiftedPts.size() < uint(shifted_pts_thr_)) { */
   /*   ROS_ERROR("[OpticFlow]: shiftPts contains many NaNs, returning"); */
@@ -456,22 +460,23 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
 
   cv::Point2d avgShift;
 
-  if (LONG_RANGE_RATIO == 2) {
-    std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD);
+/*   if (LONG_RANGE_RATIO == 2) { */
+/*     std::vector<unsigned int> inliers = getInliers(undistShifts, LONGRANGE_INLIER_THRESHOLD); */
 
-    if (inliers.size() < 3) {
-      ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning");
-      return false;
-    }
+/*     if (inliers.size() < 3) { */
+/*       ROS_ERROR("[OpticFlow]: less than 3 out of 4 samples are inliers, returning"); */
+/*       return false; */
+/*     } */
 
-    avgShift = cv::Point2d(0.0, 0.0);
-    for (size_t i = 0; i < inliers.size(); i++) {
-      avgShift += undistShifts[inliers[i]];
-    }
-    avgShift = avgShift / (double)(inliers.size());
-  } else if (LONG_RANGE_RATIO == 4) {
+/*     avgShift = cv::Point2d(0.0, 0.0); */
+/*     for (size_t i = 0; i < inliers.size(); i++) { */
+/*       avgShift += undistShifts[inliers[i]]; */
+/*     } */
+/*     avgShift = avgShift / (double)(inliers.size()); */
+/*   } else if (LONG_RANGE_RATIO == 4) { */
+/*     avgShift = undistShifts[0]; */
+/*   } */
     avgShift = undistShifts[0];
-  }
 
   double multiplier;
   if (LONG_RANGE_RATIO == 4)

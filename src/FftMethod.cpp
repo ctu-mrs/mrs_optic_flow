@@ -1,6 +1,6 @@
 #include <FftMethod.h>
 
-#define LONG_RANGE_RATIO 4
+#define LONG_RANGE_RATIO 2
 
 cv::String buildOptions;
 cv::Mat    storageA, storageB, diffmap;
@@ -1682,9 +1682,9 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 
   frameSize       = i_frameSize;
   samplePointSize = i_samplePointSize;
-  samplePointSize_lr = 1*i_samplePointSize;
+  samplePointSize_lr = (4/LONG_RANGE_RATIO)*i_samplePointSize;
   max_px_speed_sq = pow(max_px_speed_t, 2);
-  max_px_speed_lr = 1*max_px_speed_t;
+  max_px_speed_lr = (4/LONG_RANGE_RATIO)*max_px_speed_t;
   max_px_speed_sq_lr = pow(max_px_speed_lr,2);;
 
   cl_file_name = i_cl_file_name;
