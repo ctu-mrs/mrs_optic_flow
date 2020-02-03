@@ -482,8 +482,8 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   double x_corr_cam, y_corr_cam;
   {
     std::scoped_lock lock(mutex_tf, mutex_dynamic_tilt);
-    double x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0); 
-    double y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1);
+    double x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0)/multiplier; 
+    double y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1)/multiplier;
     double t_corr = sqrt(y_corr*y_corr + x_corr*x_corr);
     double yaw_corr = atan2(y_corr, x_corr)+cam_yaw;
     x_corr_cam = cos(yaw_corr)*t_corr; 
