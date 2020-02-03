@@ -63,6 +63,8 @@ namespace enc = sensor_msgs::image_encodings;
 #define STRING_EQUAL 0
 #define LONG_RANGE_RATIO 4
 
+#define filter_ratio 0.9
+
 namespace mrs_optic_flow
 {
 
@@ -167,6 +169,8 @@ private:
   tf2_ros::TransformListener*     listener;
   geometry_msgs::TransformStamped transformCam2Base;
   geometry_msgs::TransformStamped transformBase2Cam;
+  /* geometry_msgs::TransformStamped transformBase2CamLink; */
+  double cam_yaw;
   /* geometry_msgs::Transform  transformBase2World; */
 
 private:
@@ -219,12 +223,14 @@ private:
   cv::Point3d     angular_rate_curr;
   std::mutex      mutex_angular_rate;
   std::mutex      mutex_static_tilt;
+  std::mutex      mutex_dynamic_tilt;
 
 private:
   tf2::Quaternion odometry_orientation;
   tf2::Quaternion imu_orientation;
   double          odometry_roll, odometry_pitch, odometry_yaw;
   double          imu_roll, imu_pitch, imu_yaw;
+  double          imu_roll_rate, imu_pitch_rate;
   double          odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
   cv::Point2f     odometry_speed;
   ros::Time       odometry_stamp;
@@ -296,7 +302,7 @@ private:
   int    ransac_num_of_iter_;
   double RansacThresholdRadSq;
 
-  std::string camera_frame_, uav_frame_, uav_untilted_frame_;
+  std::string camera_frame_, camera_link_frame_, uav_frame_, uav_untilted_frame_;
 
   std::string fft_cl_file_;
   bool        useOCL_;
@@ -472,6 +478,18 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   else if (LONG_RANGE_RATIO == 2)
     multiplier = 2;
 
+  double x_corr_cam, y_corr_cam;
+  {
+    std::scoped_lock lock(mutex_tf, mutex_dynamic_tilt);
+    double x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0); 
+    double y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1);
+    double t_corr = sqrt(y_corr*y_corr + x_corr*x_corr);
+    double yaw_corr = atan2(y_corr, x_corr)+cam_yaw;
+    x_corr_cam = cos(yaw_corr)*t_corr; 
+    y_corr_cam = sin(yaw_corr)*t_corr;
+  }
+  avgShift.x += x_corr_cam;
+  avgShift.y += y_corr_cam;
   o_tran.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
   o_tran.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
   o_tran.setZ(0.0);
@@ -789,6 +807,7 @@ void OpticFlow::onInit() {
   // | -------------------- basic node params ------------------- |
   param_loader.load_param("uav_name", uav_name, std::string());
   param_loader.load_param("camera_frame", camera_frame_);
+  param_loader.load_param("camera_link_frame", camera_link_frame_);
   param_loader.load_param("uav_frame", uav_frame_);
   param_loader.load_param("uav_untilted_frame", uav_untilted_frame_);
   param_loader.load_param("enable_profiler", profiler_enabled_);
@@ -1167,15 +1186,24 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
     return;
   }
 
+  tf::Quaternion quaternion_tf;
+  double dummy;
   try {
     {
       std::scoped_lock lock(mutex_tf);
       transformBase2Cam = buffer.lookupTransform(camera_frame_, uav_frame_, ros::Time(0), ros::Duration(2));
+      /* transformBase2CamLink = buffer.lookupTransform(camera_link_frame_, uav_frame_, ros::Time(0), ros::Duration(2)); */
+      quaternionMsgToTF(transformBase2Cam.transform.rotation, quaternion_tf);
+      tf::Matrix3x3 m(quaternion_tf);
+      m.getRPY(dummy, dummy, cam_yaw);
+
     }
 
     ROS_INFO_STREAM("[OpticFlow]: received base2cam tf" << transformBase2Cam);
 
     double tf_roll, tf_pitch, tf_yaw;
+
+
 
     // calculate the euler angles
     tf::Quaternion quaternion_tf;
@@ -1286,6 +1314,17 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
 
     tf2::fromMsg(msg->orientation, imu_orientation);
     tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw);
+    /* std::cout << "OR IMUM CB: " << msg->orientation.x<< msg->orientation.y <<msg->orientation.z <<" - " << msg->orientation.w << std::endl; */
+    /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " <<
+     * imu_orientation.getAngle() << std::endl; */
+    /* std::cout << "RP IMU CB: " << imu_roll << " " << imu_pitch << std::endl; */
+  }
+  {
+    std::scoped_lock lock(mutex_dynamic_tilt);
+
+    imu_roll_rate =   imu_roll_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.x;
+    imu_pitch_rate =  imu_pitch_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.y;
+    /* tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw); */
     /* std::cout << "OR IMUM CB: " << msg->orientation.x<< msg->orientation.y <<msg->orientation.z <<" - " << msg->orientation.w << std::endl; */
     /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " <<
      * imu_orientation.getAngle() << std::endl; */

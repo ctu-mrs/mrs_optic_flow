@@ -1832,7 +1832,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       shift_raw = shift;
 
       bool valid = true;
-      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq_lr|| absd(shift.x) > ((double)samplePointSize / 2) ||
+      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq|| absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
         ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d", shift.x, shift.y, i, j);
         valid = false;
@@ -1955,7 +1955,7 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
       shift_raw = shift;
 
       bool valid = true;
-      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize_lr / 2) ||
+      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq_lr || absd(shift.x) > ((double)samplePointSize_lr / 2) ||
           absd(shift.y) > ((double)samplePointSize_lr / 2)) {
         ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d", shift.x, shift.y, i, j);
         valid = false;

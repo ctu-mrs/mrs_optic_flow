@@ -18,6 +18,7 @@
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
 
   <arg name="camera_frame" default="$(arg UAV_NAME)/bluefox_optflow_optical" />
+  <arg name="camera_link_frame" default="$(arg UAV_NAME)/bluefox_optflow" />
   <arg name="uav_frame" default="$(arg UAV_NAME)/fcu" />
   <arg name="uav_untilted_frame" default="$(arg UAV_NAME)/fcu_untilted" />
 
