@@ -1729,7 +1729,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       }
     }
   } else {
-    if (get2DT(mrs_optic_flow_vectors, uav_height_curr, cv::Point2d(xi, yi), tran)) {
+    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), cv::Point2d(xi, yi), tran)) {
       ROS_INFO_STREAM("vecs: " << mrs_optic_flow_vectors);
 
       if (!std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
