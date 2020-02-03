@@ -1748,7 +1748,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
 
       tran = (tf2::Transform(tempTfC2B.getRotation()) * tran);
 
-      velocity.header.frame_id = uav_untilted_frame_;
+      velocity.header.frame_id = uav_frame_;
       velocity.header.stamp    = image->header.stamp;
 
       velocity.twist.twist.linear.x  = tran.x();
