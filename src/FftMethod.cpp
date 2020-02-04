@@ -1711,7 +1711,7 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
 
 
   sqNum            = frameSize / samplePointSize;
-  sqNum_lr         = sqNum/LONG_RANGE_RATIO;
+  sqNum_lr         = 1;
 
 
   usrc1.create(frameSize, frameSize, CV_32FC1, cv::USAGE_ALLOCATE_DEVICE_MEMORY);
