@@ -149,7 +149,7 @@ private:
 private:
   void processImage(const cv_bridge::CvImagePtr image);
   bool getRT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Quaternion& o_rot, tf2::Vector3& o_tran);
-  bool get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff);
+  bool get2DT(std::vector<cv::Point2d> shifts, double ground_dist, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff);
 
   bool isUavLandoff();
 
@@ -391,7 +391,7 @@ bool OpticFlow::isUavLandoff() {
 //}
 
 /* get2DT() //{ */
-bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff) {
+bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double ground_dist, double height, cv::Point2d ulCorner, tf2::Vector3& o_tran, tf2::Vector3& o_tran_diff) {
   if (shifts.size() < 1) {
     ROS_ERROR("[OpticFlow]: No points given, returning");
     return false;
@@ -509,16 +509,16 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   ROS_INFO_STREAM("[OpticFlow]: cam_yaw: " << cam_yaw << " x_corr_cam: " << x_corr_cam << " y_corr_cam: " << y_corr_cam);
   avgShift.x += x_corr_cam;
   avgShift.y += y_corr_cam;
-  o_tran.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
-  o_tran.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
+  o_tran.setX(avgShift.x * (ground_dist / camMatrixLocal(0, 0) * multiplier));
+  o_tran.setY(avgShift.y * (ground_dist / camMatrixLocal(1, 1) * multiplier));
   o_tran.setZ(0.0);
 
   o_tran = -o_tran / dur.toSec();
 
   tf2::Vector3 o_tran_corr;
 
-  avgShift.x += x_corr_cam;
-  avgShift.y += y_corr_cam;
+  /* avgShift.x += x_corr_cam; */
+  /* avgShift.y += y_corr_cam; */
   o_tran_corr.setX(avgShift.x * (height / camMatrixLocal(0, 0) * multiplier));
   o_tran_corr.setY(avgShift.y * (height / camMatrixLocal(1, 1) * multiplier));
   o_tran_corr.setZ(0.0);
@@ -1810,7 +1810,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     }
   } else {
     tf2::Vector3 tran_diff;
-    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), cv::Point2d(xi, yi), tran, tran_diff)) {
+    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), uav_height_curr, cv::Point2d(xi, yi), tran, tran_diff)) {
       ROS_INFO_STREAM("vecs: " << mrs_optic_flow_vectors);
 
       if (!std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
