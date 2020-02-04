@@ -63,7 +63,8 @@ namespace enc = sensor_msgs::image_encodings;
 #define STRING_EQUAL 0
 #define LONG_RANGE_RATIO 2
 
-#define filter_ratio 1.0
+#define use_rate_accumulation true
+#define filter_ratio 0.4
 
 namespace mrs_optic_flow
 {
@@ -231,7 +232,8 @@ private:
   tf2::Quaternion imu_orientation;
   double          odometry_roll, odometry_pitch, odometry_yaw;
   double          imu_roll, imu_pitch, imu_yaw;
-  double          imu_roll_rate, imu_pitch_rate;
+  double          imu_roll_rate = 0, imu_pitch_rate = 0;
+  ros::Time       imu_last_time;
   double          odometry_roll_h, odometry_pitch_h, odometry_yaw_h;
   cv::Point2f     odometry_speed;
   ros::Time       odometry_stamp;
@@ -487,12 +489,22 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   double x_corr_cam, y_corr_cam;
   {
     std::scoped_lock lock(mutex_tf, mutex_dynamic_tilt);
-    double x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0)/multiplier; 
-    double y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1)/multiplier;
+    double x_corr, y_corr;
+    if (use_rate_accumulation){
+      x_corr = -tan(imu_roll_rate)*camMatrixLocal(0,0)/multiplier; 
+      y_corr = tan(imu_pitch_rate)*camMatrixLocal(1,1)/multiplier;
+    } else {
+      x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0)/multiplier; 
+      y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1)/multiplier;
+    }
     double t_corr = sqrt(y_corr*y_corr + x_corr*x_corr);
     double yaw_corr = atan2(y_corr, x_corr)+cam_yaw;
     x_corr_cam = cos(yaw_corr)*t_corr; 
     y_corr_cam = sin(yaw_corr)*t_corr;
+    if (use_rate_accumulation){
+      imu_roll_rate = 0;
+      imu_pitch_rate = 0;
+    }
   }
   ROS_INFO_STREAM("[OpticFlow]: cam_yaw: " << cam_yaw << " x_corr_cam: " << x_corr_cam << " y_corr_cam: " << y_corr_cam);
   avgShift.x += x_corr_cam;
@@ -1063,6 +1075,7 @@ void OpticFlow::onInit() {
   subscriber_odometry   = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
   nrep                  = 0;
 
+  imu_last_time = ros::Time::now();
   if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
     subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
   } else if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
@@ -1340,17 +1353,24 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
      * imu_orientation.getAngle() << std::endl; */
     /* std::cout << "RP IMU CB: " << imu_roll << " " << imu_pitch << std::endl; */
   }
+  ros::Time curr_time = msg->header.stamp; 
   {
     std::scoped_lock lock(mutex_dynamic_tilt);
 
-    imu_roll_rate =   imu_roll_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.x;
-    imu_pitch_rate =  imu_pitch_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.y;
+    if (use_rate_accumulation){
+      imu_roll_rate =   imu_roll_rate + msg->angular_velocity.x*(curr_time - imu_last_time).toSec();
+      imu_pitch_rate =  imu_pitch_rate + msg->angular_velocity.y*(curr_time - imu_last_time).toSec();
+    } else {
+      imu_roll_rate =   imu_roll_rate*(1.0-filter_ratio) + filter_ratio*msg->angular_velocity.x;
+      imu_pitch_rate =  imu_pitch_rate*(1.0-filter_ratio) + filter_ratio*msg->angular_velocity.y;
+    }
     /* tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw); */
     /* std::cout << "OR IMUM CB: " << msg->orientation.x<< msg->orientation.y <<msg->orientation.z <<" - " << msg->orientation.w << std::endl; */
     /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " <<
      * imu_orientation.getAngle() << std::endl; */
     /* std::cout << "RP IMU CB: " << imu_roll << " " << imu_pitch << std::endl; */
   }
+  imu_last_time = curr_time;
 }
 
 //}
