@@ -1,3 +1,0 @@
-mrs_optic_flow:
-
-  long_range_mode: "always_off" # always_off height_based takeoff_based
