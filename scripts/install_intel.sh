@@ -9,6 +9,4 @@ wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/inte
 wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-ocloc_19.11.12599_amd64.deb
 sudo dpkg -i *.deb
 
-echo "[SeatDefaults]
-autologin-user=mrs
-autologin-user-timeout=0" > /etc/lightdm/lightdm.conf
+sudo sh -c "echo [SeatDefaults]'\n'autologin-user=mrs'\n'autologin-user-timeout=0>/etc/lightdm/lightdm.conf"
