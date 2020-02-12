@@ -1,3 +1,5 @@
+#define VERSION "0.0.3.0"
+
 /* includes //{ */
 
 #include <ros/ros.h>
@@ -132,7 +134,9 @@ struct PointValue
 class OpticFlow : public nodelet::Nodelet {
 
 public:
-  virtual void    onInit();
+  virtual void onInit();
+
+  std::string     _version_;
   ros::NodeHandle nh_;
 
 private:
@@ -345,16 +349,21 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
 
   std::vector<unsigned int> inliers;
   std::vector<unsigned int> inliers_tentative;
-  for (unsigned int i = 0; i < (int)(shifts.size()); i++) {
+
+  for (int i = 0; i < int(shifts.size()); i++) {
+
     inliers_tentative.clear();
     inliers_tentative.push_back(i);
-    for (unsigned int j = 0; j < (int)(shifts.size()); j++) {
+
+    for (int j = 0; j < int(shifts.size()); j++) {
+
       if (i == j)
         continue;
 
       if (cv::norm(shifts[i] - shifts[j]) < threshold)
         inliers_tentative.push_back(j);
     }
+
     if (inliers.size() < inliers_tentative.size())
       inliers = inliers_tentative;
   }
@@ -482,12 +491,12 @@ bool OpticFlow::get2DT(std::vector<cv::Point2d> shifts, double height, cv::Point
   double x_corr_cam, y_corr_cam;
   {
     std::scoped_lock lock(mutex_tf, mutex_dynamic_tilt);
-    double x_corr = -tan(imu_roll_rate*dur.toSec())*camMatrixLocal(0,0)/multiplier; 
-    double y_corr = tan(imu_pitch_rate*dur.toSec())*camMatrixLocal(1,1)/multiplier;
-    double t_corr = sqrt(y_corr*y_corr + x_corr*x_corr);
-    double yaw_corr = atan2(y_corr, x_corr)+cam_yaw;
-    x_corr_cam = cos(yaw_corr)*t_corr; 
-    y_corr_cam = sin(yaw_corr)*t_corr;
+    double           x_corr   = -tan(imu_roll_rate * dur.toSec()) * camMatrixLocal(0, 0) / multiplier;
+    double           y_corr   = tan(imu_pitch_rate * dur.toSec()) * camMatrixLocal(1, 1) / multiplier;
+    double           t_corr   = sqrt(y_corr * y_corr + x_corr * x_corr);
+    double           yaw_corr = atan2(y_corr, x_corr) + cam_yaw;
+    x_corr_cam                = cos(yaw_corr) * t_corr;
+    y_corr_cam                = sin(yaw_corr) * t_corr;
   }
   ROS_INFO_STREAM("[OpticFlow]: cam_yaw: " << cam_yaw << " x_corr_cam: " << x_corr_cam << " y_corr_cam: " << y_corr_cam);
   avgShift.x += x_corr_cam;
@@ -818,6 +827,14 @@ void OpticFlow::onInit() {
 
   mrs_lib::ParamLoader param_loader(nh_, "OpticFlow");
 
+  param_loader.load_param("version", _version_);
+
+  if (_version_ != VERSION) {
+
+    ROS_ERROR("[OpticFlow]: the version of the binary (%s) does not match the config file (%s), please build me!", VERSION, _version_.c_str());
+    ros::shutdown();
+  }
+
   // | -------------------- basic node params ------------------- |
   param_loader.load_param("uav_name", uav_name, std::string());
   param_loader.load_param("camera_frame", camera_frame_);
@@ -1035,12 +1052,12 @@ void OpticFlow::onInit() {
   // |                         publishers                         |
   // --------------------------------------------------------------
 
-  publisher_chosen_allsac        = nh_.advertise<std_msgs::Int32>("allsac_chosen_out", 1);
-  publisher_velocity             = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out", 1);
-  publisher_velocity_longrange   = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange", 1);
-  publisher_velocity_longrange_diff   = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange_diff", 1);
-  publisher_velocity_std         = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev_out", 1);
-  publisher_max_allowed_velocity = nh_.advertise<std_msgs::Float32>("max_velocity_out", 1);
+  publisher_chosen_allsac           = nh_.advertise<std_msgs::Int32>("allsac_chosen_out", 1);
+  publisher_velocity                = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out", 1);
+  publisher_velocity_longrange      = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange", 1);
+  publisher_velocity_longrange_diff = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange_diff", 1);
+  publisher_velocity_std            = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev_out", 1);
+  publisher_max_allowed_velocity    = nh_.advertise<std_msgs::Float32>("max_velocity_out", 1);
 
   if (raw_enabled_) {
     publisher_points_raw = nh_.advertise<std_msgs::UInt32MultiArray>("points_raw_out", 1);
@@ -1094,7 +1111,7 @@ void OpticFlow::onInit() {
 
   is_initialized = true;
 
-  ROS_INFO("[OpticFlow]: initialized");
+  ROS_INFO("[OpticFlow]: initialized, version %s", VERSION);
 }
 
 //}
@@ -1202,7 +1219,7 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
   }
 
   tf::Quaternion quaternion_tf;
-  double dummy;
+  double         dummy;
   try {
     {
       std::scoped_lock lock(mutex_tf);
@@ -1211,14 +1228,12 @@ void OpticFlow::tfTimer(const ros::TimerEvent& event) {
       quaternionMsgToTF(transformBase2Cam.transform.rotation, quaternion_tf);
       tf::Matrix3x3 m(quaternion_tf);
       m.getRPY(dummy, dummy, cam_yaw);
-      cam_yaw+=M_PI_2;
-
+      cam_yaw += M_PI_2;
     }
 
     ROS_INFO_STREAM("[OpticFlow]: received base2cam tf" << transformBase2Cam);
 
     double tf_roll, tf_pitch, tf_yaw;
-
 
 
     // calculate the euler angles
@@ -1338,8 +1353,8 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
   {
     std::scoped_lock lock(mutex_dynamic_tilt);
 
-    imu_roll_rate =   imu_roll_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.x;
-    imu_pitch_rate =  imu_pitch_rate*(1-filter_ratio) + filter_ratio*msg->angular_velocity.y;
+    imu_roll_rate  = imu_roll_rate * (1 - filter_ratio) + filter_ratio * msg->angular_velocity.x;
+    imu_pitch_rate = imu_pitch_rate * (1 - filter_ratio) + filter_ratio * msg->angular_velocity.y;
     /* tf2::Matrix3x3(imu_orientation).getRPY(imu_roll, imu_pitch, imu_yaw); */
     /* std::cout << "OR IMUM CB: " << msg->orientation.x<< msg->orientation.y <<msg->orientation.z <<" - " << msg->orientation.w << std::endl; */
     /* std::cout << "OR IMU CB: " << imu_orientation.getAxis().x() << imu_orientation.getAxis().y() <<imu_orientation.getAxis().z() <<" - " <<
@@ -1785,7 +1800,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     }
   } else {
     tf2::Vector3 tran_diff;
-    if (get2DT(mrs_optic_flow_vectors, uav_height_curr/(cos(imu_pitch)*cos(imu_roll)), cv::Point2d(xi, yi), tran, tran_diff)) {
+    if (get2DT(mrs_optic_flow_vectors, uav_height_curr / (cos(imu_pitch) * cos(imu_roll)), cv::Point2d(xi, yi), tran, tran_diff)) {
       ROS_INFO_STREAM("vecs: " << mrs_optic_flow_vectors);
 
       if (!std::isfinite(tran.x()) || !std::isfinite(tran.y()) || !std::isfinite(tran.z())) {
@@ -1810,9 +1825,12 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       velocity.twist.twist.linear.x  = tran.x();
       velocity.twist.twist.linear.y  = tran.y();
       velocity.twist.twist.linear.z  = std::nan("");
-      velocity.twist.twist.angular.x = std::nan("");;
-      velocity.twist.twist.angular.y = std::nan("");;
-      velocity.twist.twist.angular.z = std::nan("");;
+      velocity.twist.twist.angular.x = std::nan("");
+      ;
+      velocity.twist.twist.angular.y = std::nan("");
+      ;
+      velocity.twist.twist.angular.z = std::nan("");
+      ;
 
       velocity.twist.covariance[0]  = pow(50 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7]  = velocity.twist.covariance[0];
@@ -1847,9 +1865,12 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
       velocity.twist.twist.linear.x  = tran_diff.x();
       velocity.twist.twist.linear.y  = tran_diff.y();
       velocity.twist.twist.linear.z  = std::nan("");
-      velocity.twist.twist.angular.x = std::nan("");;
-      velocity.twist.twist.angular.y = std::nan("");;
-      velocity.twist.twist.angular.z = std::nan("");;
+      velocity.twist.twist.angular.x = std::nan("");
+      ;
+      velocity.twist.twist.angular.y = std::nan("");
+      ;
+      velocity.twist.twist.angular.z = std::nan("");
+      ;
 
       velocity.twist.covariance[0]  = pow(50 * (uav_height_curr / fx), 2);  // I expect error of 5 pixels. I presume fx and fy to be reasonably simillar.
       velocity.twist.covariance[7]  = velocity.twist.covariance[0];
