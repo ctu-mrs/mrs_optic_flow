@@ -22,11 +22,14 @@
   <arg name="uav_frame" default="$(arg UAV_NAME)/fcu" />
   <arg name="uav_untilted_frame" default="$(arg UAV_NAME)/fcu_untilted" />
 
+  <arg if="$(eval arg('RUN_TYPE') == 'simulation')" name="node_start_delay" default="0" />
+  <arg if="$(eval arg('RUN_TYPE') == 'uav')" name="node_start_delay" default="15" />
+
   <group ns="$(arg UAV_NAME)">
 
     <!-- Optic flow nodelet -->
     <!-- The delay in the launch prefix is important, without it the camera driver does not load sometimes! -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep 5; $0 $@'">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep $(arg node_start_delay); nice -n 19 $0 $@'">
 
       <rosparam file="$(find mrs_optic_flow)/config/default.yaml" />
       <rosparam file="$(find mrs_optic_flow)/config/$(arg RUN_TYPE).yaml" />
