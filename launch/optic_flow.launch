@@ -49,7 +49,7 @@
       <remap from="~odometry_in" to="odometry/orientation" />
       <remap from="~camera_in" to="bluefox_optflow/image_raw" />
       <remap from="~camera_info_in" to="bluefox_optflow/camera_info" />
-      <remap from="~uav_height_in" to="odometry/altitude" />
+      <remap from="~uav_height_in" to="odometry/height" />
       <remap from="~imu_in" to="mavros/imu/data" />
 
         <!-- Publishers -->
