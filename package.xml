@@ -2,7 +2,7 @@
 <package format="2">
 
   <name>mrs_optic_flow</name>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <description>The optic_flow package</description>
 
   <author email="viktor.walter@fel.cvut.cz">Viktor Walter</author>

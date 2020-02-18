@@ -2,8 +2,8 @@
 Changelog for package mrs_optic_flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.4 (2020-02-18)
+------------------
 * uncommented install ocl
 * added parametrized node_start_delay
 * added version check
