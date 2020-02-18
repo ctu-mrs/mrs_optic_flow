@@ -2,6 +2,30 @@
 Changelog for package mrs_optic_flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* uncommented install ocl
+* added parametrized node_start_delay
+* added version check
+* added sudo to install script
+* longrange off for uav and simulation
+* Pushing the compensation to oputput again
+* Fixing overcompensation
+* Adding output of tilt correction effect
+* exponential filter off, correction plus
+* Fixing cam yaw
+* Correcting dynamic tilts for the long range mode
+* Changing height for long range estimate to tilted
+* Setting unknown outputted values in long-range mode to nans
+* Setting long range messages to fcu
+* Adding a config-based selection of when to use the long range mode
+* Adding condition of using long range mode in Landoff tracker
+* Fixes. Also, setting the long range ratio to 4 by default
+* Implemented long range mode. Still buggy and will need testing on NUC due to flakyness of my GPU's memory
+* optflow twist in body frame
+* Updating the launcher for the new tf naming convention
+* Contributors: Matej Petrlik, Matej Petrlik (desktop), Tomas Baca, Viktor Walter, delta, foxtrot
+
 0.0.3 (2019-10-25)
 ------------------
 * updated camera frame
