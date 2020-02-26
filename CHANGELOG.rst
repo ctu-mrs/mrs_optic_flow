@@ -2,6 +2,10 @@
 Changelog for package mrs_optic_flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* nothing changed here
+
 0.0.4 (2020-02-18)
 ------------------
 * uncommented install ocl
