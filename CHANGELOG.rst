@@ -2,8 +2,8 @@
 Changelog for package mrs_optic_flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.5 (2020-02-26)
+------------------
 * nothing changed here
 
 0.0.4 (2020-02-18)
