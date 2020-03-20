@@ -62,7 +62,6 @@ using namespace std;
 
 namespace enc = sensor_msgs::image_encodings;
 
-#define STRING_EQUAL 0
 #define LONG_RANGE_RATIO 4
 
 #define filter_ratio 1.0
@@ -380,7 +379,7 @@ bool OpticFlow::isUavLandoff() {
 
   if (got_tracker_status) {
 
-    if (std::string(tracker_status.tracker).compare("LandoffTracker") == STRING_EQUAL) {
+    if (tracker_status.tracker == "LandoffTracker") {
 
       return true;
     } else {
@@ -942,12 +941,13 @@ void OpticFlow::onInit() {
     /* cv::namedWindow("ocv_iffc", cv::WINDOW_FREERATIO); */
   }
 
-  /* if (scale_rotation && (d3d_method_.compare("advanced") == 0 || d3d_method_.compare("logpol") == 0)) { */
+  /* if (scale_rotation && (d3d_method_ == "advanced" || d3d_method_ == "logpol")) { */
   /*   ROS_ERROR("[OpticFlow]: Do not use R3xS1 estimation yet. Existing methods are logpol and advanced, but a better one - pnp - is comming soon. ~Viktor");
    */
   /*   ros::shutdown(); */
   /* } */
 
+  // TODO this condition is possibly wrong, make the string comparison using ==
   if (filter_method_.compare("ransac") && ransac_num_of_chosen_ != 2) {
     ROS_WARN("[OpticFlow]: When Allsac is enabled, the ransac_num_of_chosen_ can be only 2.");
   }
@@ -1075,11 +1075,11 @@ void OpticFlow::onInit() {
   subscriber_odometry   = nh_.subscribe("odometry_in", 1, &OpticFlow::callbackOdometry, this, ros::TransportHints().tcpNoDelay());
   nrep                  = 0;
 
-  if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
+  if (ang_rate_source_ == "imu") {
     subscriber_imu = nh_.subscribe("imu_in", 1, &OpticFlow::callbackImu, this);
-  } else if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+  } else if (ang_rate_source_ == "odometry_diff") {
   } else {
-    if (ang_rate_source_.compare("odometry") != 0) {
+    if (ang_rate_source_ != "odometry") {
       ROS_ERROR("[OpticFlow]: Wrong parameter ang_rate_source_ - possible choices: imu, odometry, odometry_diff. Entered: %s", ang_rate_source_.c_str());
       ros::shutdown();
     }
@@ -1328,7 +1328,7 @@ void OpticFlow::callbackImu(const sensor_msgs::ImuConstPtr& msg) {
   mrs_lib::Routine routine_callback_imu = profiler->createRoutine("callbackImu");
 
   // angular rate source is imu aka gyro
-  if (ang_rate_source_.compare("imu") == STRING_EQUAL) {
+  if (ang_rate_source_ == "imu") {
 
     {
       std::scoped_lock lock(mutex_angular_rate);
@@ -1376,7 +1376,7 @@ void OpticFlow::callbackOdometry(const nav_msgs::OdometryConstPtr& msg) {
 
   /* tf2::quaternionMsgToTF(msg->pose.pose.orientation, bt); */
 
-  if (ang_rate_source_.compare("odometry") == STRING_EQUAL) {
+  if (ang_rate_source_ == "odometry") {
     {
       std::scoped_lock lock(mutex_angular_rate);
       angular_rate = cv::Point3d(msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z);
@@ -1473,7 +1473,7 @@ void OpticFlow::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
 
   cv_bridge::CvImagePtr image;
 
-  if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+  if (ang_rate_source_ == "odometry_diff") {
     {
       std::scoped_lock lock(mutex_odometry);
       tilt_curr                = odometry_orientation;
@@ -1608,7 +1608,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
     long_range_mode = false;
 
 
-  if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+  if (ang_rate_source_ == "odometry_diff") {
     {
       std::scoped_lock lock(mutex_odometry);
 
@@ -1649,12 +1649,12 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   // Estimate scale and rotation (if enabled)
   cv::Point2d scale_and_rotation = cv::Point2d(0, 0);
 
-  /* if (scale_rotation && d3d_method_.compare("logpol") == STRING_EQUAL) { */
+  /* if (scale_rotation && d3d_method_ == "logpol") { */
 
   /*   scale_and_rotation = scale_rotation_estimator->processImage(imCurr, gui_, debug_); */
   /*   scale_and_rotation.y /= dur.toSec(); */
 
-  /*   if (scale_rot_output_.compare("altitude") == STRING_EQUAL) { */
+  /*   if (scale_rot_output_ == "altitude") { */
 
   /*     // Altitude from velocity */
 
@@ -1677,7 +1677,7 @@ void OpticFlow::processImage(const cv_bridge::CvImagePtr image) {
   std::vector<cv::Point2d> mrs_optic_flow_vectors_raw;
   double                   temp_angle_diff;
 
-  if (ang_rate_source_.compare("odometry_diff") == STRING_EQUAL) {
+  if (ang_rate_source_ == "odometry_diff") {
     temp_angle_diff = angle_diff_curr.z;
   } else {
     temp_angle_diff = angular_rate_curr.z * dur.toSec();
