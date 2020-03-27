@@ -144,7 +144,7 @@ private:
   void callbackOdometry(const nav_msgs::OdometryConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
-  void callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg);
+  void callbackControlManagerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg);
 
   int nrep_;
 
@@ -160,8 +160,8 @@ private:
   bool       got_b2c_ = false;
   bool       got_tfs_ = false;
 
-  bool                    got_tracker_status_ = false;
-  mrs_msgs::TrackerStatus tracker_status_;
+  bool        got_active_tracker_ = false;
+  std::string active_tracker_;
 
   ros::Timer timer_cam_init_;
   void       timerCamInit(const ros::TimerEvent& event);
@@ -184,7 +184,7 @@ private:
   ros::Subscriber subscriber_image_;
   ros::Subscriber subscriber_uav_height_;
   ros::Subscriber subscriber_camera_info_;
-  ros::Subscriber subscriber_tracker_status_;
+  ros::Subscriber subscriber_active_tracker_;
   ros::Subscriber subscriber_odometry_;
   ros::Subscriber subscriber_imu_;
 
@@ -207,7 +207,7 @@ private:
   double     uav_height_;
   std::mutex mutex_uav_height_;
 
-  std::mutex mutex_tracker_status_;
+  std::mutex mutex_active_tracker_;
 
   std::mutex mutex_process_;
 
@@ -363,11 +363,11 @@ std::vector<unsigned int> getInliers(std::vector<cv::Point2d> shifts, double thr
 
 bool OpticFlow::isUavLandoff() {
 
-  std::scoped_lock lock(mutex_tracker_status_);
+  std::scoped_lock lock(mutex_active_tracker_);
 
-  if (got_tracker_status_) {
+  if (got_active_tracker_) {
 
-    if (tracker_status_.tracker == "LandoffTracker") {
+    if (active_tracker_ == "LandoffTracker") {
 
       return true;
     } else {
@@ -377,7 +377,7 @@ bool OpticFlow::isUavLandoff() {
 
   } else {
 
-    ROS_WARN_THROTTLE(1.0, "[Odometry]: Tracker status not available");
+    ROS_WARN_THROTTLE(1.0, "[Odometry]: tracker status not available");
     return false;
   }
 }
@@ -1046,7 +1046,7 @@ void OpticFlow::onInit() {
 
   // | ----------------------- subscribers ---------------------- |
 
-  subscriber_tracker_status_ = nh_.subscribe("tracker_status_in", 1, &OpticFlow::callbackTrackerStatus, this, ros::TransportHints().tcpNoDelay());
+  subscriber_active_tracker_ = nh_.subscribe("active_tracker_in", 1, &OpticFlow::callbackControlManagerDiag, this, ros::TransportHints().tcpNoDelay());
   subscriber_camera_info_    = nh_.subscribe("camera_info_in", 1, &OpticFlow::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
   subscriber_image_          = nh_.subscribe("camera_in", 1, &OpticFlow::callbackImage, this, ros::TransportHints().tcpNoDelay());
   ROS_INFO("[OpticFlow]: Image subscriber topic name is %s", subscriber_image_.getTopic().c_str());
@@ -1248,19 +1248,19 @@ void OpticFlow::timerTf(const ros::TimerEvent& event) {
 // |                          callbacks                         |
 // --------------------------------------------------------------
 
-/* //{ callbackTrackerStatus() */
+/* //{ callbackControlManagerDiag() */
 
-void OpticFlow::callbackTrackerStatus(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
+void OpticFlow::callbackControlManagerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
 
   if (!is_initialized_)
     return;
 
-  mrs_lib::Routine profiler_routine = profiler_->createRoutine("callbackTrackerStatus");
+  mrs_lib::Routine profiler_routine = profiler_->createRoutine("callbackControlManagerDiag");
 
-  std::scoped_lock lock(mutex_tracker_status_);
+  std::scoped_lock lock(mutex_active_tracker_);
 
-  tracker_status_     = msg->tracker_status;
-  got_tracker_status_ = true;
+  active_tracker_     = msg->active_tracker;
+  got_active_tracker_ = true;
 }
 //}
 
