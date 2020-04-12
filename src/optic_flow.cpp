@@ -54,8 +54,8 @@ using namespace std;
 
 /* #endif */
 
-#include <mrs_lib/ParamLoader.h>
-#include <mrs_lib/Profiler.h>
+#include <mrs_lib/param_loader.h>
+#include <mrs_lib/profiler.h>
 #include <mutex>
 
 //}
@@ -813,7 +813,7 @@ void OpticFlow::onInit() {
 
   mrs_lib::ParamLoader param_loader(nh_, "OpticFlow");
 
-  param_loader.load_param("version", _version_);
+  param_loader.loadParam("version", _version_);
 
   if (_version_ != VERSION) {
 
@@ -823,75 +823,75 @@ void OpticFlow::onInit() {
 
   // | -------------------- basic node params ------------------- |
 
-  param_loader.load_param("uav_name", _uav_name_, std::string());
-  param_loader.load_param("camera_frame", _camera_frame_);
-  param_loader.load_param("camera_link_frame", _camera_link_frame_);
-  param_loader.load_param("uav_frame", _uav_frame_);
-  param_loader.load_param("uav_untilted_frame", _uav_untilted_frame_);
-  param_loader.load_param("enable_profiler", _profiler_enabled_);
-  param_loader.load_param("debug", _debug_);
-  param_loader.load_param("gui", _gui_);
-  param_loader.load_param("silent_debug", _silent_debug_);
+  param_loader.loadParam("uav_name", _uav_name_, std::string());
+  param_loader.loadParam("camera_frame", _camera_frame_);
+  param_loader.loadParam("camera_link_frame", _camera_link_frame_);
+  param_loader.loadParam("uav_frame", _uav_frame_);
+  param_loader.loadParam("uav_untilted_frame", _uav_untilted_frame_);
+  param_loader.loadParam("enable_profiler", _profiler_enabled_);
+  param_loader.loadParam("debug", _debug_);
+  param_loader.loadParam("gui", _gui_);
+  param_loader.loadParam("silent_debug", _silent_debug_);
 
   // | --------------------- general params --------------------- |
 
-  param_loader.load_param("ang_rate_source", _ang_rate_source_);
-  param_loader.load_param("raw_output", _raw_enabled_);
+  param_loader.loadParam("ang_rate_source", _ang_rate_source_);
+  param_loader.loadParam("raw_output", _raw_enabled_);
 
-  param_loader.load_param("scale_rotation", _scale_rotation_);
-  param_loader.load_param("scale_rot_magnitude", _scale_rotation_magnitude_);
-  param_loader.load_param("scale_rot_output", _scale_rot_output_);
-  /* param_loader.load_param("d3d_method", d3d_method_); */
+  param_loader.loadParam("scale_rotation", _scale_rotation_);
+  param_loader.loadParam("scale_rot_magnitude", _scale_rotation_magnitude_);
+  param_loader.loadParam("scale_rot_output", _scale_rot_output_);
+  /* param_loader.loadParam("d3d_method", d3d_method_); */
 
-  int videoFPS = param_loader.load_param2<int>("video_fps");
+  int videoFPS = param_loader.loadParam2<int>("video_fps");
 
   // | -------------------- optic flow params ------------------- |
 
-  param_loader.load_param("mrs_optic_flow/long_range_mode", _long_range_mode_string_);
+  param_loader.loadParam("mrs_optic_flow/long_range_mode", _long_range_mode_string_);
 
-  param_loader.load_param("FftCLFile", _fft_cl_file_);
-  param_loader.load_param("useOCL", _useOCL_);
+  param_loader.loadParam("FftCLFile", _fft_cl_file_);
+  param_loader.loadParam("useOCL", _useOCL_);
 
-  param_loader.load_param("mrs_optic_flow/scale_factor", _scale_factor_);
+  param_loader.loadParam("mrs_optic_flow/scale_factor", _scale_factor_);
 
-  param_loader.load_param("mrs_optic_flow/shifted_pts_thr", _shifted_pts_thr_);
+  param_loader.loadParam("mrs_optic_flow/shifted_pts_thr", _shifted_pts_thr_);
 
-  param_loader.load_param("mrs_optic_flow/max_processing_rate", _max_processing_rate_);
-  param_loader.load_param("mrs_optic_flow/method", _method_);
-  param_loader.load_param("mrs_optic_flow/scan_radius", _scan_radius_);
-  param_loader.load_param("mrs_optic_flow/step_size", _step_size_);
-  param_loader.load_param("mrs_optic_flow/frame_size", _frame_size_);
+  param_loader.loadParam("mrs_optic_flow/max_processing_rate", _max_processing_rate_);
+  param_loader.loadParam("mrs_optic_flow/method", _method_);
+  param_loader.loadParam("mrs_optic_flow/scan_radius", _scan_radius_);
+  param_loader.loadParam("mrs_optic_flow/step_size", _step_size_);
+  param_loader.loadParam("mrs_optic_flow/frame_size", _frame_size_);
 
-  param_loader.load_param("mrs_optic_flow/takeoff_height", _takeoff_height_);
+  param_loader.loadParam("mrs_optic_flow/takeoff_height", _takeoff_height_);
 
   if (fabs(_scale_factor_ - 1.0) > 0.01) {
     _frame_size_ = _frame_size_ / _scale_factor_;
   }
 
-  param_loader.load_param("mrs_optic_flow/sample_point_size", _sample_point_size_);
+  param_loader.loadParam("mrs_optic_flow/sample_point_size", _sample_point_size_);
   if (fabs(_scale_factor_ - 1.0) > 0.01) {
     _sample_point_size_ = _sample_point_size_ / _scale_factor_;
   }
   sample_point_size_lr     = _sample_point_size_ * 2;
   sample_point_count_sqrt_ = _frame_size_ / _sample_point_size_;
   sample_point_count_      = sample_point_count_sqrt_ * sample_point_count_sqrt_;
-  param_loader.load_param("mrs_optic_flow/filter_method", _filter_method_);
-  param_loader.load_param("mrs_optic_flow/apply_abs_bouding", _apply_abs_bounding_);
-  param_loader.load_param("mrs_optic_flow/apply_rel_bouding", _apply_rel_bouding_);
+  param_loader.loadParam("mrs_optic_flow/filter_method", _filter_method_);
+  param_loader.loadParam("mrs_optic_flow/apply_abs_bouding", _apply_abs_bounding_);
+  param_loader.loadParam("mrs_optic_flow/apply_rel_bouding", _apply_rel_bouding_);
 
   {
     double _calibration_coeff_both_;  // use this as a backup value in case calibrations for separate axes are not available
-    param_loader.load_param("mrs_optic_flow/calibration/both_velocity_correction_ratio", _calibration_coeff_both_, 1.0);
-    param_loader.load_param("mrs_optic_flow/calibration/x_velocity_correction_ratio", _calibration_coeff_x_, _calibration_coeff_both_);
-    param_loader.load_param("mrs_optic_flow/calibration/y_velocity_correction_ratio", _calibration_coeff_y_, _calibration_coeff_both_);
+    param_loader.loadParam("mrs_optic_flow/calibration/both_velocity_correction_ratio", _calibration_coeff_both_, 1.0);
+    param_loader.loadParam("mrs_optic_flow/calibration/x_velocity_correction_ratio", _calibration_coeff_x_, _calibration_coeff_both_);
+    param_loader.loadParam("mrs_optic_flow/calibration/y_velocity_correction_ratio", _calibration_coeff_y_, _calibration_coeff_both_);
   }
 
-  param_loader.load_param("mrs_optic_flow/ransac/num_of_chosen", _ransac_num_of_chosen_);
-  param_loader.load_param("mrs_optic_flow/ransac/num_of_iter", _ransac_num_of_iter_);
-  _RansacThresholdRadSq_ = pow(param_loader.load_param2<double>("mrs_optic_flow/ransac/threshold_rad"), 2);
+  param_loader.loadParam("mrs_optic_flow/ransac/num_of_chosen", _ransac_num_of_chosen_);
+  param_loader.loadParam("mrs_optic_flow/ransac/num_of_iter", _ransac_num_of_iter_);
+  _RansacThresholdRadSq_ = pow(param_loader.loadParam2<double>("mrs_optic_flow/ransac/threshold_rad"), 2);
 
-  param_loader.load_param("mrs_optic_flow/rotation_correction", _rotation_correction_);
-  param_loader.load_param("mrs_optic_flow/filtering/analyze_duration", _analyze_duration_);
+  param_loader.loadParam("mrs_optic_flow/rotation_correction", _rotation_correction_);
+  param_loader.loadParam("mrs_optic_flow/filtering/analyze_duration", _analyze_duration_);
   // method check
   if (_method_ < 3 || _method_ > 5) {
     ROS_ERROR("[OpticFlow]: No such OpticFlow calculation method. Available: 3 = BM on CPU, 4 = FFT on CPU, 5 = BM on GPU via OpenCL");
@@ -899,21 +899,21 @@ void OpticFlow::onInit() {
 
   // | ------------------------ filtering ----------------------- |
 
-  param_loader.load_param("store_video", store_video_);
-  std::string video_path_ = param_loader.load_param2<std::string>("video_path");
+  param_loader.loadParam("store_video", store_video_);
+  std::string video_path_ = param_loader.loadParam2<std::string>("video_path");
 
   // | ------------------ physical constraints ------------------ |
 
-  param_loader.load_param("constraints/max_pixel_speed", _max_pixel_speed_);
-  param_loader.load_param("constraints/max_horizontal_speed", _max_horizontal_speed_);
-  param_loader.load_param("constraints/max_horizontal_acceleration", _max_horizontal_acceleration_);
-  param_loader.load_param("constraints/max_vertical_speed", _max_vertical_speed_);
-  param_loader.load_param("constraints/max_yaw_rate", _max_yaw_rate_);
-  param_loader.load_param("constraints/speed_noise", _speed_noise_);
+  param_loader.loadParam("constraints/max_pixel_speed", _max_pixel_speed_);
+  param_loader.loadParam("constraints/max_horizontal_speed", _max_horizontal_speed_);
+  param_loader.loadParam("constraints/max_horizontal_acceleration", _max_horizontal_acceleration_);
+  param_loader.loadParam("constraints/max_vertical_speed", _max_vertical_speed_);
+  param_loader.loadParam("constraints/max_yaw_rate", _max_yaw_rate_);
+  param_loader.loadParam("constraints/speed_noise", _speed_noise_);
 
   // | --------------- fallback camera parameters --------------- |
-  /* param_loader.load_param("camera_matrix/data", fallback_camera_data); */
-  /* param_loader.load_param("distortion_coefficients/data", fallback_distortion_coeffs); */
+  /* param_loader.loadParam("camera_matrix/data", fallback_camera_data); */
+  /* param_loader.loadParam("distortion_coefficients/data", fallback_distortion_coeffs); */
 
   if (_gui_) {
     cv::namedWindow("ocv_optic_flow", cv::WINDOW_FREERATIO);
@@ -1081,7 +1081,7 @@ void OpticFlow::onInit() {
 
   // | ----------------------- finish init ---------------------- |
 
-  if (!param_loader.loaded_successfully()) {
+  if (!param_loader.loadedSuccessfully()) {
     ROS_ERROR("[OpticFlow]: Could not load all parameters!");
     ros::shutdown();
   }
