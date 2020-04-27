@@ -31,11 +31,11 @@ For latest version at the time of writing, use:
 ```
 mkdir neo
 cd neo
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-gmmlib_18.4.1_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-core_19.11.1622_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-opencl_19.11.1622_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-opencl_19.11.12599_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-ocloc_19.11.12599_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-gmmlib_20.1.1_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-igc-core_1.0.3826_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-igc-opencl_1.0.3826_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-opencl_20.16.16582_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-ocloc_20.16.16582_amd64.deb
 sudo dpkg -i *.deb
 ```
 
@@ -61,6 +61,8 @@ The lightdm has to be started for the GPU to show as a OpenCL device. For this t
 autologin-user=mrs
 autologin-user-timeout=0
 ```
+Replace username `mrs` with your username.
+
 In newer releases of Ubuntu, it may be necessary to remove `unity-greeter`, which prevents the autologin.
 
 

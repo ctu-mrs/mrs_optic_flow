@@ -2,11 +2,11 @@
 sudo apt install ocl-icd-dev ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers
 
 cd neo
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-gmmlib_18.4.1_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-core_19.11.1622_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-igc-opencl_19.11.1622_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-opencl_19.11.12599_amd64.deb
-wget https://github.com/intel/compute-runtime/releases/download/19.11.12599/intel-ocloc_19.11.12599_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-gmmlib_20.1.1_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-igc-core_1.0.3826_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-igc-opencl_1.0.3826_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-opencl_20.16.16582_amd64.deb
+wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-ocloc_20.16.16582_amd64.deb
 sudo dpkg -i *.deb
 
-sudo sh -c "echo [SeatDefaults]'\n'autologin-user=mrs'\n'autologin-user-timeout=0>/etc/lightdm/lightdm.conf"
+sudo sh -c "echo [SeatDefaults]'\n'autologin-user=$USER'\n'autologin-user-timeout=0>/etc/lightdm/lightdm.conf"
