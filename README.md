@@ -1,5 +1,7 @@
 # The Optical flow processing for GPS-denied environments
 
+[![Build Status](https://travis-ci.com/ctu-mrs/mrs_optic_flow.svg?branch=master)](https://travis-ci.com/ctu-mrs/mrs_optic_flow)
+
 ## System requirements
 - Either a GPU (Integrated is often sufficient) or a decent CPU.
 - A downwards facing camera - we use mvBlueFOX cameras with ~90 degrees of vertical FOV. This camera HAS TO be properly calibrated.
