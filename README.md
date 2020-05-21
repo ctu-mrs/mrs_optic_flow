@@ -29,21 +29,17 @@
 
 The acceleration is implemented in the OpenCL framework.
 Regardless of your GPU, install packages:
+```bash
+sudo apt -y install ocl-icd-dev ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers clinfo
 ```
-[[ocl-icd-dev]] ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers
-```
-and We also recommend installing
-```
-clinfo
-```
-for testing if your GPU even shows up as an OpenCL device.
 
 ### Intel GPUs
 
 For generations greater than 8th (Broadwell) you have to install the NEO OpenCL drivers:
 https://github.com/intel/compute-runtime/releases
 For latest version at the time of writing, use:
-```
+```bash
+cd /tmp
 mkdir -p neo
 cd neo
 wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-gmmlib_20.1.1_amd64.deb
@@ -55,8 +51,8 @@ sudo dpkg -i *.deb
 ```
 
 For older (3rd to 6th gen) you have to install the Beignet OpenCL drivers:
-```
-sudo apt install beignet
+```bash
+sudo apt -y install beignet
 ```
 
 For generations in between, either may or may not work, try it starting with NEO drivers.
