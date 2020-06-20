@@ -7,7 +7,12 @@ scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVi
   // set video output
   storeVideo = i_storeVideo;
   if (storeVideo) {
+#ifdef ROS_MELODIC
     outputVideo.open(*videoPath, CV_FOURCC('M', 'P', 'E', 'G'), videoFPS, cv::Size(resolution, resolution), false);
+#endif
+#ifdef ROS_NOETIC
+    outputVideo.open(*videoPath, cv::VideoWriter::fourcc('M', 'P', 'E', 'G'), videoFPS, cv::Size(resolution, resolution), false);
+#endif
     if (!outputVideo.isOpened())
       ROS_ERROR("[OpticFlow]: Could not open output video file: %s", videoPath->c_str());
   }
@@ -27,11 +32,18 @@ scaleRotationEstimator::scaleRotationEstimator(int res, double m, bool i_storeVi
 }
 
 cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, [[maybe_unused]] bool debug) {
+
   if (first) {
-    // old code
+
+// old code
+#ifdef ROS_MELODIC
     ipl_ta = imCurr;
     ipl_tb = tempIm;
     cvLogPolar(&ipl_ta, &ipl_tb, center, optimM, CV_INTER_CUBIC);
+#endif
+#ifdef ROS_NOETIC
+    cv::logPolar(imCurr, tempIm, center, optimM, cv::INTER_CUBIC);
+#endif
 
     tempIm.convertTo(prevIm_F32, CV_32FC1);
 
@@ -91,9 +103,14 @@ cv::Point2d scaleRotationEstimator::processImage(cv::Mat imCurr, bool gui, [[may
 
 
   // OLD thing
-  ipl_ta = imCurr;
-  ipl_tb = tempIm;
-  cvLogPolar(&ipl_ta, &ipl_tb, center, optimM, CV_INTER_LANCZOS4);
+#ifdef ROS_MELODIC
+    ipl_ta = imCurr;
+    ipl_tb = tempIm;
+    cvLogPolar(&ipl_ta, &ipl_tb, center, optimM, CV_INTER_LANCZOS4);
+#endif
+#ifdef ROS_NOETIC
+    cv::logPolar(imCurr, tempIm, center, optimM, cv::INTER_LANCZOS4);
+#endif
 
   tempIm.convertTo(tempIm_F32, CV_32FC1);
 

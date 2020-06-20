@@ -1680,19 +1680,25 @@ std::vector<cv::Point2d> FftMethod::phaseCorrelateFieldLongRange(cv::Mat& _src1,
 FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed_t, bool i_storeVideo, bool i_raw_enable, bool i_rot_corr_enable,
                      bool i_tilt_corr_enable, std::string* videoPath, int videoFPS, std::string i_cl_file_name, bool i_useOCL) {
 
-  frameSize       = i_frameSize;
-  samplePointSize = i_samplePointSize;
-  samplePointSize_lr = 1*i_samplePointSize;
-  max_px_speed_sq = pow(max_px_speed_t, 2);
-  max_px_speed_lr = 1*max_px_speed_t;
-  max_px_speed_sq_lr = pow(max_px_speed_lr,2);;
+  frameSize          = i_frameSize;
+  samplePointSize    = i_samplePointSize;
+  samplePointSize_lr = 1 * i_samplePointSize;
+  max_px_speed_sq    = pow(max_px_speed_t, 2);
+  max_px_speed_lr    = 1 * max_px_speed_t;
+  max_px_speed_sq_lr = pow(max_px_speed_lr, 2);
+  ;
 
   cl_file_name = i_cl_file_name;
   useOCL       = i_useOCL;
 
   storeVideo = i_storeVideo;
   if (storeVideo) {
+#ifdef ROS_MELODIC
     outputVideo.open(*videoPath, CV_FOURCC('M', 'P', 'E', 'G'), videoFPS, cv::Size(frameSize, frameSize), false);
+#endif
+#ifdef ROS_NOETIC
+    outputVideo.open(*videoPath, cv::VideoWriter::fourcc('M', 'P', 'E', 'G'), videoFPS, cv::Size(frameSize, frameSize), false);
+#endif
     if (!outputVideo.isOpened())
       ROS_ERROR("[OpticFlow]: Could not open output video file: %s", videoPath->c_str());
   }
@@ -1710,8 +1716,8 @@ FftMethod::FftMethod(int i_frameSize, int i_samplePointSize, double max_px_speed
   }
 
 
-  sqNum            = frameSize / samplePointSize;
-  sqNum_lr         = sqNum/LONG_RANGE_RATIO;
+  sqNum    = frameSize / samplePointSize;
+  sqNum_lr = sqNum / LONG_RANGE_RATIO;
 
 
   usrc1.create(frameSize, frameSize, CV_32FC1, cv::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -1832,7 +1838,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
       shift_raw = shift;
 
       bool valid = true;
-      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq|| absd(shift.x) > ((double)samplePointSize / 2) ||
+      if (pow(shift.x, 2) + pow(shift.y, 2) > max_px_speed_sq || absd(shift.x) > ((double)samplePointSize / 2) ||
           absd(shift.y) > ((double)samplePointSize / 2)) {
         ROS_WARN("[OpticFlow]: FFT - shift is too large (%f; %f) in window x %d y %d", shift.x, shift.y, i, j);
         valid = false;
@@ -1897,7 +1903,7 @@ std::vector<cv::Point2d> FftMethod::processImage(cv::Mat imCurr, bool gui, bool 
 }
 
 std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool gui, bool debug, cv::Point midPoint_t, double yaw_angle, cv::Point2d rot_center,
-                                                 std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy) {
+                                                          std::vector<cv::Point2d>& raw_output, double i_fx, double i_fy) {
 
   if (running)
     return std::vector<cv::Point2d>();
@@ -1922,8 +1928,8 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
   ROS_INFO("[OpticFlow]: Using long range mode");
 
   cv::Mat imCurrD, imPrevD;
-  cv::resize(imCurr,imCurrD,cv::Size(),1.0/LONG_RANGE_RATIO,1.0/LONG_RANGE_RATIO);
-  cv::resize(imPrev,imPrevD,cv::Size(),1.0/LONG_RANGE_RATIO,1.0/LONG_RANGE_RATIO);
+  cv::resize(imCurr, imCurrD, cv::Size(), 1.0 / LONG_RANGE_RATIO, 1.0 / LONG_RANGE_RATIO);
+  cv::resize(imPrev, imPrevD, cv::Size(), 1.0 / LONG_RANGE_RATIO, 1.0 / LONG_RANGE_RATIO);
 
   if (gui || storeVideo) {
     imView = imCurrD.clone();
@@ -1934,11 +1940,10 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
   imPrevD.convertTo(imPrevF, CV_32FC1);
   speeds.clear();
 
-  if (useOCL){
+  if (useOCL) {
     /* ROS_WARN("TODO!"); */
     speeds = phaseCorrelateFieldLongRange(imCurrF, imPrevF, sqNum_lr, sqNum_lr);
-  }
-  else
+  } else
     speeds.resize(sqNum_lr * sqNum_lr);
 
   for (int j = 0; j < sqNum_lr; j++) {
@@ -1949,7 +1954,8 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
       if (useOCL)
         shift = speeds[i + sqNum_lr * j];
       else
-        shift = -cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize_lr, samplePointSize_lr)), imPrevF(cv::Rect(xi, yi, samplePointSize_lr, samplePointSize_lr)));
+        shift = -cv::phaseCorrelate(imCurrF(cv::Rect(xi, yi, samplePointSize_lr, samplePointSize_lr)),
+                                    imPrevF(cv::Rect(xi, yi, samplePointSize_lr, samplePointSize_lr)));
 
       /* ROS_INFO("HERE B"); */
       shift_raw = shift;
@@ -1976,8 +1982,8 @@ std::vector<cv::Point2d> FftMethod::processImageLongRange(cv::Mat imCurr, bool g
       if (gui || storeVideo) {
         if (valid)
           cv::line(imView, cv::Point2i(xi + samplePointSize_lr / 2, yi + samplePointSize_lr / 2),
-                   cv::Point2i(xi + samplePointSize_lr / 2, yi + samplePointSize_lr / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)), cv::Scalar(255),
-                   valid ? 5 : 1);
+                   cv::Point2i(xi + samplePointSize_lr / 2, yi + samplePointSize_lr / 2) + cv::Point2i((int)(shift.x * 5.0), (int)(shift.y * 5.0)),
+                   cv::Scalar(255), valid ? 5 : 1);
       }
     }
   }
