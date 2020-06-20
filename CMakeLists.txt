@@ -21,6 +21,11 @@ set(Eigen_LIBRARIES ${Eigen_LIBRARIES})
 
 find_package(OpenCV REQUIRED)
 
+execute_process(COMMAND lsb_release -cs
+    OUTPUT_VARIABLE RELEASE_CODENAME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 # find_package(OpenCL REQUIRED)
 # message("${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
 
@@ -48,6 +53,12 @@ include_directories(
 
 ## Declare a C++ executable
 add_library(OpticFlow src/optic_flow.cpp src/utilityFunctions.cpp src/FftMethod.cpp src/scaleRotationEstimator.cpp)
+
+if (${RELEASE_CODENAME} MATCHES "bionic")
+  target_compile_definitions(OpticFlow PUBLIC ROS_MELODIC=1)
+elseif(${RELEASE_CODENAME} MATCHES "focal")
+  target_compile_definitions(OpticFlow PUBLIC ROS_NOETIC=1)
+endif()
 
 add_dependencies(OpticFlow
   ${${PROJECT_NAME}_EXPORTED_TARGETS}

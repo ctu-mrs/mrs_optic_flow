@@ -16,14 +16,14 @@ public:
   cv::Point2d processImage(cv::Mat imCurr, bool gui, bool debug);
 
 private:
-  cv::Mat     prevIm_F32;
-  cv::Mat     tempIm;
-  cv::Mat     tempIm_F32;
+  cv::Mat prevIm_F32;
+  cv::Mat tempIm;
+  cv::Mat tempIm_F32;
   cv::Point2f center;
-  double      optimM, Ky;
-  bool        first;
-  IplImage    ipl_ta, ipl_tb;
-  bool        storeVideo;
+  double   optimM, Ky;
+  bool     first;
+  IplImage ipl_ta, ipl_tb;
+  bool     storeVideo;
 
   cv::VideoWriter outputVideo;
 
