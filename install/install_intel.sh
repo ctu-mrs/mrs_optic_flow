@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt -y install ocl-icd-dev ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers
+sudo apt-get -y install ocl-icd-dev ocl-icd-libopencl1 ocl-icd-opencl-dev opencl-headers
 
 mkdir -p ~/neo
 cd ~/neo
