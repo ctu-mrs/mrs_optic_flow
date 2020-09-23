@@ -33,22 +33,12 @@ cd uav_core
 echo "running the main install.sh"
 ./installation/install.sh
 
-gitman update
-
-# get the current commit SHA
-cd "$TRAVIS_BUILD_DIR"
-SHA=`git rev-parse HEAD`
-
-# get the current package name
-PACKAGE_NAME=${PWD##*/}
-
-# checkout the SHA
-cd ~/uav_core/.gitman/$PACKAGE_NAME
-git checkout "$SHA"
+MY_PATH=`dirname $TRAVIS_BUILD_DIR`
 
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/src
 ln -s ~/uav_core
+ln -s "$MY_PATH" mrs_optic_flow
 source /opt/ros/$ROS_DISTRO/setup.bash
 cd ~/catkin_ws
 
