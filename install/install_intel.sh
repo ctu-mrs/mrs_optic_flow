@@ -11,4 +11,6 @@ wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/inte
 wget https://github.com/intel/compute-runtime/releases/download/20.16.16582/intel-ocloc_20.16.16582_amd64.deb
 sudo dpkg -i *.deb
 
-sudo sh -c "echo [SeatDefaults]'\n'autologin-user=$USER'\n'autologin-user-timeout=0>/etc/lightdm/lightdm.conf"
+if [ -e /etc/lightdm ]; then
+  sudo sh -c "echo [SeatDefaults]'\n'autologin-user=$USER'\n'autologin-user-timeout=0>/etc/lightdm/lightdm.conf"
+fi
