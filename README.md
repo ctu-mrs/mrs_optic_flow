@@ -1,6 +1,9 @@
-# Optical Flow Odometry [![Build Status](https://travis-ci.com/ctu-mrs/mrs_optic_flow.svg?branch=master)](https://travis-ci.com/ctu-mrs/mrs_optic_flow)
+# Optical Flow Odometry
 
 ![](.fig/thumbnail.jpg)
+
+| Build status | [![Build Status](https://github.com/ctu-mrs/mrs_optic_flow/workflows/Melodic/badge.svg)](https://github.com/ctu-mrs/mrs_optic_flow/actions) | [![Build Status](https://github.com/ctu-mrs/mrs_optic_flow/workflows/Noetic/badge.svg)](https://github.com/ctu-mrs/mrs_optic_flow/actions) |
+|--------------|---------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 
 ## Description
 
