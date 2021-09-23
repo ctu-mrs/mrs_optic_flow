@@ -22,6 +22,9 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2</depend>
   <depend>mrs_lib</depend>
+  
+  <depend>message_generation</depend>
+  <exec_depend>message_runtime</exec_depend>
 
   <export>
     <nodelet plugin="${prefix}/plugins.xml" />

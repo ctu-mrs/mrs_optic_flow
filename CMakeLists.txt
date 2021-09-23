@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   tf
   mrs_lib
+  message_generation
   )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -29,6 +30,16 @@ execute_process(COMMAND lsb_release -cs
 
 # find_package(OpenCL REQUIRED)
 # message("${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
+
+add_message_files(
+   FILES
+   States.msg
+)
+
+generate_messages(DEPENDENCIES
+  mrs_msgs
+  std_msgs
+  )
 
 ###################################
 ## catkin specific configuration ##

@@ -1,3 +1,4 @@
+#include <opencv2/calib3d.hpp>
 #define VERSION "0.0.5.0"
 
 /* includes //{ */
@@ -30,6 +31,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Imu.h>
 #include <std_msgs/Float32.h>
+#include <mrs_optic_flow/States.h>
 
 #define LONGRANGE_INLIER_THRESHOLD 15
 
@@ -195,6 +197,8 @@ private:
   ros::Publisher publisher_points_raw_;
   ros::Publisher publisher_max_allowed_velocity_;
   ros::Publisher publisher_chosen_allsac_;
+  
+  ros::Publisher publisher_debug_states_;
 
   bool got_camera_info_ = false;
   bool got_image_       = false;
@@ -557,19 +561,46 @@ bool OpticFlow::getRT(std::vector<cv::Point2d> shifts, double height, cv::Point2
   cv::Mat mask;
   cv::Mat homography = cv::findHomography(undistPtsA, undistPtsB, cv::RANSAC, 0.01, mask);
 
+  mrs_optic_flow::States pub_states;
+
+  double error_total = 0;
+  double error_reduced = 0;
+
   bool allSmall  = false;
   uint remaining = 0;
   for (int z = 0; z < (int)(shiftedPts.size()); z++) {
+    cv::Vec3d pointA(undistPtsA[z].x, undistPtsA[z].y, 1);
+    cv::Vec3d pointB(undistPtsB[z].x, undistPtsB[z].y, 1);
+      
+    cv::Mat err = cv::Mat(pointB) - homography * cv::Mat(pointA);  
+   
+    double point_error = sqrt(err.at<double>(0)*err.at<double>(0)+err.at<double>(1)*err.at<double>(1));
+
+    error_total += point_error;
+
+    /* ROS_ERROR("[OpticFlow]: %d error %f", z,  sqrt(err.at<double>(0)*err.at<double>(0)+err.at<double>(1)*err.at<double>(1))); */
+
     if (mask.at<unsigned char>(z) == 1) {
       remaining++;
-
+    
+      error_reduced += point_error;
+  
       if (cv::norm(shiftsPassed[z]) > 0.01)
         allSmall = false;
     }
   }
 
-  if (_debug_)
-    ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining);
+  pub_states.points = remaining;
+  pub_states.error_total = error_total;
+  pub_states.error_reduced = error_reduced;
+
+  publisher_debug_states_.publish(pub_states);
+
+  if (_debug_){
+    /* ROS_INFO("[OpticFlow]: Motion estimated from %d points", remaining); */
+    ROS_INFO("[OpticFlow]: Points: %d, total_err: %f, error_reduced: %f", remaining, error_total, error_reduced);
+
+  }
 
 
   if (remaining < uint(_shifted_pts_thr_)) {
@@ -833,6 +864,8 @@ void OpticFlow::onInit() {
   param_loader.loadParam("gui", _gui_);
   param_loader.loadParam("silent_debug", _silent_debug_);
 
+  _debug_ = true;
+
   // | --------------------- general params --------------------- |
 
   param_loader.loadParam("ang_rate_source", _ang_rate_source_);
@@ -1039,6 +1072,8 @@ void OpticFlow::onInit() {
   publisher_velocity_longrange_diff_ = nh_.advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity_out_longrange_diff", 1);
   publisher_velocity_std_            = nh_.advertise<geometry_msgs::Vector3>("velocity_stddev_out", 1);
   publisher_max_allowed_velocity_    = nh_.advertise<std_msgs::Float32>("max_velocity_out", 1);
+    
+  publisher_debug_states_ = nh_.advertise<mrs_optic_flow::States>("debug_states", 1);
 
   if (_raw_enabled_) {
     publisher_points_raw_ = nh_.advertise<std_msgs::UInt32MultiArray>("points_raw_out", 1);
