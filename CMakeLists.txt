@@ -23,9 +23,9 @@ set(Eigen_LIBRARIES ${Eigen_LIBRARIES})
 find_package(OpenCV REQUIRED)
 
 execute_process(COMMAND lsb_release -cs
-    OUTPUT_VARIABLE RELEASE_CODENAME
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+  OUTPUT_VARIABLE RELEASE_CODENAME
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 
 # find_package(OpenCL REQUIRED)
 # message("${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
@@ -34,16 +34,20 @@ execute_process(COMMAND lsb_release -cs
 ## catkin specific configuration ##
 ###################################
 
+set(LIBRARIES
+  OpticFlow
+  )
+
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS mrs_lib cv_bridge image_transport roscpp sensor_msgs std_msgs geometry_msgs
   DEPENDS Eigen
-  LIBRARIES OpticFlow
+  LIBRARIES ${LIBRARIES}
   )
 
-###########
-## Build ##
-###########
+## --------------------------------------------------------------
+## |                            Build                           |
+## --------------------------------------------------------------
 
 include_directories(
   include
@@ -53,7 +57,11 @@ include_directories(
   )
 
 ## Declare a C++ executable
-add_library(OpticFlow src/optic_flow.cpp src/utilityFunctions.cpp src/FftMethod.cpp src/scaleRotationEstimator.cpp)
+add_library(OpticFlow
+  src/optic_flow.cpp
+  src/utilityFunctions.cpp
+  src/FftMethod.cpp
+  src/scaleRotationEstimator.cpp)
 
 if (${RELEASE_CODENAME} MATCHES "bionic")
   target_compile_definitions(OpticFlow PUBLIC ROS_MELODIC=1)
@@ -73,4 +81,27 @@ target_link_libraries(OpticFlow
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${Eigen_LIBRARIES}
+  )
+
+## --------------------------------------------------------------
+## |                           Install                          |
+## --------------------------------------------------------------
+
+install(TARGETS ${LIBRARIES}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+  )
+
+install(DIRECTORY launch config
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  )
+
+install(DIRECTORY include/
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+  )
+
+install(DIRECTORY ./
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  FILES_MATCHING PATTERN "*.xml"
   )
