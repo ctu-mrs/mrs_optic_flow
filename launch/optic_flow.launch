@@ -41,7 +41,7 @@
       <param name="uav_frame" value="$(arg uav_frame)" />
       <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
-      <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
+      <param name="FftCLFile" value="$(find mrs_optic_flow)/cl/FftMethod.cl" />
       <param name="useOCL" value="true" />
 
         <!-- Subscribers -->
