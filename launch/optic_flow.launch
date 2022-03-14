@@ -42,7 +42,7 @@
       <param name="uav_untilted_frame" value="$(arg uav_untilted_frame)" />
 
       <param name="FftCLFile" value="$(find mrs_optic_flow)/src/FftMethod.cl" />
-      <param name="useOCL" value="true" />
+      <param name="useOCL" value="false" />
 
         <!-- Subscribers -->
       <remap from="~tracker_status_in" to="control_manager/diagnostics" />
