@@ -6,7 +6,7 @@
   <arg name="RUN_TYPE" default="$(optenv RUN_TYPE)" />
 
     <!-- other args -->
-  <arg name="standalone" default="false" />
+  <arg name="standalone" default="true" />
   <arg name="debug" default="false" />
 
   <arg     if="$(eval arg('standalone') or arg('debug') or arg('RUN_TYPE') == 'simulation')" name="nodelet" value="standalone" />
@@ -22,17 +22,13 @@
   <arg name="uav_frame" default="$(arg UAV_NAME)/fcu" />
   <arg name="uav_untilted_frame" default="$(arg UAV_NAME)/fcu_untilted" />
 
-  <arg if="$(eval arg('RUN_TYPE') == 'simulation')" name="node_start_delay" default="0" />
-  <arg if="$(eval arg('RUN_TYPE') == 'uav')" name="node_start_delay" default="15" />
-
   <group ns="$(arg UAV_NAME)">
 
     <!-- Optic flow nodelet -->
     <!-- The delay in the launch prefix is important, without it the camera driver does not load sometimes! -->
-    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen" respawn="true" launch-prefix="bash -c 'sleep $(arg node_start_delay); nice -n 19 $0 $@'">
+    <node name="optic_flow" pkg="nodelet" type="nodelet" args="$(arg nodelet) mrs_optic_flow/OpticFlow $(arg nodelet_manager)" output="screen">
 
       <rosparam file="$(find mrs_optic_flow)/config/default.yaml" />
-      <rosparam file="$(find mrs_optic_flow)/config/$(arg RUN_TYPE).yaml" />
 
       <param name="enable_profiler" value="$(arg PROFILER)" />
 
